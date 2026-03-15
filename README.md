@@ -48,6 +48,6 @@ This repository already contains the main application code and backend/Supabase 
 
 ## Repository Status
 
-- GitHub repository: to be filled after repository creation in this submission flow
+- GitHub repository: https://github.com/xunyud/Earth-Online
 - Primary branch: `main`
 - License: MIT
