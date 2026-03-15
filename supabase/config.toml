@@ -1,0 +1,63 @@
+
+[functions.wechat-webhook]
+enabled = true
+verify_jwt = true
+import_map = "./functions/wechat-webhook/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/wechat-webhook/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/wechat-webhook/*.html" ]
+
+[functions.weekly-summary]
+enabled = true
+verify_jwt = false
+import_map = "./functions/weekly-summary/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/weekly-summary/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/weekly-summary/*.html" ]
+
+[functions.sync-user-memory]
+enabled = true
+verify_jwt = false
+import_map = "./functions/sync-user-memory/deno.json"
+entrypoint = "./functions/sync-user-memory/index.ts"
+
+[functions.parse-quest]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/parse-quest/index.ts"
+
+[functions.guide-bootstrap]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/guide-bootstrap/index.ts"
+
+[functions.guide-chat]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/guide-chat/index.ts"
+
+[functions.guide-night-reflection]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/guide-night-reflection/index.ts"
+
+[functions.guide-event-generate]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/guide-event-generate/index.ts"
+
+[functions.guide-event-accept]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/guide-event-accept/index.ts"
+
+[functions.guide-portrait-generate]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/guide-portrait-generate/index.ts"

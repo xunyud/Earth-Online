@@ -1,0 +1,66 @@
+请注意，这个文件内的所有需求修改都没有 quests表而是quest_nodes 表，需要你自行修改
+每个“@AI 需求指令” 都是一段单独的指令，需要你一步一步执行。
+
+**@AI 需求指令：重构核销逻辑与“经验/金币”分离结算**
+
+我们的数据库已更新：
+1. `inventory` 表新增了 `cost` 字段。
+2. `quests` 表新增了 `is_reward` (布尔值) 字段。
+3. 新增了 RPC `increment_custom_stats(delta_xp INT, delta_gold INT)` 用于分离结算。
+
+请帮我修改 Controller 逻辑：
+
+### 1. 修改背包核销逻辑 (useItem)
+当用户在背包中点击“使用”时：
+- 除了将物品设为 `is_used: true`，请自动在 `quests` 表中 `insert` 一个新任务，插入在列表顶部（或者同等处理）。
+- **任务属性**：
+  - `title`: 背包物品的名字
+  - `xp`: 物品的 `cost` (需从背包数据中读取)
+  - `is_reward`: true
+  - `description`: "✨ 放下负担，去好好享受属于你的战利品吧！"
+
+### 2. 改造任务完成/撤销的结算逻辑 (toggleQuestCompletion)
+- 废弃原来调用的 `increment_total_xp`，改用新 RPC `increment_custom_stats(deltaXp, deltaGold)`。
+- **结算判断**：
+  - 如果 `quest.is_reward == true`，则只有 XP 变动，金币不变 -> `increment_custom_stats(deltaXp, 0)`。
+  - 如果是普通任务 -> `increment_custom_stats(deltaXp, deltaXp)`。
+- 请同步修改本地状态的 `currentXp` 和 `currentGold`，使其与上述逻辑一致。
+
+**@AI 需求指令：实现“奖励任务”的只读模式**
+
+我们在上一步已经给任务增加了 `is_reward` 属性。这类任务在 UI 上应该是**不可修改**的。
+
+请修改首页的任务详情/编辑界面（Dialog 或 BottomSheet）：
+1. 传入当前点击的 `Quest` 对象进行判断。
+2. 如果 `quest.is_reward == true`：
+   - 将标题、经验值等所有 `TextField` 设置为只读 (`readOnly: true` 或 `enabled: false`)。
+   - 隐藏“保存修改”相关的按钮，仅保留“关闭”按钮。
+   - (可选) 在卡片顶部加一个特殊的徽章或提示文字：“🎁 这是一个奖励任务，尽情享受吧，不可编辑。”
+3. 如果是普通任务，保持原有的可编辑状态不变。
+
+**@AI 需求指令：开发商店商品删除功能与“不再提醒”弹窗机制**
+
+请帮我完善战利品商店的管理体验，并引入 `shared_preferences` 控制全局的免打扰弹窗：
+
+### 1. 商店商品删除 UI
+- 在商店列表的每个商品卡片右侧，新增一个“删除” Icon（垃圾桶图标，红色）。
+
+### 2. 封装带“不再提醒”的确认弹窗
+请封装一个通用的 Dialog 组件或方法，包含：
+- 标题、警告内容、"取消"和"确认"按钮。
+- 左下角带有一个 Checkbox：“下次不再提醒”。
+- **逻辑**：点击确认时，如果勾选了“不再提醒”，请使用 `shared_preferences` 将 `hide_shop_delete_confirm` 设为 `true`。
+
+### 3. 删除逻辑对接
+- 点击商品删除按钮时：
+  1. 检查 `shared_preferences`，如果 `hide_shop_delete_confirm` 为 true，直接执行删除数据库的操作（`delete().eq('id', itemId)`）并刷新列表。
+  2. 如果为 false，则弹出刚刚封装的确认框，用户点确认后再执行删除。
+
+  **@AI 需求指令：在主页暴露背包快捷入口**
+
+目前背包只能在商店内打开，层级太深。请帮我优化首页 UI：
+
+1. 打开主页的 AppBar 组件 (如 `home_page.dart`)。
+2. 在右上角的 actions 数组中，除了已有的“商店”入口外，新增一个“背包”入口（使用 `Icons.backpack` 或类似图标）。
+3. 如果你能实现的话，可以在背包 Icon 右上角加一个“小红点”或 Badge（当状态管理中检测到背包里有 `is_used == false` 的物品时显示小红点）。
+4. 点击该图标，直接打开/跳转到与之前一致的背包页面。

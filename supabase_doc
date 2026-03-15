@@ -1,0 +1,122 @@
+# Supabase 使用说明（本项目）
+
+> 适用环境：Windows + PowerShell。若 `supabase` CLI 位于当前目录，执行命令需使用 `./supabase ...`。
+
+## 0. 前置条件
+
+1. 已安装 Supabase CLI（任选其一）
+   - Scoop：`scoop install supabase`
+   - Chocolatey：`choco install supabase-cli`
+   - 或使用项目根目录下的 `supabase.exe`/`supabase`（本项目约定用 `./supabase` 执行）
+2. 已登录并关联项目
+   - `./supabase login`
+   - `./supabase link --project-ref <project-ref>`
+3. 网络环境稳定（公司网/校园网常见 HTTPS 被中断，见“常见问题”）
+
+## 1. Edge Functions（函数）
+
+### 1.1 部署 parse-quest
+
+用于 AI 任务拆解（返回 `cheer + tasks`）。
+
+```bash
+./supabase functions deploy parse-quest --no-verify-jwt
+```
+
+### 1.2 设置 Secrets（DeepSeek Key）
+
+```bash
+./supabase secrets set DEEPSEEK_API_KEY=<你的key>
+```
+
+如使用 OpenAI 兼容 KEY：
+
+```bash
+./supabase secrets set OPENAI_API_KEY=<你的key>
+```
+
+## 2. 数据库迁移（migrations）
+
+### 2.1 推送 migrations 到远端（生产/云端）
+
+```bash
+./supabase db push
+```
+
+本项目新增的关键迁移（示例）：
+- `supabase/migrations/20260227000000_add_profile_total_xp.sql`：`profiles.total_xp` + `increment_total_xp(delta)`
+- `supabase/migrations/20260228000000_add_profile_leveling.sql`：`profiles.level/current_xp/max_xp` + `grant_xp(delta)`（处理升级与溢出结算）
+
+## 3. 常见命令（开发过程会用到）
+
+### 3.1 查看调试信息（排查部署/网络问题）
+
+```bash
+./supabase functions deploy parse-quest --no-verify-jwt --debug
+./supabase db push --debug
+```
+
+### 3.2 需要数据库密码时（CLI 提示 SUPABASE_DB_PASSWORD）
+
+当出现类似提示：
+`Connect to your database by setting the env var: SUPABASE_DB_PASSWORD`
+
+在 PowerShell 设置（临时会话）：
+
+```powershell
+$env:SUPABASE_DB_PASSWORD="你的数据库密码"
+```
+
+然后重试：
+
+```bash
+./supabase db push
+```
+
+### 3.3 如何获取/重置数据库密码（你不知道密码时）
+
+Supabase 出于安全原因不会在 CLI 里直接显示数据库密码。如果你不知道密码，需要到 Dashboard 重置：
+1. 打开 Supabase Dashboard → 选择项目
+2. Project Settings → Database → Reset database password（或 Set database password）
+3. 重置后把新密码设置到当前 PowerShell 会话：
+
+```powershell
+$env:SUPABASE_DB_PASSWORD="你的新数据库密码"
+```
+
+4. 再执行：
+
+```bash
+./supabase db push
+```
+
+## 4. 常见问题（必看）
+
+### 4.1 wsarecv: An existing connection was forcibly closed by the remote host
+
+现象：部署 functions 或 db push 过程中，HTTPS 连接被远端/中间网络强制断开。
+
+优先排查：
+1. 换网络（手机热点通常最有效）或使用稳定 VPN
+2. 关闭/放行杀软与企业安全软件的 HTTPS 扫描
+3. 若在代理环境，确认 PowerShell 的代理环境变量正确：
+   - `HTTP_PROXY`
+   - `HTTPS_PROXY`
+4. 使用 `--debug` 观察是 TLS 握手、鉴权还是上传过程被中断
+
+补充：如果你在 IPv6 网络环境经常遇到该错误，可尝试临时关闭 IPv6、或切换到手机热点（通常会直接恢复）。
+
+### 4.2 WARNING: Docker is not running
+
+这是警告，但某些情况下本地打包/依赖解析更稳定：
+- 建议启动 Docker Desktop（Running 状态）后再重试部署/推库。
+
+### 4.3 WARNING: Functions using fallback import map
+
+这是 Supabase 的提示，不影响部署。
+如需改为推荐方式，按官方文档为每个函数配置 import map（可后续处理）。
+
+## 5. 本项目约定（重要）
+
+1. Windows PowerShell 下统一使用 `./supabase ...` 执行 CLI 命令。
+2. 当用户要求“改某个文件内容”，直接修改目标文件，不只在聊天里贴替换文本。
