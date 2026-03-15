@@ -1,177 +1,53 @@
-# Supabase CLI
+# Earth Online
 
-[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
-](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
+Earth Online is a memory-aware productivity game that turns everyday planning into a living quest log. The project combines a Flutter client, a lightweight Node backend, and Supabase functions so users can capture daily context, revisit recent memory, and receive task suggestions that stay grounded in what they have already done.
 
-[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
+## Competition Submission
 
-This repository contains all the functionality for Supabase CLI.
+### 1. All Source Code of the Project
 
-- [x] Running Supabase locally
-- [x] Managing database migrations
-- [x] Creating and deploying Supabase Functions
-- [x] Generating types directly from your database schema
-- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
+This repository contains the full source code for Earth Online.
 
-## Getting started
+- `frontend/`: the Flutter application, including the quest board, memory guide dialog, profile customization, WeChat binding flow, diary, recycle bin, stats, rewards, and achievement screens.
+- `backend/`: a Node.js / Express service for webhook ingestion and debounced message processing.
+- `supabase/`: database migrations, shared guide logic, and Supabase Edge Functions for task parsing, guide chat, memory sync, weekly summaries, portrait generation, and WeChat-related flows.
+- `docs/`: product notes, implementation plans, and project references used during development.
 
-### Install the CLI
+Core product capabilities currently present in the source code include:
 
-Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
+- A gamified quest board for creating, organizing, and completing tasks.
+- A memory-aware guide that reads recent signals and proposes recovery or progress tasks in a conversational flow.
+- A life diary and recycle bin for preserving short-term context and recovering deleted work.
+- Profile customization with avatar upload and editable nickname.
+- WeChat binding for bridging reminders and status updates into a real-world messaging channel.
+- Progress systems such as XP, levels, rewards, inventory, achievements, and stats.
 
-```bash
-npm i supabase --save-dev
-```
+### 2. Project Introduction Video
 
-When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
+Video link: **TBD before final competition submission**
 
-```
-NODE_OPTIONS=--no-experimental-fetch yarn add supabase
-```
+The project introduction video for the Memory Genesis Competition 2026 should cover:
 
-> **Note**
-For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
+1. The main features of Earth Online.
+2. How Earth Online uses memory, including recent context, long-term signals, and guide references.
+3. How that memory helps users restart, recover, and keep moving through real tasks with less friction.
 
-<details>
-  <summary><b>macOS</b></summary>
+### 3. Deployed URL
 
-  Available via [Homebrew](https://brew.sh). To install:
+Deployed URL: **TBD before final competition submission**
 
-  ```sh
-  brew install supabase/tap/supabase
-  ```
+This repository already contains the main application code and backend/Supabase components required for deployment. A public deployment link should be added here once the final hosted environment is available.
 
-  To install the beta release channel:
-  
-  ```sh
-  brew install supabase/tap/supabase-beta
-  brew link --overwrite supabase-beta
-  ```
-  
-  To upgrade:
+## Tech Stack
 
-  ```sh
-  brew upgrade supabase
-  ```
-</details>
+- Flutter + Dart
+- Supabase
+- Node.js + Express
+- Redis
+- TypeScript
 
-<details>
-  <summary><b>Windows</b></summary>
+## Repository Status
 
-  Available via [Scoop](https://scoop.sh). To install:
-
-  ```powershell
-  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-  scoop install supabase
-  ```
-
-  To upgrade:
-
-  ```powershell
-  scoop update supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Linux</b></summary>
-
-  Available via [Homebrew](https://brew.sh) and Linux packages.
-
-  #### via Homebrew
-
-  To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-
-  #### via Linux packages
-
-  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
-
-  ```sh
-  sudo apk add --allow-untrusted <...>.apk
-  ```
-
-  ```sh
-  sudo dpkg -i <...>.deb
-  ```
-
-  ```sh
-  sudo rpm -i <...>.rpm
-  ```
-
-  ```sh
-  sudo pacman -U <...>.pkg.tar.zst
-  ```
-</details>
-
-<details>
-  <summary><b>Other Platforms</b></summary>
-
-  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
-
-  ```sh
-  go install github.com/supabase/cli@latest
-  ```
-
-  Add a symlink to the binary in `$PATH` for easier access:
-
-  ```sh
-  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
-  ```
-
-  This works on other non-standard Linux distros.
-</details>
-
-<details>
-  <summary><b>Community Maintained Packages</b></summary>
-
-  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
-  To install in your working directory:
-
-  ```bash
-  pkgx install supabase
-  ```
-
-  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
-</details>
-
-### Run the CLI
-
-```bash
-supabase bootstrap
-```
-
-Or using npx:
-
-```bash
-npx supabase bootstrap
-```
-
-The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
-
-## Docs
-
-Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
-
-## Breaking changes
-
-We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
-
-However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
-
-## Developing
-
-To run from source:
-
-```sh
-# Go >= 1.22
-go run . help
-```
+- GitHub repository: to be filled after repository creation in this submission flow
+- Primary branch: `main`
+- License: MIT
