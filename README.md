@@ -34,7 +34,7 @@ The project introduction video for the Memory Genesis Competition 2026 should co
 
 ### 3. Deployed URL
 
-Deployed URL: **TBD before final competition submission**
+Deployed URL: https://earth-online-wine.vercel.app
 
 This repository already contains the main application code and backend/Supabase components required for deployment. A public deployment link should be added here once the final hosted environment is available.
 
