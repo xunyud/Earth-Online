@@ -1,3 +1,5 @@
+[English](./README.md) | [中文](./README.zh-CN.md)
+
 # Earth Online
 
 Earth Online is a memory-aware productivity game that turns everyday planning into a living quest log. The project combines a Flutter client, a lightweight Node backend, and Supabase functions so users can capture daily context, revisit recent memory, and receive task suggestions that stay grounded in what they have already done.
@@ -34,9 +36,9 @@ The project introduction video for the Memory Genesis Competition 2026 should co
 
 ### 3. Deployed URL
 
-Deployed URL: https://earth-online-wine.vercel.app
+Deployed URL: [https://earth-online-wine.vercel.app](https://earth-online-wine.vercel.app)
 
-This repository already contains the main application code and backend/Supabase components required for deployment. A public deployment link should be added here once the final hosted environment is available.
+This repository already contains the main application code and backend/Supabase components required for deployment. The current public web deployment is hosted on Vercel at the link above.
 
 ## Tech Stack
 
