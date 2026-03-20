@@ -1,0 +1,26 @@
+[
+  {
+    "id": "intro",
+    "voice": "Most task apps record work, but they do not remember your context. Earth Online keeps recent context alive, so the next step can start from where your real day left off."
+  },
+  {
+    "id": "quest-board",
+    "voice": "A rough note becomes a quest, then a completed action. Earth Online starts from real behavior: type the task, place it on the board, and finish it with visible progress."
+  },
+  {
+    "id": "memory-loop",
+    "voice": "Finished work does not disappear. Earth Online turns completed quests, daily logs, behavior signals, and prior recall into a memory bundle that can be used as evidence later."
+  },
+  {
+    "id": "guide",
+    "voice": "When the guide opens, it reads memory before replying. Instead of a generic pep talk, it answers from recent rhythm and can show how many memory references informed that response."
+  },
+  {
+    "id": "event",
+    "voice": "Daily events do not just suggest a task. They explain why it matters right now, surface the memory evidence, and let the user accept it directly into the board."
+  },
+  {
+    "id": "outro",
+    "voice": "Life Diary and weekly summaries keep the story going. When the system remembers what just happened, people can restart faster, recover with less friction, and keep moving forward."
+  }
+]

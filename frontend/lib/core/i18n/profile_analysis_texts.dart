@@ -70,5 +70,8 @@ const Map<String, Map<String, String>> profileAnalysisTexts =
     'zh': '先把感受说清楚，会比急着做判断更有效。',
     'en': 'Naming what you feel will help more than rushing to conclusions.',
   },
-  'profile.evaluation_title': {'zh': 'AI 对你的评价', 'en': 'AI Read on You'},
+  'profile.evaluation_title': {
+    'zh': '{name}对你的评价',
+    'en': '{name}\'s read on you',
+  },
 };

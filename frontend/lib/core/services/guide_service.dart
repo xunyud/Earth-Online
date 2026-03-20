@@ -149,35 +149,163 @@ class GuideBootstrapResult {
   }
 }
 
+enum GuideChatIntent {
+  companion,
+  advice,
+  action,
+}
+
+GuideChatIntent _guideChatIntentFromRaw(dynamic value) {
+  final text = value == null ? '' : '$value'.trim().toLowerCase();
+  switch (text) {
+    case 'action':
+      return GuideChatIntent.action;
+    case 'advice':
+      return GuideChatIntent.advice;
+    case 'companion':
+    default:
+      return GuideChatIntent.companion;
+  }
+}
+
+class GuideMessageCard {
+  final String label;
+  final String content;
+
+  const GuideMessageCard({
+    required this.label,
+    required this.content,
+  });
+
+  factory GuideMessageCard.fromMap(Map<String, dynamic> map) {
+    return GuideMessageCard(
+      label: (map['label'] as String?)?.trim() ?? '',
+      content: (map['content'] as String?)?.trim() ?? '',
+    );
+  }
+}
+
+class GuideResultCard {
+  final String label;
+  final String title;
+  final String description;
+
+  const GuideResultCard({
+    required this.label,
+    required this.title,
+    required this.description,
+  });
+
+  factory GuideResultCard.fromMap(Map<String, dynamic> map) {
+    return GuideResultCard(
+      label: (map['label'] as String?)?.trim() ?? '',
+      title: (map['title'] as String?)?.trim() ?? '',
+      description: (map['description'] as String?)?.trim() ?? '',
+    );
+  }
+}
+
+class GuideTaskEditDraft {
+  final String taskId;
+  final String taskTitle;
+  final String action;
+  final String updatedTitle;
+  final String updatedDescription;
+  final int? updatedXpReward;
+  final List<String> subtasks;
+
+  const GuideTaskEditDraft({
+    required this.taskId,
+    required this.taskTitle,
+    required this.action,
+    required this.updatedTitle,
+    required this.updatedDescription,
+    required this.updatedXpReward,
+    required this.subtasks,
+  });
+
+  factory GuideTaskEditDraft.fromMap(Map<String, dynamic> map) {
+    final subtasksRaw = map['subtasks'];
+    final xpRaw = map['updated_xp_reward'];
+    return GuideTaskEditDraft(
+      taskId: (map['task_id'] as String?)?.trim() ?? '',
+      taskTitle: (map['task_title'] as String?)?.trim() ?? '',
+      action: (map['action'] as String?)?.trim() ?? '',
+      updatedTitle: (map['updated_title'] as String?)?.trim() ?? '',
+      updatedDescription: (map['updated_description'] as String?)?.trim() ?? '',
+      updatedXpReward: xpRaw is num ? xpRaw.round() : int.tryParse('$xpRaw'),
+      subtasks: subtasksRaw is List
+          ? subtasksRaw
+              .map((item) => '$item')
+              .where((item) => item.trim().isNotEmpty)
+              .toList()
+          : const <String>[],
+    );
+  }
+}
+
 class GuideChatResult {
   final String reply;
+  final GuideChatIntent intent;
   final List<String> quickActions;
+  final GuideMessageCard? messageCard;
+  final GuideResultCard? resultCard;
   final GuideSuggestedTask? suggestedTask;
+  final GuideTaskEditDraft? taskEditDraft;
   final List<String> memoryRefs;
 
   const GuideChatResult({
     required this.reply,
+    required this.intent,
     required this.quickActions,
+    required this.messageCard,
+    required this.resultCard,
     required this.suggestedTask,
+    required this.taskEditDraft,
     required this.memoryRefs,
   });
 
   factory GuideChatResult.fromMap(Map<String, dynamic> map) {
     final actionsRaw = map['quick_actions'];
     final refsRaw = map['memory_refs'];
+    final messageCardRaw = map['message_card'];
+    final resultCardRaw = map['result_card'];
+    final taskEditDraftRaw = map['task_edit_draft'];
     return GuideChatResult(
       reply: (map['reply'] as String?)?.trim() ?? '',
+      intent: _guideChatIntentFromRaw(map['intent']),
       quickActions: actionsRaw is List
           ? actionsRaw
               .map((item) => '$item')
               .where((item) => item.trim().isNotEmpty)
               .toList()
           : const <String>[],
+      messageCard: messageCardRaw is Map<String, dynamic>
+          ? GuideMessageCard.fromMap(messageCardRaw)
+          : messageCardRaw is Map
+              ? GuideMessageCard.fromMap(
+                  messageCardRaw.map((key, value) => MapEntry('$key', value)),
+                )
+              : null,
+      resultCard: resultCardRaw is Map<String, dynamic>
+          ? GuideResultCard.fromMap(resultCardRaw)
+          : resultCardRaw is Map
+              ? GuideResultCard.fromMap(
+                  resultCardRaw.map((key, value) => MapEntry('$key', value)),
+                )
+              : null,
       suggestedTask: map['suggested_task'] is Map<String, dynamic>
           ? GuideSuggestedTask.fromMap(
               map['suggested_task'] as Map<String, dynamic>,
             )
           : null,
+      taskEditDraft: taskEditDraftRaw is Map<String, dynamic>
+          ? GuideTaskEditDraft.fromMap(taskEditDraftRaw)
+          : taskEditDraftRaw is Map
+              ? GuideTaskEditDraft.fromMap(
+                  taskEditDraftRaw.map((key, value) => MapEntry('$key', value)),
+                )
+              : null,
       memoryRefs: refsRaw is List
           ? refsRaw
               .map((item) => '$item')

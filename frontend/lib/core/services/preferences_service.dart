@@ -23,6 +23,10 @@ class PreferencesService {
   static const String _keyGuideDisplayName = 'guide_display_name';
   static String? _cachedGuideDisplayName;
 
+  static const String _keyGuideOnboardingSeenUserId =
+      'guide_onboarding_seen_user_id';
+  static String? _cachedGuideOnboardingSeenUserId;
+
   static const String _keyProfileDisplayName = 'profile_display_name';
   static String? _cachedProfileDisplayName;
 
@@ -145,6 +149,26 @@ class PreferencesService {
     await prefs.setString(_keyGuideDisplayName, normalized);
   }
 
+  static Future<String?> guideOnboardingSeenUserId() async {
+    final cached = _cachedGuideOnboardingSeenUserId;
+    if (cached != null) return cached;
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_keyGuideOnboardingSeenUserId);
+    _cachedGuideOnboardingSeenUserId = value;
+    return value;
+  }
+
+  static Future<void> setGuideOnboardingSeenUserId(String? value) async {
+    final normalized = _normalizeOptionalString(value);
+    _cachedGuideOnboardingSeenUserId = normalized;
+    final prefs = await SharedPreferences.getInstance();
+    if (normalized == null) {
+      await prefs.remove(_keyGuideOnboardingSeenUserId);
+      return;
+    }
+    await prefs.setString(_keyGuideOnboardingSeenUserId, normalized);
+  }
+
   static Future<String?> profileDisplayName() async {
     final cached = _cachedProfileDisplayName;
     if (cached != null) return cached;
@@ -200,6 +224,7 @@ class PreferencesService {
     _cachedGuideProactiveEnabled = null;
     _cachedGuideLastBootstrapDate = null;
     _cachedGuideDisplayName = null;
+    _cachedGuideOnboardingSeenUserId = null;
     _cachedProfileDisplayName = null;
     _cachedProfileAvatarBase64 = null;
   }

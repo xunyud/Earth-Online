@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
-import '../../../core/services/guide_service.dart';
 import '../../../core/theme/quest_theme.dart';
 
 enum GuideDialogRole {
@@ -24,6 +23,28 @@ class GuideDialogMessage {
   });
 }
 
+class GuideDialogInfoMessageCard {
+  final String label;
+  final String content;
+
+  const GuideDialogInfoMessageCard({
+    required this.label,
+    required this.content,
+  });
+}
+
+class GuideDialogResultCard {
+  final String label;
+  final String title;
+  final String description;
+
+  const GuideDialogResultCard({
+    required this.label,
+    required this.title,
+    required this.description,
+  });
+}
+
 class GuidePanelDialog extends StatelessWidget {
   final String title;
   final String guideName;
@@ -37,20 +58,20 @@ class GuidePanelDialog extends StatelessWidget {
   final bool statusReady;
   final List<GuideDialogMessage> messages;
   final List<String> quickActions;
-  final GuideSuggestedTask? suggestedTask;
+  final List<String> examplePrompts;
+  final GuideDialogInfoMessageCard? currentMessageCard;
+  final GuideDialogResultCard? currentResultCard;
   final TextEditingController inputController;
   final String inputHintText;
   final String sendLabel;
   final String retryLabel;
-  final String addTaskLabel;
-  final String proposalTitle;
   final String closeLabel;
   final bool sending;
   final String Function(int count) memoryRefsLabelBuilder;
   final VoidCallback? onRetry;
   final ValueChanged<String> onSubmit;
   final ValueChanged<String> onQuickActionTap;
-  final VoidCallback? onAddSuggestedTask;
+  final ValueChanged<String> onExamplePromptTap;
   final VoidCallback? onEditGuideName;
   final VoidCallback onClose;
 
@@ -68,20 +89,20 @@ class GuidePanelDialog extends StatelessWidget {
     required this.statusReady,
     required this.messages,
     required this.quickActions,
-    required this.suggestedTask,
+    required this.examplePrompts,
+    required this.currentMessageCard,
+    required this.currentResultCard,
     required this.inputController,
     required this.inputHintText,
     required this.sendLabel,
     required this.retryLabel,
-    required this.addTaskLabel,
-    required this.proposalTitle,
     required this.closeLabel,
     required this.sending,
     required this.memoryRefsLabelBuilder,
     required this.onRetry,
     required this.onSubmit,
     required this.onQuickActionTap,
-    required this.onAddSuggestedTask,
+    required this.onExamplePromptTap,
     required this.onEditGuideName,
     required this.onClose,
   });
@@ -159,6 +180,12 @@ class GuidePanelDialog extends StatelessWidget {
                           summary: guideMemorySummary,
                           signals: guideMemorySignals,
                         ),
+                        if (currentMessageCard != null) ...[
+                          const SizedBox(height: 14),
+                          _GuideInfoMessageCard(
+                            card: currentMessageCard!,
+                          ),
+                        ],
                         const SizedBox(height: 14),
                         ...messages.map((message) {
                           return Padding(
@@ -172,41 +199,76 @@ class GuidePanelDialog extends StatelessWidget {
                             ),
                           );
                         }),
-                        if (suggestedTask != null) ...[
-                          const SizedBox(height: 2),
-                          _GuideSuggestedTaskCard(
-                            proposalTitle: proposalTitle,
-                            task: suggestedTask!,
-                            addTaskLabel: addTaskLabel,
-                            enabled: !sending,
-                            onAddSuggestedTask: onAddSuggestedTask,
-                            theme: theme,
+                        if (currentResultCard != null) ...[
+                          const SizedBox(height: 4),
+                          _GuideResultStatusCard(
+                            key: const ValueKey('guide-current-result-card'),
+                            card: currentResultCard!,
                           ),
                         ],
                         if (quickActions.isNotEmpty) ...[
                           const SizedBox(height: 14),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: quickActions
-                                .map(
-                                  (action) => ActionChip(
-                                    label: Text(action),
-                                    backgroundColor:
-                                        Colors.white.withAlpha(205),
-                                    side: const BorderSide(
-                                      color: Color(0x22547250),
+                          Container(
+                            key: const ValueKey('guide-entry-actions'),
+                            child: Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: quickActions
+                                  .map(
+                                    (action) => ActionChip(
+                                      label: Text(action),
+                                      backgroundColor:
+                                          Colors.white.withAlpha(205),
+                                      side: const BorderSide(
+                                        color: Color(0x22547250),
+                                      ),
+                                      labelStyle:
+                                          AppTextStyles.caption.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF355537),
+                                      ),
+                                      onPressed: sending
+                                          ? null
+                                          : () => onQuickActionTap(action),
                                     ),
-                                    labelStyle: AppTextStyles.caption.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF355537),
+                                  )
+                                  .toList(),
+                            ),
+                          ),
+                        ],
+                        if (examplePrompts.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            key: const ValueKey('guide-dynamic-actions'),
+                            child: Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: examplePrompts
+                                  .map(
+                                    (prompt) => ActionChip(
+                                      label: Text(prompt),
+                                      avatar: const Icon(
+                                        Icons.auto_awesome_rounded,
+                                        size: 16,
+                                        color: Color(0xFF4A6B49),
+                                      ),
+                                      backgroundColor:
+                                          const Color(0xFFF6FBEA),
+                                      side: const BorderSide(
+                                        color: Color(0x22547250),
+                                      ),
+                                      labelStyle:
+                                          AppTextStyles.caption.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF355537),
+                                      ),
+                                      onPressed: sending
+                                          ? null
+                                          : () => onExamplePromptTap(prompt),
                                     ),
-                                    onPressed: sending
-                                        ? null
-                                        : () => onQuickActionTap(action),
-                                  ),
-                                )
-                                .toList(),
+                                  )
+                                  .toList(),
+                            ),
                           ),
                         ],
                       ],
@@ -234,6 +296,55 @@ class GuidePanelDialog extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GuideInfoMessageCard extends StatelessWidget {
+  final GuideDialogInfoMessageCard card;
+
+  const _GuideInfoMessageCard({
+    required this.card,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFFFFCF4),
+            Color(0xFFF7F9ED),
+          ],
+        ),
+        border: Border.all(color: const Color(0x204B7D4D)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              card.label,
+              style: AppTextStyles.caption.copyWith(
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF4F724D),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              card.content,
+              style: AppTextStyles.body.copyWith(
+                height: 1.55,
+                color: const Color(0xFF314132),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -273,6 +384,8 @@ class _GuideHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canEditGuideName = onEditGuideName != null;
+
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
@@ -320,25 +433,57 @@ class _GuideHeader extends StatelessWidget {
                 ),
                 const SizedBox(width: 14),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: AppTextStyles.heading2.copyWith(
-                          color: const Color(0xFF1F3721),
-                          fontWeight: FontWeight.w800,
+                  child: Tooltip(
+                    message: editNameLabel,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        key: const ValueKey('guide-name-trigger'),
+                        onTap: onEditGuideName,
+                        borderRadius: BorderRadius.circular(18),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      title,
+                                      style: AppTextStyles.heading2.copyWith(
+                                        color: const Color(0xFF1F3721),
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  if (canEditGuideName) ...[
+                                    const SizedBox(width: 8),
+                                    const Icon(
+                                      Icons.edit_outlined,
+                                      size: 16,
+                                      color: Color(0xFF5A7654),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                subtitle,
+                                style: AppTextStyles.caption.copyWith(
+                                  height: 1.45,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        subtitle,
-                        style: AppTextStyles.caption.copyWith(
-                          height: 1.45,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
                 IconButton(
@@ -383,19 +528,6 @@ class _GuideHeader extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: onEditGuideName,
-                  icon: const Icon(Icons.edit_rounded, size: 16),
-                  label: Text(editNameLabel),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF355537),
-                    side: const BorderSide(color: Color(0x22547250)),
-                    backgroundColor: Colors.white.withAlpha(168),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
                   ),
                 ),
                 if (!statusReady)
@@ -579,21 +711,12 @@ class _GuideMessageBubble extends StatelessWidget {
   }
 }
 
-class _GuideSuggestedTaskCard extends StatelessWidget {
-  final String proposalTitle;
-  final GuideSuggestedTask task;
-  final String addTaskLabel;
-  final bool enabled;
-  final VoidCallback? onAddSuggestedTask;
-  final QuestTheme theme;
+class _GuideResultStatusCard extends StatelessWidget {
+  final GuideDialogResultCard card;
 
-  const _GuideSuggestedTaskCard({
-    required this.proposalTitle,
-    required this.task,
-    required this.addTaskLabel,
-    required this.enabled,
-    required this.onAddSuggestedTask,
-    required this.theme,
+  const _GuideResultStatusCard({
+    super.key,
+    required this.card,
   });
 
   @override
@@ -616,62 +739,32 @@ class _GuideSuggestedTaskCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    proposalTitle,
-                    style: AppTextStyles.caption.copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF4E6F4F),
-                    ),
-                  ),
-                ),
-                Text(
-                  '+${task.xpReward} XP',
-                  style: AppTextStyles.heading2.copyWith(
-                    fontSize: 16,
-                    color: const Color(0xFF4E6F4F),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
             Text(
-              task.title,
+              card.label,
+              style: AppTextStyles.caption.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF4E6F4F),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              card.title,
               style: AppTextStyles.heading2.copyWith(
                 fontSize: 22,
                 color: const Color(0xFF243826),
               ),
             ),
-            const SizedBox(height: 10),
-            Text(
-              task.description,
-              style: AppTextStyles.body.copyWith(
-                height: 1.5,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: enabled ? onAddSuggestedTask : null,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: theme.primaryAccentColor,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(46),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                    ),
-                    child: Text(addTaskLabel),
-                  ),
+            if (card.description.trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                card.description,
+                style: AppTextStyles.body.copyWith(
+                  height: 1.5,
+                  color: AppColors.textSecondary,
                 ),
-              ],
-            ),
+              ),
+            ],
           ],
         ),
       ),

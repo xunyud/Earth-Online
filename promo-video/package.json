@@ -1,0 +1,25 @@
+{
+  "name": "earth-online-promo-video",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "voice": "powershell -ExecutionPolicy Bypass -File scripts\\generate_voice.ps1",
+    "voice:zh": "powershell -ExecutionPolicy Bypass -File scripts\\generate_voice.ps1 -SceneFile src\\voice-lines.zh.json -AudioDir public\\audio-zh -VoicePattern \"Microsoft Huihui Desktop*\"",
+    "render": "remotion render src/index.ts EarthOnlinePromo ../output/earth-online-intro.mp4",
+    "render:zh": "remotion render src/index.ts EarthOnlinePromoZh ../output/earth-online-intro-zh.mp4",
+    "still": "remotion still src/index.ts EarthOnlinePromo ../output/earth-online-poster.png --frame=30",
+    "still:zh": "remotion still src/index.ts EarthOnlinePromoZh ../output/earth-online-poster-zh.png --frame=30"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.366"
+  },
+  "devDependencies": {
+    "@remotion/cli": "^4.0.366",
+    "@types/node": "^24.0.0",
+    "@types/react": "^18.3.12",
+    "typescript": "^5.8.3"
+  }
+}

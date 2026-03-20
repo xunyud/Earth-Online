@@ -68,7 +68,7 @@ const Map<String, Map<String, String>> _localizedTexts =
   'common.not_available': {'zh': '暂不可用', 'en': 'Unavailable'},
   'common.not_logged_in': {'zh': '未登录', 'en': 'Not Signed In'},
   'app.title': {'zh': 'Quest Log', 'en': 'Quest Log'},
-  'home.guide.tooltip': {'zh': '专属向导', 'en': 'Personal Guide'},
+  'home.guide.tooltip': {'zh': '专属助手', 'en': 'Personal Assistant'},
   'home.profile.tooltip': {'zh': '记忆画像', 'en': 'Memory Portrait'},
   'home.sync.tooltip': {'zh': '上传今日记忆', 'en': 'Upload Today Memory'},
   'home.stats.tooltip': {'zh': '数据统计', 'en': 'Stats'},
@@ -84,8 +84,8 @@ const Map<String, Map<String, String>> _localizedTexts =
   'home.gold_label': {'zh': '金币', 'en': 'Gold'},
   'home.level_label': {'zh': '等级', 'en': 'Level'},
   'home.bootstrap.offline': {
-    'zh': '向导暂时离线，请稍后重试。',
-    'en': 'Guide is offline for now. Please try again later.'
+    'zh': '助手暂时离线，请稍后重试。',
+    'en': 'Assistant is offline for now. Please try again later.'
   },
   'home.event.title': {'zh': '地球突发事件', 'en': 'Earth Dynamic Event'},
   'home.event.reward': {
@@ -93,6 +93,7 @@ const Map<String, Map<String, String>> _localizedTexts =
     'en': 'Reward: +{xp} XP / +{gold} Gold'
   },
   'home.event.reason': {'zh': '记忆依据：{reason}', 'en': 'Memory Basis: {reason}'},
+  'home.event.reason_badge': {'zh': '记忆依据', 'en': 'Memory Basis'},
   'home.event.accepted': {
     'zh': '事件已加入任务板：+{xp} XP / +{gold} 金币',
     'en': 'Event added to quest board: +{xp} XP / +{gold} Gold'
@@ -109,13 +110,13 @@ const Map<String, Map<String, String>> _localizedTexts =
     'en': 'Move all quests to recycle bin.'
   },
   'home.delete_all.confirm': {'zh': '确认删除', 'en': 'Delete All'},
-  'guide.title': {'zh': '专属地球向导', 'en': 'Personal Earth Guide'},
+  'guide.title': {'zh': '专属助手', 'en': 'Personal Assistant'},
   'guide.name.default': {'zh': '小忆', 'en': 'Xiaoyi'},
   'guide.name.edit': {'zh': '修改名字', 'en': 'Rename'},
   'guide.name.dialog_title': {'zh': '给{name}起个名字', 'en': 'Name {name}'},
   'guide.name.dialog_hint': {
     'zh': '输入你想怎么叫它',
-    'en': 'Choose what to call your guide'
+    'en': 'Choose what to call your assistant'
   },
   'guide.name.dialog_action': {'zh': '保存名字', 'en': 'Save Name'},
   'guide.hero.subtitle': {
@@ -134,9 +135,55 @@ const Map<String, Map<String, String>> _localizedTexts =
   'guide.quick.today': {'zh': '继续聊今天', 'en': 'Continue Today'},
   'guide.quick.week': {'zh': '回看上周', 'en': 'Review Last Week'},
   'guide.quick.recovery': {'zh': '给我一个恢复任务', 'en': 'Give Me Recovery Quest'},
+  'guide.quick.listen_more': {'zh': '继续说说', 'en': 'Keep talking'},
+  'guide.quick.stay_with_me': {'zh': '陪我聊聊', 'en': 'Stay with me'},
+  'guide.quick.hardest_part': {
+    'zh': '最难的是哪一块',
+    'en': 'Which part feels hardest'
+  },
+  'guide.quick.help_sort': {'zh': '帮我理一下', 'en': 'Help me sort it out'},
+  'guide.quick.ask_advice': {'zh': '给我一个建议', 'en': 'Give me advice'},
+  'guide.quick.push_or_rest': {
+    'zh': '现在更适合推进还是休息',
+    'en': 'Push or rest right now'
+  },
+  'guide.quick.generate_task': {
+    'zh': '把这句变成任务',
+    'en': 'Turn this into a task'
+  },
+  'guide.quick.open_stats': {'zh': '帮我看统计', 'en': 'Open stats'},
+  'guide.quick.view_weekly': {'zh': '看看这周怎么样', 'en': 'Show this week'},
+  'guide.mode.generate_task': {'zh': '生成任务', 'en': 'Create Task'},
+  'guide.mode.modify_task': {'zh': '修改任务', 'en': 'Edit Task'},
+  'guide.mode.companion': {'zh': '陪我聊聊', 'en': 'Talk With Me'},
+  'guide.examples.title': {'zh': '试试这些说法', 'en': 'Try saying it like this'},
+  'guide.examples.generate': {
+    'zh': '直接说一句要做的事，我会把它整理成任务。',
+    'en': 'Say the thing you want to do and I will turn it into a task.',
+  },
+  'guide.examples.modify': {
+    'zh': '说出任务名和想改的内容，我会继续帮你调整。',
+    'en': 'Tell me the task name and what to change, and I will update it.',
+  },
+  'guide.examples.companion': {
+    'zh': '不用把话说完整，先从最想说的那一块开始就行。',
+    'en': 'You do not need the full story. Start with the part you want to say first.',
+  },
   'guide.input.hint': {
     'zh': '告诉{name}你现在的状态...',
     'en': 'Tell {name} how you feel now...'
+  },
+  'guide.input.generate_hint': {
+    'zh': '例如：把“准备周会开场白”变成任务',
+    'en': 'For example: Turn "Prepare the meeting opening" into a task',
+  },
+  'guide.input.modify_hint': {
+    'zh': '例如：修改任务“开会”，截止时间是 3 月 20 日',
+    'en': 'For example: Edit task "Meeting", due on March 20',
+  },
+  'guide.input.companion_hint': {
+    'zh': '例如：我现在有点乱，陪我聊聊',
+    'en': 'For example: I feel scattered right now, stay with me',
   },
   'guide.memory.title': {'zh': '{name}记得', 'en': '{name} Remembers'},
   'guide.memory.empty': {
@@ -169,6 +216,80 @@ const Map<String, Map<String, String>> _localizedTexts =
   'guide.added_task': {
     'zh': '{name}的任务建议已加入任务板。',
     'en': '{name}\'s quest has been added.'
+  },
+  'guide.onboarding.dialog_title': {'zh': '新手教程', 'en': 'Getting Started'},
+  'guide.onboarding.badge': {'zh': '上手任务', 'en': 'Starter Tasks'},
+  'guide.onboarding.accepted': {
+    'zh': '新手教程已加入任务板。',
+    'en': 'Starter tutorial added to your board.'
+  },
+  'guide.onboarding.dismissed': {
+    'zh': '新手教程已先跳过。',
+    'en': 'Starter tutorial skipped for now.'
+  },
+  'guide.onboarding.failed': {
+    'zh': '新手教程生成失败，请稍后重试。',
+    'en': 'Failed to create starter tutorial. Please retry later.'
+  },
+  'guide.onboarding.reason_badge': {'zh': '教程说明', 'en': 'Why start here'},
+  'guide.onboarding.event.title': {
+    'zh': '新手教程：先用 4 步熟悉每日任务',
+    'en': 'Starter Tutorial: Learn Daily Tasks in 4 Steps'
+  },
+  'guide.onboarding.event.description': {
+    'zh': '这组任务会带你走一遍输入待办、完成任务、和助手对话、查看记忆画像四个核心功能。',
+    'en':
+        'These starter tasks walk you through adding a task, completing one, chatting with your assistant, and viewing your memory portrait.'
+  },
+  'guide.onboarding.event.reason': {
+    'zh': '当前账户还是空白状态，先用一组上手任务带你认识这个软件最常用的功能。',
+    'en':
+        'Your account is still fresh, so this starter set is the fastest way to learn the core features.'
+  },
+  'guide.onboarding.parent.title': {
+    'zh': '新手教程：认识每日任务',
+    'en': 'Starter Tutorial: Meet Daily Tasks'
+  },
+  'guide.onboarding.parent.description': {
+    'zh': '跟着下面 4 个小步骤走一遍输入、完成、助手和记忆功能，完成后再回来勾掉这条总任务。',
+    'en':
+        'Follow the 4 steps below to try task input, completion, assistant chat, and memory features, then come back and mark this main quest done.'
+  },
+  'guide.onboarding.step.capture.title': {
+    'zh': '输入一句今天要做的事',
+    'en': 'Type One Thing for Today'
+  },
+  'guide.onboarding.step.capture.description': {
+    'zh': '在底部输入栏写一句待办，体验系统怎样帮你整理成任务。',
+    'en':
+        'Use the bottom input bar to type one thing you want to do and watch the app turn it into quests.'
+  },
+  'guide.onboarding.step.complete.title': {
+    'zh': '完成一个最小动作',
+    'en': 'Finish One Tiny Step'
+  },
+  'guide.onboarding.step.complete.description': {
+    'zh': '勾掉一项已经做完的小事，看看 XP 和金币是怎么变化的。',
+    'en':
+        'Check off one tiny task you already finished and notice how XP and gold change.'
+  },
+  'guide.onboarding.step.assistant.title': {
+    'zh': '和{name}说一句话',
+    'en': 'Say One Line to {name}'
+  },
+  'guide.onboarding.step.assistant.description': {
+    'zh': '打开专属助手，说一句你现在的状态，感受它怎么陪你整理今天。',
+    'en':
+        'Open your personal assistant, share how you feel, and see how it helps you sort out today.'
+  },
+  'guide.onboarding.step.portrait.title': {
+    'zh': '看一眼记忆画像',
+    'en': 'Open Your Memory Portrait'
+  },
+  'guide.onboarding.step.portrait.description': {
+    'zh': '试试上传今日记忆，或打开记忆画像，看看系统怎样理解你的状态。',
+    'en':
+        'Try uploading today’s memory or open the memory portrait to see how the app reads your current state.'
   },
   'guide.status.ready': {'zh': '{name}在线', 'en': '{name} is online'},
   'guide.status.auth': {'zh': '登录已过期', 'en': 'Session Expired'},
@@ -223,7 +344,7 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '夜话复盘：仅记录不加任务',
     'en': 'Night reflection: record only, no task'
   },
-  'profile.title': {'zh': 'AI 记忆画像', 'en': 'AI Memory Portrait'},
+  'profile.title': {'zh': '{name}记忆画像', 'en': '{name} Memory Portrait'},
   'profile.generate_fail': {
     'zh': '画像生成失败，请稍后重试。',
     'en': 'Portrait generation failed. Please retry later.'
@@ -233,13 +354,14 @@ const Map<String, Map<String, String>> _localizedTexts =
   'profile.loading': {'zh': '正在生成画像...', 'en': 'Generating portrait...'},
   'settings.title': {'zh': '设置中心', 'en': 'Settings'},
   'settings.subtitle': {
-    'zh': '把向导、外观和语言整理到一个清爽面板里。',
-    'en': 'Keep guide, appearance, and language in one calm panel.'
+    'zh': '把助手、外观和语言整理到一个清爽面板里。',
+    'en': 'Keep assistant, appearance, and language in one calm panel.'
   },
-  'settings.section.guide': {'zh': '向导', 'en': 'Guide'},
+  'settings.section.guide': {'zh': '助手', 'en': 'Assistant'},
   'settings.section.guide_desc': {
-    'zh': '决定 AI 什么时候陪你开场，什么时候安静待机。',
-    'en': 'Choose when the guide should proactively reach out or stay quiet.'
+    'zh': '决定助手什么时候陪你开场，什么时候安静待机。',
+    'en':
+        'Choose when the assistant should proactively reach out or stay quiet.'
   },
   'settings.section.appearance': {'zh': '外观', 'en': 'Appearance'},
   'settings.section.appearance_desc': {
@@ -251,7 +373,7 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '切换界面语言，文案会立即同步。',
     'en': 'Switch the interface language and refresh copy instantly.'
   },
-  'settings.guide_enabled': {'zh': '启用专属向导', 'en': 'Enable Personal Guide'},
+  'settings.guide_enabled': {'zh': '启用专属助手', 'en': 'Enable Personal Assistant'},
   'settings.guide_enabled_desc': {
     'zh': '关闭后不再主动触达，但可手动开启。',
     'en':
@@ -298,8 +420,8 @@ const Map<String, Map<String, String>> _localizedTexts =
   'drawer.diary.desc': {'zh': '记录你的现实副本', 'en': 'Record your real-world run'},
   'drawer.recycle': {'zh': '回收站', 'en': 'Recycle Bin'},
   'drawer.recycle.desc': {'zh': '查看已删除任务', 'en': 'View deleted quests'},
-  'drawer.guide': {'zh': '专属向导', 'en': 'Personal Guide'},
-  'drawer.guide.desc': {'zh': '打开记忆对话面板', 'en': 'Open memory chat panel'},
+  'drawer.guide': {'zh': '专属助手', 'en': 'Personal Assistant'},
+  'drawer.guide.desc': {'zh': '打开专属助手对话', 'en': 'Open assistant chat'},
   'drawer.binding': {'zh': '微信绑定', 'en': 'WeChat Binding'},
   'drawer.binding.desc': {'zh': '同步微信消息', 'en': 'Sync WeChat messages'},
   'drawer.settings': {'zh': '设置中心', 'en': 'Settings'},

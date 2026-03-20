@@ -28,6 +28,24 @@ class ProfileStatsFloor {
   });
 }
 
+class _GuideOnboardingQuestSpec {
+  final int index;
+  final int? parentIndex;
+  final String title;
+  final String description;
+  final int xpReward;
+  final String questTier;
+
+  const _GuideOnboardingQuestSpec({
+    required this.index,
+    required this.parentIndex,
+    required this.title,
+    required this.description,
+    required this.xpReward,
+    required this.questTier,
+  });
+}
+
 class QuestController extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
   RealtimeChannel? _questChannel;
@@ -89,6 +107,7 @@ class QuestController extends ChangeNotifier {
   int get confettiSeq => _confettiSeq;
   int get longestStreak => _longestStreak;
   AchievementController get achievementController => _achievementController;
+  String? get currentUserId => _supabase.auth.currentUser?.id;
 
   static double multiplierForStreak(int streak) {
     if (streak < 3) return 1.0;
@@ -204,21 +223,62 @@ class QuestController extends ChangeNotifier {
     required String userId,
     required String eventType,
     required String content,
+    String? memoryKind,
+    String? sourceTaskId,
+    String? sourceTaskTitle,
+    String? sourceStatus,
+    String? summary,
+    Map<String, dynamic>? extra,
   }) {
     final safeContent = content.trim();
     if (safeContent.isEmpty) return;
+    final body = <String, dynamic>{
+      'user_id': userId,
+      'event_type': eventType,
+      'content': safeContent,
+      if (memoryKind != null && memoryKind.trim().isNotEmpty)
+        'memory_kind': memoryKind.trim(),
+      if (sourceTaskId != null && sourceTaskId.trim().isNotEmpty)
+        'source_task_id': sourceTaskId.trim(),
+      if (sourceTaskTitle != null && sourceTaskTitle.trim().isNotEmpty)
+        'source_task_title': sourceTaskTitle.trim(),
+      if (sourceStatus != null && sourceStatus.trim().isNotEmpty)
+        'source_status': sourceStatus.trim(),
+      if (summary != null && summary.trim().isNotEmpty)
+        'summary': summary.trim(),
+      if (extra != null && extra.isNotEmpty) 'extra': extra,
+    };
     () async {
       try {
         await _supabase.functions.invoke(
           'sync-user-memory',
-          body: {
-            'user_id': userId,
-            'event_type': eventType,
-            'content': safeContent,
-          },
+          body: body,
         );
       } catch (_) {}
     }();
+  }
+
+  void _syncQuestMemoryBatchFireAndForget({
+    required String eventType,
+    required Iterable<QuestNode> quests,
+    required String sourceStatus,
+  }) {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) return;
+    for (final quest in quests) {
+      if (quest.isReward) continue;
+      final title = quest.title.trim();
+      if (title.isEmpty) continue;
+      _syncMemoryFireAndForget(
+        userId: userId,
+        eventType: eventType,
+        content: title,
+        memoryKind: 'task_event',
+        sourceTaskId: quest.id,
+        sourceTaskTitle: title,
+        sourceStatus: sourceStatus,
+      );
+    }
   }
 
   List<TimelineEntry> get timelineEntries {
@@ -795,6 +855,188 @@ class QuestController extends ChangeNotifier {
     }
   }
 
+  Future<List<QuestNode>> addGuideChildTasks({
+    required QuestNode parent,
+    required List<String> stepTitles,
+    int xpReward = 10,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) {
+      _showError(_t('quest.error.no_session'));
+      return const <QuestNode>[];
+    }
+
+    final normalizedTitles = stepTitles
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .take(3)
+        .toList();
+    if (normalizedTitles.isEmpty) {
+      return const <QuestNode>[];
+    }
+
+    final siblings = _quests
+        .where((quest) => quest.parentId == parent.id && !quest.isDeleted)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    var nextSortOrder =
+        siblings.isEmpty ? 1000.0 : siblings.last.sortOrder + 1000.0;
+    final normalizedXp = xpReward.clamp(5, 80);
+    final insertedQuests = <QuestNode>[];
+
+    try {
+      for (final title in normalizedTitles) {
+        final row = await _supabase
+            .from('quest_nodes')
+            .insert({
+              'user_id': userId,
+              'parent_id': parent.id,
+              'title': title,
+              'quest_tier': 'Side_Quest',
+              'xp_reward': normalizedXp,
+              'is_completed': false,
+              'is_deleted': false,
+              'sort_order': nextSortOrder,
+            })
+            .select()
+            .single();
+        final inserted = QuestNode.fromJson(row);
+        insertedQuests.add(inserted);
+        _quests.add(inserted);
+        nextSortOrder += 1000.0;
+      }
+      notifyListeners();
+      return insertedQuests;
+    } catch (e) {
+      debugPrint('Guide child tasks insert failed: $e');
+      _showError(_t('quest.error.guide_insert_failed'));
+      return const <QuestNode>[];
+    }
+  }
+
+  List<_GuideOnboardingQuestSpec> _buildGuideOnboardingQuestSpecs({
+    required String guideName,
+  }) {
+    return <_GuideOnboardingQuestSpec>[
+      _GuideOnboardingQuestSpec(
+        index: 0,
+        parentIndex: null,
+        title: _t('guide.onboarding.parent.title'),
+        description: _t('guide.onboarding.parent.description'),
+        xpReward: 40,
+        questTier: 'Main_Quest',
+      ),
+      _GuideOnboardingQuestSpec(
+        index: 1,
+        parentIndex: 0,
+        title: _t('guide.onboarding.step.capture.title'),
+        description: _t('guide.onboarding.step.capture.description'),
+        xpReward: 20,
+        questTier: 'Side_Quest',
+      ),
+      _GuideOnboardingQuestSpec(
+        index: 2,
+        parentIndex: 0,
+        title: _t('guide.onboarding.step.complete.title'),
+        description: _t('guide.onboarding.step.complete.description'),
+        xpReward: 20,
+        questTier: 'Side_Quest',
+      ),
+      _GuideOnboardingQuestSpec(
+        index: 3,
+        parentIndex: 0,
+        title: _t(
+          'guide.onboarding.step.assistant.title',
+          params: {'name': guideName},
+        ),
+        description: _t('guide.onboarding.step.assistant.description'),
+        xpReward: 20,
+        questTier: 'Side_Quest',
+      ),
+      _GuideOnboardingQuestSpec(
+        index: 4,
+        parentIndex: 0,
+        title: _t('guide.onboarding.step.portrait.title'),
+        description: _t('guide.onboarding.step.portrait.description'),
+        xpReward: 20,
+        questTier: 'Side_Quest',
+      ),
+    ];
+  }
+
+  Future<List<QuestNode>> addOnboardingTutorialBundle({
+    required String guideName,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) {
+      _showError(_t('quest.error.no_session'));
+      return const <QuestNode>[];
+    }
+
+    final specs = _buildGuideOnboardingQuestSpecs(guideName: guideName);
+    final createdByIndex = <int, QuestNode>{};
+    final createdIds = <String>[];
+    final rootSortOrder = -DateTime.now().millisecondsSinceEpoch.toDouble();
+
+    Future<void> insertOne(_GuideOnboardingQuestSpec spec) async {
+      final parentId = spec.parentIndex == null
+          ? null
+          : createdByIndex[spec.parentIndex!]?.id;
+      final payload = <String, dynamic>{
+        'user_id': userId,
+        'parent_id': parentId,
+        'title': spec.title.trim(),
+        'description': spec.description.trim(),
+        'quest_tier': spec.questTier,
+        'xp_reward': spec.xpReward.clamp(5, 200),
+        'is_completed': false,
+        'is_deleted': false,
+        'sort_order':
+            parentId == null ? rootSortOrder : (spec.index * 1000).toDouble(),
+      };
+
+      final row =
+          await _supabase.from('quest_nodes').insert(payload).select().single();
+      final inserted = QuestNode.fromJson(row);
+      createdByIndex[spec.index] = inserted;
+      createdIds.add(inserted.id);
+    }
+
+    try {
+      for (final spec in specs.where((item) => item.parentIndex == null)) {
+        await insertOne(spec);
+      }
+      for (final spec in specs.where((item) => item.parentIndex != null)) {
+        await insertOne(spec);
+      }
+    } catch (e) {
+      if (createdIds.isNotEmpty) {
+        try {
+          await _supabase
+              .from('quest_nodes')
+              .delete()
+              .inFilter('id', createdIds);
+        } catch (_) {}
+      }
+      debugPrint('Guide onboarding insert failed: $e');
+      _showError(_t('quest.error.guide_insert_failed'));
+      return const <QuestNode>[];
+    }
+
+    final insertedQuests = createdByIndex.values.toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    for (final quest in insertedQuests) {
+      final existingIndex = _quests.indexWhere((item) => item.id == quest.id);
+      if (existingIndex == -1) {
+        _quests.add(quest);
+      } else {
+        _quests[existingIndex] = quest;
+      }
+    }
+    notifyListeners();
+    return insertedQuests;
+  }
+
   void _showLevelUpSnackBar(int level) {
     scaffoldMessengerKey.currentState?.showSnackBar(
       SnackBar(
@@ -1116,11 +1358,20 @@ class QuestController extends ChangeNotifier {
           _achievementController.checkAchievements('daily');
           _achievementController.checkAchievements('streak');
           _achievementController.checkAchievements('growth');
-          _syncMemoryFireAndForget(
-            userId: userId,
-            eventType: 'quest_completed',
-            content: quest.title,
-          );
+          for (final completedQuest
+              in toggled.where((item) => !item.isReward)) {
+            final title = completedQuest.title.trim();
+            if (title.isEmpty) continue;
+            _syncMemoryFireAndForget(
+              userId: userId,
+              eventType: 'quest_completed',
+              content: title,
+              memoryKind: 'task_event',
+              sourceTaskId: completedQuest.id,
+              sourceTaskTitle: title,
+              sourceStatus: 'active',
+            );
+          }
         }
       } catch (e) {
         var reason = e.toString();
@@ -1241,6 +1492,7 @@ class QuestController extends ChangeNotifier {
         backup[q.id] = q;
       }
     }
+    final deletedQuests = backup.values.toList(growable: false);
 
     _quests = _quests
         .map(
@@ -1253,6 +1505,11 @@ class QuestController extends ChangeNotifier {
         await _supabase
             .from('quest_nodes')
             .update({'is_deleted': true}).inFilter('id', idsToDelete.toList());
+        _syncQuestMemoryBatchFireAndForget(
+          eventType: 'quest_deleted',
+          quests: deletedQuests,
+          sourceStatus: 'inactive',
+        );
       } catch (_) {
         _quests = _quests
             .map((q) => backup.containsKey(q.id) ? backup[q.id]! : q)
@@ -1283,6 +1540,7 @@ class QuestController extends ChangeNotifier {
         backup[q.id] = q;
       }
     }
+    final restoredQuests = backup.values.toList(growable: false);
 
     _quests = _quests
         .map((q) =>
@@ -1294,6 +1552,11 @@ class QuestController extends ChangeNotifier {
       try {
         await _supabase.from('quest_nodes').update(
             {'is_deleted': false}).inFilter('id', idsToRestore.toList());
+        _syncQuestMemoryBatchFireAndForget(
+          eventType: 'quest_restored',
+          quests: restoredQuests,
+          sourceStatus: 'active',
+        );
       } catch (_) {
         _quests = _quests
             .map((q) => backup.containsKey(q.id) ? backup[q.id]! : q)
@@ -1318,6 +1581,9 @@ class QuestController extends ChangeNotifier {
       }
     }
 
+    final deletedQuests = _quests
+        .where((q) => idsToDelete.contains(q.id))
+        .toList(growable: false);
     final backup = List<QuestNode>.from(_quests);
     _quests = _quests.where((q) => !idsToDelete.contains(q.id)).toList();
     notifyListeners();
@@ -1328,6 +1594,11 @@ class QuestController extends ChangeNotifier {
             .from('quest_nodes')
             .delete()
             .inFilter('id', idsToDelete.toList());
+        _syncQuestMemoryBatchFireAndForget(
+          eventType: 'quest_deleted',
+          quests: deletedQuests,
+          sourceStatus: 'inactive',
+        );
       } catch (_) {
         _quests = backup;
         notifyListeners();
@@ -1362,6 +1633,7 @@ class QuestController extends ChangeNotifier {
         backup[q.id] = q;
       }
     }
+    final deletedQuests = backup.values.toList(growable: false);
 
     _quests = _quests
         .map((q) => q.isDeleted ? q : q.copyWith(isDeleted: true))
@@ -1373,6 +1645,11 @@ class QuestController extends ChangeNotifier {
         await _supabase
             .from('quest_nodes')
             .update({'is_deleted': true}).eq('is_deleted', false);
+        _syncQuestMemoryBatchFireAndForget(
+          eventType: 'quest_deleted',
+          quests: deletedQuests,
+          sourceStatus: 'inactive',
+        );
       } catch (_) {
         _quests = _quests
             .map((q) => backup.containsKey(q.id) ? backup[q.id]! : q)
@@ -1386,6 +1663,7 @@ class QuestController extends ChangeNotifier {
   void restoreAllQuests() {
     if (trashedQuests.isEmpty) return;
 
+    final restoredQuests = List<QuestNode>.from(trashedQuests);
     final backup = List<QuestNode>.from(_quests);
     _quests = _quests.map((q) => q.copyWith(isDeleted: false)).toList();
     notifyListeners();
@@ -1395,6 +1673,11 @@ class QuestController extends ChangeNotifier {
         await _supabase
             .from('quest_nodes')
             .update({'is_deleted': false}).eq('is_deleted', true);
+        _syncQuestMemoryBatchFireAndForget(
+          eventType: 'quest_restored',
+          quests: restoredQuests,
+          sourceStatus: 'active',
+        );
       } catch (_) {
         _quests = backup;
         notifyListeners();

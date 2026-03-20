@@ -295,10 +295,12 @@ export async function buildGuideChatPayload(
   userId: string,
   scene: string,
   message: string,
+  clientContext?: Record<string, unknown>,
 ) {
   const memory = await gatherGuideMemoryBundle(supabase, userId, {
     scene,
     userMessage: message,
+    clientContext,
     maxRawItems: 60,
     maxPackedChars: 14000,
   });
