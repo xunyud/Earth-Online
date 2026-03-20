@@ -26,7 +26,12 @@ Core product capabilities currently present in the source code include:
 
 ### 2. Project Introduction Video
 
-Video link: **TBD before final competition submission**
+Click the poster below to watch the Chinese demo video:
+
+[![Earth Online Chinese demo video](./docs/media/promo-video/earth-online-poster-zh.png)](./docs/media/promo-video/earth-online-intro-zh.mp4)
+
+- Video link: [Chinese intro video](./docs/media/promo-video/earth-online-intro-zh.mp4)
+- Poster preview: [Chinese poster](./docs/media/promo-video/earth-online-poster-zh.png)
 
 The project introduction video for the Memory Genesis Competition 2026 should cover:
 
