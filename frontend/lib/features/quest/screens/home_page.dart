@@ -176,8 +176,11 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadGuideDisplayName() async {
     final stored = await PreferencesService.guideDisplayName();
+    final resolved =
+        await _guideService.resolveDisplayName(localFallback: stored);
+    await PreferencesService.setGuideDisplayName(resolved);
     if (!mounted) return;
-    setState(() => _guideDisplayName = stored);
+    setState(() => _guideDisplayName = resolved);
   }
 
   Map<String, dynamic> _buildGuideClientContext() {
@@ -340,12 +343,21 @@ class _HomePageState extends State<HomePage> {
     controller.dispose();
 
     if (nextName == null) return;
-    await PreferencesService.setGuideDisplayName(nextName);
+    final normalized = nextName.trim().isEmpty ? null : nextName.trim();
+    await PreferencesService.setGuideDisplayName(normalized);
+    var syncFailed = false;
+    try {
+      await _guideService.saveDisplayName(normalized);
+    } catch (_) {
+      syncFailed = true;
+    }
     if (!mounted) return;
 
-    final normalized = nextName.trim().isEmpty ? null : nextName.trim();
     setState(() => _guideDisplayName = normalized);
     setModalState(() {});
+    if (syncFailed) {
+      showForestSnackBar(context, context.tr('quest.error.save_failed'));
+    }
   }
 
   void _appendGuideMessage(
@@ -1353,9 +1365,8 @@ class _HomePageState extends State<HomePage> {
       cleaned = cleaned.replaceFirst(pattern, '').trim();
     }
 
-    cleaned = cleaned
-        .replaceFirst(RegExp(r'^(?:改成|改为|改到|调整为|设为|为)'), '')
-        .trim();
+    cleaned =
+        cleaned.replaceFirst(RegExp(r'^(?:改成|改为|改到|调整为|设为|为)'), '').trim();
 
     final dueKeyword = RegExp(r'(?:截止时间?|到期时间?|截止|到期)').firstMatch(cleaned);
     if (dueKeyword != null) {
@@ -2246,7 +2257,8 @@ class _HomePageState extends State<HomePage> {
           taskTitle: nextTitle ?? target.title,
           action: 'sync_due_date',
           updatedTitle: nextTitle ?? '',
-          updatedDescription: hasDescriptionUpdate ? (nextDescription ?? '') : '',
+          updatedDescription:
+              hasDescriptionUpdate ? (nextDescription ?? '') : '',
           updatedXpReward: nextXp,
           subtasks: childTasks.map((item) => item.title).toList(),
         );

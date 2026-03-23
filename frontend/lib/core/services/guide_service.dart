@@ -468,6 +468,49 @@ class GuideService {
 
   final SupabaseClient _supabase;
 
+  String? _normalizeDisplayName(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    return trimmed;
+  }
+
+  Future<String?> resolveDisplayName({String? localFallback}) async {
+    final normalizedLocal = _normalizeDisplayName(localFallback);
+    final userId =
+        SupabaseAuthService.instance.getCurrentUserId()?.trim() ?? '';
+    if (userId.isEmpty) {
+      return normalizedLocal;
+    }
+
+    try {
+      final row = await _supabase
+          .from('guide_user_settings')
+          .upsert({
+            'user_id': userId,
+            if (normalizedLocal != null) 'display_name': normalizedLocal,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          }, onConflict: 'user_id')
+          .select('display_name')
+          .single();
+      final serverValue = _normalizeDisplayName(row['display_name'] as String?);
+      return serverValue ?? normalizedLocal;
+    } catch (_) {
+      return normalizedLocal;
+    }
+  }
+
+  Future<void> saveDisplayName(String? value) async {
+    final userId =
+        SupabaseAuthService.instance.getCurrentUserId()?.trim() ?? '';
+    if (userId.isEmpty) return;
+
+    await _supabase.from('guide_user_settings').upsert({
+      'user_id': userId,
+      'display_name': _normalizeDisplayName(value),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }, onConflict: 'user_id');
+  }
+
   Future<GuideBootstrapResult> bootstrap({String scene = 'home'}) async {
     final data = await _invoke('guide-bootstrap', body: {'scene': scene});
     return GuideBootstrapResult.fromMap(data);

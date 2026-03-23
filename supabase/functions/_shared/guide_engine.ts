@@ -7,10 +7,23 @@ import {
   type GuideSuggestedTask,
 } from "./guide_ai.ts";
 
+export type GuideDialogExtraPayload = {
+  channel?: string;
+  quick_actions?: string[];
+  suggested_task?: GuideSuggestedTask | null;
+};
+
+const DEFAULT_GUIDE_DISPLAY_NAME = "小忆";
+
 function toText(v: unknown) {
   if (typeof v === "string") return v.trim();
   if (v == null) return "";
   return String(v).trim();
+}
+
+function toRecord(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
 }
 
 function todayDateId() {
@@ -36,6 +49,17 @@ export async function ensureGuideSettings(supabase: any, userId: string) {
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function resolveGuideDisplayName(
+  supabase: any,
+  userId: string,
+  clientContext?: Record<string, unknown>,
+) {
+  const settings = await ensureGuideSettings(supabase, userId);
+  const settingsName = toText(settings?.display_name);
+  const clientName = toText(toRecord(clientContext).guide_name);
+  return settingsName || clientName || DEFAULT_GUIDE_DISPLAY_NAME;
 }
 
 function normalizeDailyEvent(row: Record<string, unknown>) {
@@ -227,6 +251,7 @@ export async function writeGuideDialogLog(
     role: "user" | "assistant" | "system";
     content: string;
     memoryRefs?: string[];
+    extraPayload?: GuideDialogExtraPayload;
   },
 ) {
   const payload = {
@@ -237,6 +262,7 @@ export async function writeGuideDialogLog(
     memory_refs: Array.isArray(input.memoryRefs)
       ? input.memoryRefs.slice(0, 80)
       : [],
+    ...(input.extraPayload ? { extra_payload: input.extraPayload } : {}),
   };
   if (!payload.content) return;
   try {
@@ -252,6 +278,8 @@ export async function buildGuideBootstrapPayload(
   scene: string,
 ) {
   const settings = await ensureGuideSettings(supabase, userId);
+  const guideDisplayName = toText(settings?.display_name) ||
+    DEFAULT_GUIDE_DISPLAY_NAME;
   const enabled = settings?.guide_enabled !== false;
   const memory = await gatherGuideMemoryBundle(supabase, userId, {
     scene,
@@ -267,6 +295,7 @@ export async function buildGuideBootstrapPayload(
       memory_refs: memory.memory_refs.slice(0, 80),
       trace_id: crypto.randomUUID(),
       behavior_signals: memory.behavior_signals.slice(0, 8),
+      guide_display_name: guideDisplayName,
     };
   }
 
@@ -287,7 +316,24 @@ export async function buildGuideBootstrapPayload(
     memory_refs: memory.memory_refs.slice(0, 80),
     trace_id: crypto.randomUUID(),
     behavior_signals: memory.behavior_signals.slice(0, 8),
+    guide_display_name: guideDisplayName,
   };
+}
+
+export function buildGuideAssistantExtraPayload(input: {
+  quickActions?: string[];
+  suggestedTask?: GuideSuggestedTask | null;
+  channel?: string;
+}): GuideDialogExtraPayload | undefined {
+  const quickActions = Array.isArray(input.quickActions)
+    ? input.quickActions.map((item) => toText(item)).filter(Boolean).slice(0, 3)
+    : [];
+  const payload: GuideDialogExtraPayload = {};
+  const channel = toText(input.channel);
+  if (channel) payload.channel = channel;
+  if (quickActions.length > 0) payload.quick_actions = quickActions;
+  if (input.suggestedTask) payload.suggested_task = input.suggestedTask;
+  return Object.keys(payload).length > 0 ? payload : undefined;
 }
 
 export async function buildGuideChatPayload(
@@ -297,10 +343,19 @@ export async function buildGuideChatPayload(
   message: string,
   clientContext?: Record<string, unknown>,
 ) {
+  const guideDisplayName = await resolveGuideDisplayName(
+    supabase,
+    userId,
+    clientContext,
+  );
+  const nextClientContext = {
+    ...toRecord(clientContext),
+    guide_name: guideDisplayName,
+  };
   const memory = await gatherGuideMemoryBundle(supabase, userId, {
     scene,
     userMessage: message,
-    clientContext,
+    clientContext: nextClientContext,
     maxRawItems: 60,
     maxPackedChars: 14000,
   });
@@ -320,6 +375,11 @@ export async function buildGuideChatPayload(
       role: "assistant",
       content: draft.reply,
       memoryRefs: memory.memory_refs,
+      extraPayload: buildGuideAssistantExtraPayload({
+        quickActions: draft.quick_actions,
+        suggestedTask: draft.suggested_task ?? null,
+        channel: scene === "wechat" ? "wechat" : "app",
+      }),
     }),
   ]);
 
@@ -328,6 +388,67 @@ export async function buildGuideChatPayload(
     quick_actions: draft.quick_actions,
     suggested_task: draft.suggested_task ?? null,
     memory_refs: memory.memory_refs.slice(0, 80),
+    guide_display_name: guideDisplayName,
+  };
+}
+
+export async function getLatestSuggestedTask(
+  supabase: any,
+  userId: string,
+  scene: string,
+): Promise<GuideSuggestedTask | null> {
+  const { data, error } = await supabase
+    .from("guide_dialog_logs")
+    .select("extra_payload,created_at")
+    .eq("user_id", userId)
+    .eq("scene", scene)
+    .eq("role", "assistant")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (error) throw error;
+
+  for (const row of data ?? []) {
+    const extraPayload = toRecord(
+      (row as Record<string, unknown>).extra_payload,
+    );
+    const rawTask = extraPayload.suggested_task;
+    if (rawTask) {
+      return normalizeSuggestedTask(rawTask);
+    }
+  }
+
+  return null;
+}
+
+export async function acceptLatestSuggestedTask(
+  supabase: any,
+  userId: string,
+  scene: string,
+) {
+  const suggestedTask = await getLatestSuggestedTask(supabase, userId, scene);
+  if (!suggestedTask) {
+    return {
+      accepted: false,
+      inserted_quest_id: null,
+      task: null,
+    };
+  }
+
+  const insertedQuestId = await insertQuestNodeWithFallbacks(supabase, {
+    user_id: userId,
+    parent_id: null,
+    title: suggestedTask.title,
+    quest_tier: suggestedTask.quest_tier,
+    sort_order: -Date.now(),
+    xp_reward: suggestedTask.xp_reward,
+    description: suggestedTask.description,
+  });
+
+  return {
+    accepted: true,
+    inserted_quest_id: insertedQuestId,
+    task: suggestedTask,
   };
 }
 
