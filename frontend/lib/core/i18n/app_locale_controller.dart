@@ -147,10 +147,7 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '现在更适合推进还是休息',
     'en': 'Push or rest right now'
   },
-  'guide.quick.generate_task': {
-    'zh': '把这句变成任务',
-    'en': 'Turn this into a task'
-  },
+  'guide.quick.generate_task': {'zh': '把这句变成任务', 'en': 'Turn this into a task'},
   'guide.quick.open_stats': {'zh': '帮我看统计', 'en': 'Open stats'},
   'guide.quick.view_weekly': {'zh': '看看这周怎么样', 'en': 'Show this week'},
   'guide.mode.generate_task': {'zh': '生成任务', 'en': 'Create Task'},
@@ -167,7 +164,8 @@ const Map<String, Map<String, String>> _localizedTexts =
   },
   'guide.examples.companion': {
     'zh': '不用把话说完整，先从最想说的那一块开始就行。',
-    'en': 'You do not need the full story. Start with the part you want to say first.',
+    'en':
+        'You do not need the full story. Start with the part you want to say first.',
   },
   'guide.input.hint': {
     'zh': '告诉{name}你现在的状态...',
@@ -478,6 +476,12 @@ const Map<String, Map<String, String>> _localizedTexts =
   },
   'shop.deleted': {'zh': '已删除', 'en': 'Deleted'},
   'shop.gold_balance': {'zh': '金币余额', 'en': 'Gold Balance'},
+  'shop.system_title': {'zh': '系统商城', 'en': 'System Shop'},
+  'shop.custom_title': {'zh': '自定义奖励', 'en': 'Custom Rewards'},
+  'shop.system_empty': {
+    'zh': '系统商品还没有上架，请稍后再来看看。',
+    'en': 'System rewards are not available yet. Please check back later.'
+  },
   'shop.empty': {
     'zh': '还没有上架自定义商品，先添加一个吧。',
     'en': 'No custom rewards yet. Add your first one.'

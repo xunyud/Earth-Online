@@ -6,6 +6,67 @@ import '../models/reward.dart';
 import '../models/inventory_item.dart';
 
 class RewardController extends ChangeNotifier {
+  static const Set<String> _supportedSystemRewardTitles = {
+    '听一首歌',
+    '散步二十分钟',
+    '看一集喜欢的内容',
+    '买一杯喜欢的饮料',
+    '躺平放空半小时',
+    '喝杯奶茶',
+    '点一份喜欢的小甜点',
+    '玩游戏一小时',
+  };
+  static const List<Map<String, Object>> _dailySystemRewardSeeds = [
+    {
+      'title': '听一首歌',
+      'description': '给自己几分钟，安静听完一首喜欢的歌。',
+      'cost': 1,
+      'icon': '🎵',
+    },
+    {
+      'title': '散步二十分钟',
+      'description': '暂时离开任务列表，去走一走换换脑子。',
+      'cost': 20,
+      'icon': '🚶',
+    },
+    {
+      'title': '看一集喜欢的内容',
+      'description': '看一集喜欢的剧、动画或视频。',
+      'cost': 30,
+      'icon': '📺',
+    },
+    {
+      'title': '买一杯喜欢的饮料',
+      'description': '用一杯喜欢的饮料犒劳一下自己。',
+      'cost': 35,
+      'icon': '🥤',
+    },
+    {
+      'title': '躺平放空半小时',
+      'description': '什么都不做，专心休息半小时。',
+      'cost': 40,
+      'icon': '🛋️',
+    },
+    {
+      'title': '喝杯奶茶',
+      'description': '买一杯奶茶，认真享受一下。',
+      'cost': 50,
+      'icon': '🧋',
+    },
+    {
+      'title': '点一份喜欢的小甜点',
+      'description': '来一份甜点，给努力一个具体回报。',
+      'cost': 60,
+      'icon': '🍰',
+    },
+    {
+      'title': '玩游戏一小时',
+      'description': '给自己一小时完整的娱乐时间。',
+      'cost': 80,
+      'icon': '🎮',
+    },
+  ];
+
   final SupabaseClient _supabase;
   final QuestController _questController;
 
@@ -78,6 +139,65 @@ class RewardController extends ChangeNotifier {
         effectValue == 'lava';
   }
 
+  static bool isSupportedSystemReward(Reward reward) {
+    if (!reward.isSystem) return true;
+    return _supportedSystemRewardTitles.contains(reward.title.trim());
+  }
+
+  static bool _isDailySystemShopReward(Reward reward) {
+    return _supportedSystemRewardTitles.contains(reward.title.trim()) &&
+        reward.effectType == null;
+  }
+
+  Future<List<Reward>> _fetchRewards(String userId) async {
+    final res = await _supabase
+        .from('rewards')
+        .select()
+        .eq('is_active', true)
+        .or('user_id.eq.$userId,is_system.eq.true,user_id.is.null');
+
+    return (res as List)
+        .whereType<Map>()
+        .map((e) => Reward.fromJson(e.cast<String, dynamic>()))
+        .where((r) => r.id.isNotEmpty && r.title.isNotEmpty)
+        .where((r) => !isDeprecatedSystemReward(r))
+        .where(isSupportedSystemReward)
+        .toList();
+  }
+
+  Future<bool> _ensureDailySystemRewardsFallback(
+    String userId,
+    List<Reward> rewards,
+  ) async {
+    final existingTitles = rewards.map((reward) => reward.title.trim()).toSet();
+    final missingPayloads = _dailySystemRewardSeeds
+        .where((seed) => !existingTitles.contains(seed['title'] as String))
+        .map(
+          (seed) => <String, dynamic>{
+            'user_id': userId,
+            'title': seed['title'],
+            'description': seed['description'],
+            'cost': seed['cost'],
+            'category': 'custom',
+            'icon': seed['icon'],
+            'is_system': false,
+            'is_active': true,
+          },
+        )
+        .toList();
+
+    if (missingPayloads.isEmpty) {
+      return false;
+    }
+
+    try {
+      await _supabase.from('rewards').insert(missingPayloads);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> loadRewards() async {
     _loading = true;
     notifyListeners();
@@ -89,21 +209,20 @@ class RewardController extends ChangeNotifier {
         return;
       }
 
-      final res = await _supabase
-          .from('rewards')
-          .select()
-          .eq('is_active', true)
-          .or('user_id.eq.$userId,is_system.eq.true,user_id.is.null');
-      final all = (res as List)
-          .whereType<Map>()
-          .map((e) => Reward.fromJson(e.cast<String, dynamic>()))
-          .where((r) => r.id.isNotEmpty && r.title.isNotEmpty)
-          .where((r) => !isDeprecatedSystemReward(r))
-          .toList();
+      var filteredRewards = await _fetchRewards(userId);
+      if (!filteredRewards.any(_isDailySystemShopReward)) {
+        final inserted =
+            await _ensureDailySystemRewardsFallback(userId, filteredRewards);
+        if (inserted) {
+          filteredRewards = await _fetchRewards(userId);
+        }
+      }
 
-      _systemRewards = all.where((r) => r.isSystem).toList()
+      _systemRewards = filteredRewards.where(_isDailySystemShopReward).toList()
         ..sort((a, b) => a.cost.compareTo(b.cost));
-      _customRewards = all.where((r) => !r.isSystem).toList()
+      _customRewards = filteredRewards
+          .where((r) => !_isDailySystemShopReward(r) && !r.isSystem)
+          .toList()
         ..sort((a, b) => a.cost.compareTo(b.cost));
     } catch (_) {
       _customRewards = [];

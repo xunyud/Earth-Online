@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -30,11 +32,14 @@ class _AddRewardDraft {
 
 class _RewardShopPageState extends State<RewardShopPage> {
   late final RewardController _controller;
+  late final PageController _pageController;
+  int _selectedTab = 0;
 
   @override
   void initState() {
     super.initState();
     _controller = RewardController(quest: widget.questController);
+    _pageController = PageController(initialPage: _selectedTab);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _controller.loadRewards();
       _controller.loadInventory();
@@ -43,6 +48,7 @@ class _RewardShopPageState extends State<RewardShopPage> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -431,72 +437,330 @@ class _RewardShopPageState extends State<RewardShopPage> {
     );
   }
 
-  Widget _buildCustomShopTab(QuestTheme theme, int gold) {
-    final items = _controller.customRewards;
-    if (items.isEmpty) {
-      return Center(
-        child: Text(
-          context.tr('shop.empty'),
-          style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-        ),
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 92),
-      itemBuilder: (context, i) {
-        final r = items[i];
-        final canBuy = gold >= r.cost;
-        final busy = _controller.isRedeeming(r.id);
-        final deleting = _controller.isDeleting(r.id);
-        return _buildRewardCard(
-          theme: theme,
-          reward: r,
-          subtitle: '${r.cost} ${context.tr('shop.gold_unit')}',
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton(
-                onPressed:
-                    (!canBuy || busy || deleting) ? null : () => _redeem(r),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      canBuy ? theme.primaryAccentColor : AppColors.textHint,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+  Future<void> _openTab(int index) async {
+    if (_selectedTab == index) return;
+    setState(() => _selectedTab = index);
+    await _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Widget _buildShopSwitcher(QuestTheme theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            height: 56,
+            decoration: BoxDecoration(
+              color: theme.surfaceColor.withAlpha(120),
+              borderRadius: BorderRadius.zero,
+              border: Border.all(
+                color: Colors.black.withAlpha(22),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildSwitchCard(
+                    theme: theme,
+                    index: 0,
+                    title: context.tr('shop.system_title'),
+                    icon: Icons.storefront_rounded,
                   ),
                 ),
-                child: busy
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : Text(context.tr('shop.buy_btn')),
+                Container(
+                  width: 1,
+                  color: Colors.black.withAlpha(18),
+                ),
+                Expanded(
+                  child: _buildSwitchCard(
+                    theme: theme,
+                    index: 1,
+                    title: context.tr('shop.custom_title'),
+                    icon: Icons.edit_note_rounded,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSwitchCard({
+    required QuestTheme theme,
+    required int index,
+    required String title,
+    required IconData icon,
+  }) {
+    final selected = _selectedTab == index;
+    final selectedGlow = Colors.white.withAlpha(28);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.zero,
+        onTap: () => _openTab(index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white.withAlpha(16) : Colors.transparent,
+            borderRadius: BorderRadius.zero,
+            boxShadow: [
+              if (selected)
+                BoxShadow(
+                  color: selectedGlow,
+                  blurRadius: 16,
+                  spreadRadius: 1,
+                ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color:
+                    selected ? AppColors.textPrimary : AppColors.textSecondary,
+                size: 16,
               ),
               const SizedBox(width: 8),
-              IconButton(
-                onPressed: deleting ? null : () => _deleteReward(r),
-                icon: deleting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(
-                        Icons.delete_outline_rounded,
-                        color: Colors.redAccent,
-                      ),
+              Flexible(
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 180),
+                  style: AppTextStyles.heading2.copyWith(
+                    fontSize: 13,
+                    fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                    color: selected
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                    letterSpacing: 0.2,
+                  ),
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ),
             ],
           ),
-        );
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSystemShopPage(QuestTheme theme, int gold) {
+    final items = _controller.systemRewards;
+    return _buildShopPageContainer(
+      theme: theme,
+      child: items.isEmpty
+          ? _buildEmptyState(context.tr('shop.system_empty'))
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              itemBuilder: (context, i) {
+                final r = items[i];
+                final canBuy = gold >= r.cost;
+                final busy = _controller.isRedeeming(r.id);
+                return _buildRewardCard(
+                  theme: theme,
+                  reward: r,
+                  subtitle: _buildRewardSubtitle(r),
+                  trailing: _buildSystemRewardActions(theme, r, busy, canBuy),
+                );
+              },
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemCount: items.length,
+            ),
+    );
+  }
+
+  Widget _buildCustomShopPage(QuestTheme theme, int gold) {
+    final items = _controller.customRewards;
+    return _buildShopPageContainer(
+      theme: theme,
+      child: items.isEmpty
+          ? _buildEmptyState(context.tr('shop.empty'))
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 92),
+              itemBuilder: (context, i) {
+                final r = items[i];
+                final canBuy = gold >= r.cost;
+                final busy = _controller.isRedeeming(r.id);
+                final deleting = _controller.isDeleting(r.id);
+                return _buildRewardCard(
+                  theme: theme,
+                  reward: r,
+                  subtitle: '${r.cost} ${context.tr('shop.gold_unit')}',
+                  trailing: _buildCustomRewardActions(
+                    theme,
+                    r,
+                    canBuy,
+                    busy,
+                    deleting,
+                  ),
+                );
+              },
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemCount: items.length,
+            ),
+    );
+  }
+
+  Widget _buildShopPageContainer({
+    required QuestTheme theme,
+    required Widget child,
+  }) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      decoration: BoxDecoration(
+        color: theme.surfaceColor.withAlpha(230),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.shadowColor),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSystemRewardActions(
+    QuestTheme theme,
+    Reward reward,
+    bool busy,
+    bool canBuy,
+  ) {
+    return ElevatedButton(
+      onPressed: (!canBuy || busy) ? null : () => _redeem(reward),
+      style: _buildRedeemButtonStyle(theme, canBuy: canBuy),
+      child: busy
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+          : Text(context.tr('shop.buy_btn')),
+    );
+  }
+
+  Widget _buildCustomRewardActions(
+    QuestTheme theme,
+    Reward reward,
+    bool canBuy,
+    bool busy,
+    bool deleting,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ElevatedButton(
+          onPressed:
+              (!canBuy || busy || deleting) ? null : () => _redeem(reward),
+          style: _buildRedeemButtonStyle(theme, canBuy: canBuy),
+          child: busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Text(context.tr('shop.buy_btn')),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          onPressed: deleting ? null : () => _deleteReward(reward),
+          icon: deleting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.redAccent,
+                ),
+        ),
+      ],
+    );
+  }
+
+  ButtonStyle _buildRedeemButtonStyle(
+    QuestTheme theme, {
+    required bool canBuy,
+  }) {
+    final activeColor = Color.alphaBlend(
+      Colors.white.withAlpha(34),
+      theme.primaryAccentColor,
+    );
+    return ElevatedButton.styleFrom(
+      backgroundColor: activeColor,
+      foregroundColor: Colors.white,
+      disabledBackgroundColor: AppColors.softBlue.withAlpha(90),
+      disabledForegroundColor: AppColors.textSecondary,
+      elevation: canBuy ? 0 : 0,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      textStyle: AppTextStyles.caption.copyWith(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+
+  String _buildRewardSubtitle(Reward reward) {
+    final price = '${reward.cost} ${context.tr('shop.gold_unit')}';
+    final description = reward.description?.trim();
+    if (description == null || description.isEmpty) {
+      return price;
+    }
+    return '$description\n$price';
+  }
+
+  Widget _buildShopContent(QuestTheme theme, int gold) {
+    return PageView(
+      controller: _pageController,
+      physics: const BouncingScrollPhysics(),
+      onPageChanged: (index) {
+        if (_selectedTab == index) return;
+        setState(() => _selectedTab = index);
       },
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemCount: items.length,
+      children: [
+        _buildSystemShopPage(theme, gold),
+        _buildCustomShopPage(theme, gold),
+      ],
     );
   }
 
@@ -555,8 +819,7 @@ class _RewardShopPageState extends State<RewardShopPage> {
         elevation: 0,
         title: Text(
           context.tr('shop.title'),
-          style:
-              AppTextStyles.heading1.copyWith(color: theme.primaryAccentColor),
+          style: AppTextStyles.heading1.copyWith(color: AppColors.textPrimary),
         ),
         actions: [
           IconButton(
@@ -578,33 +841,37 @@ class _RewardShopPageState extends State<RewardShopPage> {
           const SizedBox(width: 6),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: theme.primaryAccentColor,
-        foregroundColor: Colors.white,
-        tooltip: context.tr('shop.add_reward'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        onPressed: _openAddReward,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: Text(
-          context.tr('shop.add_reward'),
-          style: AppTextStyles.body.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
+      floatingActionButton: _selectedTab == 1
+          ? FloatingActionButton.extended(
+              backgroundColor: theme.primaryAccentColor,
+              foregroundColor: Colors.white,
+              tooltip: context.tr('shop.add_reward'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              onPressed: _openAddReward,
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: Text(
+                context.tr('shop.add_reward'),
+                style: AppTextStyles.body.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            )
+          : null,
       body: AnimatedBuilder(
         animation: Listenable.merge([_controller, widget.questController]),
         builder: (context, _) {
           final gold = widget.questController.currentGold;
-
           return Column(
             children: [
               _buildBalanceCard(theme, gold),
+              _buildShopSwitcher(theme),
               Expanded(
                 child: _controller.isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : _buildCustomShopTab(theme, gold),
+                    : _buildShopContent(theme, gold),
               ),
             ],
           );
