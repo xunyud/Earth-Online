@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_text_styles.dart';
+import '../../core/i18n/app_locale_controller.dart';
 import '../../core/theme/quest_theme.dart';
 import 'quest_dialog_shell.dart';
 
@@ -18,10 +19,13 @@ Future<bool> showConfirmDialog(
   BuildContext context, {
   required String title,
   required String message,
-  String confirmText = '确认',
-  String cancelText = '取消',
+  String? confirmText,
+  String? cancelText,
   bool danger = false,
 }) async {
+  final resolvedConfirmText = confirmText ?? context.tr('common.confirm');
+  final resolvedCancelText = cancelText ?? context.tr('common.cancel');
+
   final result = await showQuestDialog<bool>(
     context: context,
     barrierLabel: 'confirm_dialog',
@@ -40,11 +44,11 @@ Future<bool> showConfirmDialog(
         onClose: () => Navigator.pop(dialogContext, false),
         actions: [
           QuestDialogSecondaryButton(
-            label: cancelText,
+            label: resolvedCancelText,
             onPressed: () => Navigator.pop(dialogContext, false),
           ),
           QuestDialogPrimaryButton(
-            label: confirmText,
+            label: resolvedConfirmText,
             danger: danger,
             onPressed: () => Navigator.pop(dialogContext, true),
           ),
@@ -71,8 +75,10 @@ Future<ConfirmDialogResult> showConfirmWithDontAskDialog(
   BuildContext context, {
   required String title,
   required String message,
-  String dontAskLabel = '下次不再提醒',
+  String? dontAskLabel,
 }) async {
+  final resolvedDontAskLabel =
+      dontAskLabel ?? context.tr('confirm_dialog.dont_ask');
   var dontAskAgain = false;
 
   final res = await showQuestDialog<bool>(
@@ -91,11 +97,11 @@ Future<ConfirmDialogResult> showConfirmWithDontAskDialog(
           onClose: () => Navigator.pop(dialogContext, false),
           actions: [
             QuestDialogSecondaryButton(
-              label: '取消',
+              label: context.tr('common.cancel'),
               onPressed: () => Navigator.pop(dialogContext, false),
             ),
             QuestDialogPrimaryButton(
-              label: '确认',
+              label: context.tr('common.confirm'),
               onPressed: () => Navigator.pop(dialogContext, true),
             ),
           ],
@@ -126,7 +132,7 @@ Future<ConfirmDialogResult> showConfirmWithDontAskDialog(
                     ),
                     Expanded(
                       child: Text(
-                        dontAskLabel,
+                        resolvedDontAskLabel,
                         style: AppTextStyles.body.copyWith(
                           fontSize: 15,
                           color: const Color(0xFF39463B),

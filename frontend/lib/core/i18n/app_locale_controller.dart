@@ -432,6 +432,194 @@ const Map<String, Map<String, String>> _localizedTexts =
     'en': 'Are you sure you want to sign out?'
   },
   'drawer.logout.confirm': {'zh': '退出', 'en': 'Sign Out'},
+  'diary.title': {'zh': '人生日记', 'en': 'Life Diary'},
+  'diary.load_failed': {'zh': '加载失败', 'en': 'Load Failed'},
+  'diary.completed_count': {
+    'zh': '完成了 {count} 项任务',
+    'en': 'Completed {count} quests'
+  },
+  'diary.weekly.tooltip_idle': {
+    'zh': '📜 召唤村长周报',
+    'en': '📜 Generate Weekly Report'
+  },
+  'diary.weekly.tooltip_running': {
+    'zh': '📜 周报生成中',
+    'en': '📜 Weekly Report Running'
+  },
+  'diary.weekly.not_logged_in': {
+    'zh': '未登录，无法召唤周报',
+    'en': 'Sign in to generate a weekly report.'
+  },
+  'diary.weekly.queued': {
+    'zh': '周报已加入生成队列，你可以先去别处逛逛，完成后我会弹窗提醒你。',
+    'en':
+        'Your weekly report is queued. Feel free to leave this page and I will alert you when it is ready.'
+  },
+  'diary.weekly.ready_now': {
+    'zh': '刚刚的周报已经生成完成，你现在可以直接查看。',
+    'en': 'Your latest weekly report is already ready to view.'
+  },
+  'diary.weekly.failed': {
+    'zh': '召唤失败：{error}',
+    'en': 'Failed to start weekly report: {error}'
+  },
+  'diary.weekly.card_title': {'zh': '村长的信', 'en': 'Village Chief Letter'},
+  'diary.push_wechat.tooltip': {
+    'zh': '📩 推送周报到微信',
+    'en': '📩 Push Report to WeChat'
+  },
+  'diary.push_wechat.not_logged_in': {
+    'zh': '未登录，无法推送',
+    'en': 'Sign in to push the report.'
+  },
+  'diary.push_wechat.empty': {
+    'zh': '暂无可推送内容',
+    'en': 'No report is available to push yet.'
+  },
+  'diary.push_wechat.success': {
+    'zh': '📩 周报已推送到微信！',
+    'en': '📩 Weekly report pushed to WeChat!'
+  },
+  'diary.push_wechat.failed': {
+    'zh': '推送失败：{error}',
+    'en': 'Failed to push report: {error}'
+  },
+  'weekly.summary.ready_title': {'zh': '本周周报已生成', 'en': 'Weekly Report Ready'},
+  'weekly.summary.failed_title': {
+    'zh': '本周周报生成失败',
+    'en': 'Weekly Report Failed'
+  },
+  'weekly.summary.ready_body': {
+    'zh': '村长已经写完本周周报，你现在可以直接去查看。',
+    'en':
+        "Your village chief has finished this week's report. You can open it now."
+  },
+  'weekly.summary.failed_body': {
+    'zh': '这次周报没有顺利生成，请稍后再试一次。',
+    'en':
+        'This weekly report did not finish successfully. Please try again later.'
+  },
+  'weekly.summary.later': {'zh': '稍后再看', 'en': 'Later'},
+  'weekly.summary.acknowledge': {'zh': '知道了', 'en': 'OK'},
+  'weekly.summary.open_now': {'zh': '查看周报', 'en': 'Open Report'},
+  'confirm_dialog.dont_ask': {
+    'zh': '下次不再提醒',
+    'en': 'Skip this reminder next time'
+  },
+  'quick_add.hint': {
+    'zh': '输入任务情报 (例如: "筹备下周会议...")',
+    'en':
+        "Enter quest details (for example: \"Prepare next week's meeting...\")"
+  },
+  'achievement.page_title': {'zh': '成就殿堂', 'en': 'Achievements'},
+  'achievement.category.quest': {'zh': '任务成就', 'en': 'Quest Achievements'},
+  'achievement.category.streak': {'zh': '签到成就', 'en': 'Streak Achievements'},
+  'achievement.category.xp': {'zh': '经验成就', 'en': 'XP Achievements'},
+  'achievement.category.special': {'zh': '特殊成就', 'en': 'Special Achievements'},
+  'achievement.unlocked_progress': {
+    'zh': '已解锁 {unlocked} / {total}',
+    'en': 'Unlocked {unlocked} / {total}'
+  },
+  'achievement.empty_title': {
+    'zh': '成就系统加载中',
+    'en': 'Achievements are loading'
+  },
+  'achievement.empty_body': {
+    'zh': '完成任务和签到来解锁成就徽章',
+    'en': 'Complete quests and daily check-ins to unlock achievement badges'
+  },
+  'achievement.unlocked_badge': {'zh': '成就解锁', 'en': 'Achievement Unlocked'},
+  'achievement.detail_title': {'zh': '成就详情', 'en': 'Achievement Details'},
+  'achievement.status_label': {'zh': '状态', 'en': 'Status'},
+  'achievement.status_unlocked': {'zh': '已解锁', 'en': 'Unlocked'},
+  'achievement.status_locked': {'zh': '未解锁', 'en': 'Locked'},
+  'achievement.progress_label': {'zh': '当前进度', 'en': 'Progress'},
+  'achievement.target_label': {'zh': '目标', 'en': 'Target'},
+  'achievement.rule_label': {'zh': '规则说明', 'en': 'Rule'},
+  'achievement.unlocked_at_label': {'zh': '解锁时间', 'en': 'Unlocked At'},
+  'achievement.reward_label': {'zh': '解锁奖励', 'en': 'Reward'},
+  'achievement.acknowledge': {'zh': '我知道了', 'en': 'Got It'},
+  'achievement.progress.total_completed': {
+    'zh': '{current}/{target} 任务',
+    'en': '{current}/{target} quests'
+  },
+  'achievement.progress.streak': {
+    'zh': '{current}/{target} 天',
+    'en': '{current}/{target} days'
+  },
+  'achievement.progress.total_xp': {
+    'zh': '{current}/{target} XP',
+    'en': '{current}/{target} XP'
+  },
+  'achievement.progress.level': {
+    'zh': 'Lv.{current}/{target}',
+    'en': 'Lv.{current}/{target}'
+  },
+  'achievement.progress.board_clear': {
+    'zh': '{current}/{target} 次',
+    'en': '{current}/{target} times'
+  },
+  'achievement.progress.first_wechat': {
+    'zh': '{current}/{target} 次',
+    'en': '{current}/{target} times'
+  },
+  'achievement.target.total_completed': {
+    'zh': '目标：累计完成 {target} 个任务',
+    'en': 'Goal: complete {target} quests in total'
+  },
+  'achievement.target.streak': {
+    'zh': '目标：连续签到 {target} 天',
+    'en': 'Goal: keep a {target}-day streak'
+  },
+  'achievement.target.total_xp': {
+    'zh': '目标：累计获得 {target} XP',
+    'en': 'Goal: earn {target} XP in total'
+  },
+  'achievement.target.level': {
+    'zh': '目标：达到 {target} 级',
+    'en': 'Goal: reach level {target}'
+  },
+  'achievement.target.board_clear': {
+    'zh': '目标：首次清空任务面板',
+    'en': 'Goal: clear the quest board once'
+  },
+  'achievement.target.first_wechat': {
+    'zh': '目标：首次通过微信创建任务',
+    'en': 'Goal: create a quest from WeChat once'
+  },
+  'achievement.target.default': {
+    'zh': '目标：达到条件',
+    'en': 'Goal: meet the requirement'
+  },
+  'stats.title': {'zh': '数据统计', 'en': 'Stats'},
+  'stats.empty_title': {'zh': '还没有统计数据', 'en': 'No stats yet'},
+  'stats.empty_body': {
+    'zh': '完成任务后，这里会展示你的成长轨迹',
+    'en': 'Finish quests and this page will show your growth path'
+  },
+  'stats.highlight.weekly_completed': {'zh': '本周完成', 'en': 'This Week'},
+  'stats.highlight.total_xp': {'zh': '累计 XP', 'en': 'Total XP'},
+  'stats.highlight.longest_streak': {'zh': '最长连续', 'en': 'Longest Streak'},
+  'stats.highlight.best_day': {'zh': '最高效一天', 'en': 'Best Day'},
+  'stats.highlight.longest_streak_value': {
+    'zh': '{count}天',
+    'en': '{count} days'
+  },
+  'stats.highlight.best_day_value': {
+    'zh': '{count}个任务',
+    'en': '{count} quests'
+  },
+  'level.title.apprentice_villager': {
+    'zh': '见习村民',
+    'en': 'Apprentice Villager'
+  },
+  'level.title.junior_adventurer': {'zh': '初级冒险者', 'en': 'Junior Adventurer'},
+  'level.title.bronze_hero': {'zh': '青铜勇者', 'en': 'Bronze Hero'},
+  'level.title.silver_knight': {'zh': '白银骑士', 'en': 'Silver Knight'},
+  'level.title.golden_fighter': {'zh': '黄金斗士', 'en': 'Golden Fighter'},
+  'level.title.platinum_guardian': {'zh': '铂金守护者', 'en': 'Platinum Guardian'},
+  'level.title.legendary_champion': {'zh': '传奇王者', 'en': 'Legendary Champion'},
+  'level.title.star_traveler': {'zh': '星辰旅者', 'en': 'Star Traveler'},
   'shop.title': {'zh': '奖励商店', 'en': 'Reward Shop'},
   'shop.add_reward': {'zh': '添加奖励', 'en': 'Add Reward'},
   'shop.add_hint': {

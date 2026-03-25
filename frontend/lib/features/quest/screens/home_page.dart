@@ -3416,7 +3416,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Lv.${statsLevel.level} ${statsLevel.title}',
+                                'Lv.${statsLevel.level} ${context.tr(statsLevel.title)}',
                                 style: AppTextStyles.caption,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

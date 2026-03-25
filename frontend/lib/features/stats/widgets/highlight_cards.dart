@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/quest_theme.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
+import '../../../core/theme/quest_theme.dart';
 import '../models/stats_data.dart';
 
-/// 亮点数据横向滚动卡片
 class HighlightCards extends StatelessWidget {
   final HighlightData data;
 
@@ -17,34 +18,40 @@ class HighlightCards extends StatelessWidget {
     final cards = <_CardInfo>[
       _CardInfo(
         icon: Icons.check_circle_outline_rounded,
-        label: '本周完成',
+        label: context.tr('stats.highlight.weekly_completed'),
         value: '${data.weeklyCompleted}',
         color: theme.mainQuestColor,
       ),
       _CardInfo(
         icon: Icons.star_rounded,
-        label: '累计 XP',
+        label: context.tr('stats.highlight.total_xp'),
         value: _formatXp(data.totalXp),
         color: const Color(0xFFFFB74D),
       ),
       _CardInfo(
         icon: Icons.shield_rounded,
-        label: 'Lv.${data.currentLevel}',
-        value: data.levelTitle,
+        label: '${context.tr('home.level_label')} ${data.currentLevel}',
+        value: context.tr(data.levelTitle),
         color: theme.primaryAccentColor,
       ),
       _CardInfo(
         icon: Icons.local_fire_department_rounded,
-        label: '最长连续',
-        value: '${data.longestStreak}天',
+        label: context.tr('stats.highlight.longest_streak'),
+        value: context.tr(
+          'stats.highlight.longest_streak_value',
+          params: {'count': '${data.longestStreak}'},
+        ),
         color: Colors.deepOrange,
       ),
       _CardInfo(
         icon: Icons.emoji_events_rounded,
-        label: '最高效一天',
+        label: context.tr('stats.highlight.best_day'),
         value: data.bestDayCount > 0
-            ? '${data.bestDayCount}个任务'
-            : '—',
+            ? context.tr(
+                'stats.highlight.best_day_value',
+                params: {'count': '${data.bestDayCount}'},
+              )
+            : '--',
         color: theme.sideQuestColor,
       ),
     ];
@@ -57,9 +64,9 @@ class HighlightCards extends StatelessWidget {
         itemCount: cards.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          final c = cards[index];
+          final card = cards[index];
           return _HighlightCard(
-            info: c,
+            info: card,
             surfaceColor: theme.surfaceColor,
           );
         },

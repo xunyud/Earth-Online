@@ -21,6 +21,16 @@ entrypoint = "./functions/weekly-summary/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/weekly-summary/*.html" ]
 
+[functions.weekly-summary-enqueue]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/weekly-summary-enqueue/index.ts"
+
+[functions.weekly-summary-job]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/weekly-summary-job/index.ts"
+
 [functions.sync-user-memory]
 enabled = true
 verify_jwt = false

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/quest_theme.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
+import '../../../core/theme/quest_theme.dart';
 import '../controllers/achievement_controller.dart';
 import '../widgets/achievement_card.dart';
 
-/// 成就列表页面
-/// 按分类展示所有成就，已解锁的排在前面
 class AchievementPage extends StatefulWidget {
   final AchievementController achievementController;
 
@@ -20,6 +20,31 @@ class AchievementPage extends StatefulWidget {
 }
 
 class _AchievementPageState extends State<AchievementPage> {
+  static const _categoryMeta = <String, (String, IconData, Color)>{
+    'quest': (
+      'achievement.category.quest',
+      Icons.assignment_rounded,
+      Color(0xFF66BB6A),
+    ),
+    'streak': (
+      'achievement.category.streak',
+      Icons.local_fire_department_rounded,
+      Color(0xFFFFA726),
+    ),
+    'xp': (
+      'achievement.category.xp',
+      Icons.trending_up_rounded,
+      Color(0xFF42A5F5),
+    ),
+    'special': (
+      'achievement.category.special',
+      Icons.stars_rounded,
+      Color(0xFF2E7D32),
+    ),
+  };
+
+  static const _categoryOrder = ['quest', 'streak', 'xp', 'special'];
+
   @override
   void initState() {
     super.initState();
@@ -28,16 +53,6 @@ class _AchievementPageState extends State<AchievementPage> {
       widget.achievementController.loadAll();
     });
   }
-
-  // 分类元数据：(显示名, 图标, 颜色)
-  static const _categoryMeta = <String, (String, IconData, Color)>{
-    'quest': ('任务成就', Icons.assignment_rounded, Color(0xFF66BB6A)),
-    'streak': ('签到成就', Icons.local_fire_department_rounded, Color(0xFFFFA726)),
-    'xp': ('经验成就', Icons.trending_up_rounded, Color(0xFF42A5F5)),
-    'special': ('特殊成就', Icons.stars_rounded, Color(0xFF2E7D32)),
-  };
-
-  static const _categoryOrder = ['quest', 'streak', 'xp', 'special'];
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +69,7 @@ class _AchievementPageState extends State<AchievementPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          '成就殿堂',
+          context.tr('achievement.page_title'),
           style: AppTextStyles.heading1.copyWith(
             color: theme.primaryAccentColor,
           ),
@@ -76,28 +91,36 @@ class _AchievementPageState extends State<AchievementPage> {
           }
 
           if (ctrl.achievements.isEmpty) {
-            return _buildEmptyState(theme);
+            return _buildEmptyState(context, theme);
           }
 
-          return _buildContent(ctrl, theme);
+          return _buildContent(context, ctrl, theme);
         },
       ),
     );
   }
 
-  Widget _buildContent(AchievementController ctrl, QuestTheme theme) {
-    // 统计解锁数
+  Widget _buildContent(
+    BuildContext context,
+    AchievementController ctrl,
+    QuestTheme theme,
+  ) {
     final total = ctrl.achievements.length;
     final unlocked = ctrl.achievements.where((a) => a.isUnlocked).length;
 
     final sections = <Widget>[
-      // 顶部进度概览
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: Row(
           children: [
             Text(
-              '已解锁 $unlocked / $total',
+              context.tr(
+                'achievement.unlocked_progress',
+                params: {
+                  'unlocked': '$unlocked',
+                  'total': '$total',
+                },
+              ),
               style: AppTextStyles.caption.copyWith(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -123,14 +146,12 @@ class _AchievementPageState extends State<AchievementPage> {
       ),
     ];
 
-    // 按分类渲染
     for (final cat in _categoryOrder) {
       final meta = _categoryMeta[cat];
       if (meta == null) continue;
       final items = ctrl.achievementsByCategory(cat);
       if (items.isEmpty) continue;
 
-      // 已解锁的排在前面
       items.sort((a, b) {
         if (a.isUnlocked && !b.isUnlocked) return -1;
         if (!a.isUnlocked && b.isUnlocked) return 1;
@@ -145,7 +166,7 @@ class _AchievementPageState extends State<AchievementPage> {
               Icon(meta.$2, size: 18, color: meta.$3),
               const SizedBox(width: 6),
               Text(
-                meta.$1,
+                context.tr(meta.$1),
                 style: AppTextStyles.heading2.copyWith(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
@@ -176,7 +197,7 @@ class _AchievementPageState extends State<AchievementPage> {
     );
   }
 
-  Widget _buildEmptyState(QuestTheme theme) {
+  Widget _buildEmptyState(BuildContext context, QuestTheme theme) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -190,14 +211,14 @@ class _AchievementPageState extends State<AchievementPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '成就系统加载中',
+              context.tr('achievement.empty_title'),
               style: AppTextStyles.heading2.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              '完成任务和签到来解锁成就徽章',
+              context.tr('achievement.empty_body'),
               style: AppTextStyles.caption.copyWith(
                 color: AppColors.textHint,
               ),

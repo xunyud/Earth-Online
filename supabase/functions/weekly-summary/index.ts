@@ -1,4 +1,3 @@
-import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { EverMemOSClient } from "../_shared/evermemos_client.ts"
 

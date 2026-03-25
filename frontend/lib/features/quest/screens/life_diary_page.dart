@@ -4,8 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../../../core/theme/quest_theme.dart';
 import '../models/quest_node.dart';
+import '../services/weekly_summary_job_service.dart';
 
 class LifeDiaryPage extends StatefulWidget {
   const LifeDiaryPage({super.key});
@@ -16,6 +18,8 @@ class LifeDiaryPage extends StatefulWidget {
 
 class _LifeDiaryPageState extends State<LifeDiaryPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final WeeklySummaryJobService _weeklySummaryService =
+      WeeklySummaryJobService.instance;
 
   bool _loading = true;
   bool _summoningWeekly = false;
@@ -149,7 +153,7 @@ class _LifeDiaryPageState extends State<LifeDiaryPage> {
     if (_summoningWeekly) return;
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) {
-      _toast('未登录，无法召唤周报');
+      _toast(context.tr('diary.weekly.not_logged_in'));
       return;
     }
 
@@ -157,66 +161,29 @@ class _LifeDiaryPageState extends State<LifeDiaryPage> {
       _summoningWeekly = true;
     });
 
-    var dialogOpen = true;
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      useRootNavigator: true,
-      builder: (context) => AlertDialog(
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2.4),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                '村长正在翻阅你的卷宗，奋笔疾书中...',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
     try {
-      final response = await _supabase.functions.invoke('weekly-summary',
-          body: {'user_id': userId}).timeout(const Duration(seconds: 45));
-      final data = response.data;
-      final ok = data is Map && data['success'] == true;
-      if (!ok) {
-        final reason =
-            data is Map ? (data['error']?.toString() ?? 'unknown') : 'unknown';
-        throw Exception(reason);
+      final job = await _weeklySummaryService.enqueue();
+      if (job == null) {
+        _toast(context.tr('diary.weekly.not_logged_in'));
+        return;
       }
-
-      if (mounted && dialogOpen) {
-        Navigator.of(context, rootNavigator: true).pop();
-        dialogOpen = false;
-      }
-      _toast('🎉 村长的信件已送达！', background: Colors.green.shade700);
-      await _load();
+      final message = job.isActive
+          ? context.tr('diary.weekly.queued')
+          : context.tr('diary.weekly.ready_now');
+      _toast(message, background: Colors.green.shade700);
     } catch (e) {
-      if (mounted && dialogOpen) {
-        Navigator.of(context, rootNavigator: true).pop();
-        dialogOpen = false;
-      }
-      // 从 FunctionException 中提取后端返回的实际错误信息
       String errorMsg;
       if (e is FunctionException) {
         final details = e.details;
         if (details is Map && details['error'] != null) {
           errorMsg = details['error'].toString();
         } else {
-          errorMsg = e.reasonPhrase ?? '未知错误 (${e.status})';
+          errorMsg = e.reasonPhrase ?? 'Unknown error (${e.status})';
         }
       } else {
         errorMsg = e.toString();
       }
-      _toast('召唤失败：$errorMsg');
+      _toast(context.tr('diary.weekly.failed', params: {'error': errorMsg}));
     } finally {
       if (mounted) {
         setState(() {
@@ -231,29 +198,33 @@ class _LifeDiaryPageState extends State<LifeDiaryPage> {
     if (_pushingToWechat) return;
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) {
-      _toast('未登录，无法推送');
+      _toast(context.tr('diary.push_wechat.not_logged_in'));
       return;
     }
 
     setState(() => _pushingToWechat = true);
 
     try {
-      final response = await _supabase.functions
-          .invoke('weekly-report-push', body: {'user_id': userId})
-          .timeout(const Duration(seconds: 60));
+      final response = await _supabase.functions.invoke('weekly-report-push',
+          body: {'user_id': userId}).timeout(const Duration(seconds: 60));
       final data = response.data;
       final ok = data is Map && data['success'] == true;
       final pushed = data is Map ? (data['pushed'] ?? 0) : 0;
       if (!ok) {
-        final reason =
-            data is Map ? (data['error']?.toString() ?? '未知错误') : '未知错误';
+        final reason = data is Map
+            ? (data['error']?.toString() ?? 'Unknown error')
+            : 'Unknown error';
         throw Exception(reason);
       }
       if (pushed == 0) {
-        final msg = (data['message']?.toString() ?? '暂无可推送内容');
+        final msg = (data['message']?.toString() ??
+            context.tr('diary.push_wechat.empty'));
         _toast(msg);
       } else {
-        _toast('📩 周报已推送到微信！', background: Colors.green.shade700);
+        _toast(
+          context.tr('diary.push_wechat.success'),
+          background: Colors.green.shade700,
+        );
       }
     } catch (e) {
       String errorMsg;
@@ -262,12 +233,14 @@ class _LifeDiaryPageState extends State<LifeDiaryPage> {
         if (details is Map && details['error'] != null) {
           errorMsg = details['error'].toString();
         } else {
-          errorMsg = e.reasonPhrase ?? '未知错误 (${e.status})';
+          errorMsg = e.reasonPhrase ?? 'Unknown error (${e.status})';
         }
       } else {
         errorMsg = e.toString();
       }
-      _toast('推送失败：$errorMsg');
+      _toast(
+        context.tr('diary.push_wechat.failed', params: {'error': errorMsg}),
+      );
     } finally {
       if (mounted) setState(() => _pushingToWechat = false);
     }
@@ -283,19 +256,37 @@ class _LifeDiaryPageState extends State<LifeDiaryPage> {
         elevation: 0,
         backgroundColor: Colors.transparent,
         title: Text(
-          '人生日记',
+          context.tr('diary.title'),
           style:
               AppTextStyles.heading1.copyWith(color: theme.primaryAccentColor),
         ),
         actions: [
-          IconButton(
-            tooltip: '📜 召唤村长周报',
-            onPressed: _summoningWeekly ? null : _summonWeeklySummary,
-            icon: const Icon(Icons.auto_stories_rounded),
-            color: theme.primaryAccentColor,
+          AnimatedBuilder(
+            animation: _weeklySummaryService,
+            builder: (context, _) {
+              final isBusy =
+                  _summoningWeekly || _weeklySummaryService.hasActiveJob;
+              return IconButton(
+                tooltip: isBusy
+                    ? context.tr('diary.weekly.tooltip_running')
+                    : context.tr('diary.weekly.tooltip_idle'),
+                onPressed: isBusy ? null : _summonWeeklySummary,
+                icon: isBusy
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.primaryAccentColor,
+                        ),
+                      )
+                    : const Icon(Icons.auto_stories_rounded),
+                color: theme.primaryAccentColor,
+              );
+            },
           ),
           IconButton(
-            tooltip: '📩 推送周报到微信',
+            tooltip: context.tr('diary.push_wechat.tooltip'),
             onPressed: _pushingToWechat ? null : _pushToWechat,
             icon: _pushingToWechat
                 ? SizedBox(
@@ -326,8 +317,8 @@ class _LifeDiaryPageState extends State<LifeDiaryPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          '加载失败',
+                        Text(
+                          context.tr('diary.load_failed'),
                           style: AppTextStyles.heading2,
                         ),
                         const SizedBox(height: 8),
@@ -338,7 +329,10 @@ class _LifeDiaryPageState extends State<LifeDiaryPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: theme.primaryAccentColor,
                           ),
-                          child: const Text('重试', style: AppTextStyles.button),
+                          child: Text(
+                            context.tr('common.retry'),
+                            style: AppTextStyles.button,
+                          ),
                         ),
                       ],
                     ),
@@ -417,7 +411,10 @@ class _DiaryDayCard extends StatelessWidget {
               ],
               const Spacer(),
               Text(
-                '完成了 ${day.completedCount} 项任务',
+                context.tr(
+                  'diary.completed_count',
+                  params: {'count': '${day.completedCount}'},
+                ),
                 style:
                     AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700),
               ),
@@ -481,8 +478,7 @@ class _DiaryDayCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.auto_awesome_rounded,
-              color: Colors.amber, size: 18),
+          const Icon(Icons.auto_awesome_rounded, color: Colors.amber, size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -513,7 +509,7 @@ class _DiaryDayCard extends StatelessWidget {
                   color: theme.primaryAccentColor, size: 18),
               const SizedBox(width: 8),
               Text(
-                '村长的信',
+                AppLocaleController.instance.t('diary.weekly.card_title'),
                 style: AppTextStyles.caption.copyWith(
                   fontWeight: FontWeight.w700,
                   color: theme.primaryAccentColor,
@@ -529,8 +525,8 @@ class _DiaryDayCard extends StatelessWidget {
               p: AppTextStyles.body.copyWith(fontSize: 14, height: 1.6),
               h1: AppTextStyles.heading1.copyWith(fontSize: 18),
               h2: AppTextStyles.heading2.copyWith(fontSize: 16),
-              h3: AppTextStyles.heading2.copyWith(
-                  fontSize: 15, fontWeight: FontWeight.w600),
+              h3: AppTextStyles.heading2
+                  .copyWith(fontSize: 15, fontWeight: FontWeight.w600),
               listBullet: AppTextStyles.body.copyWith(fontSize: 14),
               blockquote: AppTextStyles.body.copyWith(
                 fontSize: 14,

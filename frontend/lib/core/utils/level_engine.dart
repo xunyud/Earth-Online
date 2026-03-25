@@ -42,14 +42,13 @@ class LevelEngine {
   }
 
   static String _titleForLevel(int level) {
-    if (level <= 5) return '见习村民';
-    if (level <= 10) return '初级冒险者';
-    if (level <= 20) return '青铜勇者';
-    if (level <= 35) return '白银骑士';
-    if (level <= 50) return '黄金斗士';
-    if (level <= 70) return '铂金守护者';
-    if (level <= 100) return '传奇王者';
-    return '星辰旅者';
+    if (level <= 5) return 'level.title.apprentice_villager';
+    if (level <= 10) return 'level.title.junior_adventurer';
+    if (level <= 20) return 'level.title.bronze_hero';
+    if (level <= 35) return 'level.title.silver_knight';
+    if (level <= 50) return 'level.title.golden_fighter';
+    if (level <= 70) return 'level.title.platinum_guardian';
+    if (level <= 100) return 'level.title.legendary_champion';
+    return 'level.title.star_traveler';
   }
 }
-

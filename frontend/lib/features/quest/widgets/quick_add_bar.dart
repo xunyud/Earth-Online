@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/quest_theme.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
+import '../../../core/theme/quest_theme.dart';
 
 class QuickAddBar extends StatefulWidget {
   final Function(String) onSubmitted;
@@ -71,7 +73,7 @@ class _QuickAddBarState extends State<QuickAddBar>
     return AnimatedBuilder(
       animation: _glowAnimation,
       builder: (context, _) {
-        final double glow = _isFocused ? _glowAnimation.value : 0.0;
+        final glow = _isFocused ? _glowAnimation.value : 0.0;
         return Container(
           margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
           decoration: BoxDecoration(
@@ -105,7 +107,7 @@ class _QuickAddBarState extends State<QuickAddBar>
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               children: [
                 Expanded(
@@ -115,15 +117,18 @@ class _QuickAddBarState extends State<QuickAddBar>
                     enabled: !widget.isLoading,
                     style: AppTextStyles.body,
                     decoration: InputDecoration(
-                      hintText: '输入任务情报 (例如: "筹备下周会议...")',
-                      hintStyle:
-                          AppTextStyles.caption.copyWith(color: AppColors.textHint),
+                      hintText: context.tr('quick_add.hint'),
+                      hintStyle: AppTextStyles.caption.copyWith(
+                        color: AppColors.textHint,
+                      ),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
                       filled: false,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
                     ),
                     onSubmitted: (_) => _handleSubmit(),
                   ),
@@ -146,14 +151,15 @@ class _QuickAddBarState extends State<QuickAddBar>
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                  theme.primaryAccentColor),
+                                theme.primaryAccentColor,
+                              ),
                             ),
                           )
                         : const Icon(Icons.arrow_upward_rounded),
                     color: widget.isLoading || _controller.text.isEmpty
                         ? AppColors.textHint
                         : AppColors.pureWhite,
-                    tooltip: 'Send',
+                    tooltip: context.tr('common.send'),
                   ),
                 ),
               ],

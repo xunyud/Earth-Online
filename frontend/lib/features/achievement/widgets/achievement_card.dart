@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/quest_theme.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
+import '../../../core/theme/quest_theme.dart';
 import '../models/achievement.dart';
 
 class AchievementCard extends StatelessWidget {
@@ -80,13 +82,14 @@ class AchievementCard extends StatelessWidget {
                     achievement.description,
                     style: AppTextStyles.caption.copyWith(
                       fontSize: 12,
-                      color:
-                          unlocked ? AppColors.textSecondary : AppColors.textHint,
+                      color: unlocked
+                          ? AppColors.textSecondary
+                          : AppColors.textHint,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _buildTargetText(),
+                    _buildTargetText(context),
                     style: AppTextStyles.caption.copyWith(
                       fontSize: 10,
                       color: AppColors.textHint,
@@ -95,7 +98,7 @@ class AchievementCard extends StatelessWidget {
                   if (achievement.xpBonus > 0 || achievement.goldBonus > 0) ...[
                     const SizedBox(height: 4),
                     Text(
-                      _buildRewardText(),
+                      _buildRewardText(context),
                       style: AppTextStyles.caption.copyWith(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -115,7 +118,7 @@ class AchievementCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
-                _buildProgressText(),
+                _buildProgressText(context),
                 style: AppTextStyles.caption.copyWith(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
@@ -139,51 +142,88 @@ class AchievementCard extends StatelessWidget {
     return current;
   }
 
-  String _buildProgressText() {
+  String _buildProgressText(BuildContext context) {
     final current = _displayProgress();
-    final target = achievement.conditionValue <= 0 ? 1 : achievement.conditionValue;
+    final target =
+        achievement.conditionValue <= 0 ? 1 : achievement.conditionValue;
     switch (achievement.conditionType) {
       case 'total_completed':
-        return '$current/$target 任务';
+        return context.tr(
+          'achievement.progress.total_completed',
+          params: {'current': '$current', 'target': '$target'},
+        );
       case 'streak':
-        return '$current/$target 天';
+        return context.tr(
+          'achievement.progress.streak',
+          params: {'current': '$current', 'target': '$target'},
+        );
       case 'total_xp':
-        return '$current/$target XP';
+        return context.tr(
+          'achievement.progress.total_xp',
+          params: {'current': '$current', 'target': '$target'},
+        );
       case 'level':
-        return '$current/$target 级';
+        return context.tr(
+          'achievement.progress.level',
+          params: {'current': '$current', 'target': '$target'},
+        );
       case 'board_clear':
-        return '$current/$target 次';
+        return context.tr(
+          'achievement.progress.board_clear',
+          params: {'current': '$current', 'target': '$target'},
+        );
       case 'first_wechat':
-        return '$current/$target 次';
+        return context.tr(
+          'achievement.progress.first_wechat',
+          params: {'current': '$current', 'target': '$target'},
+        );
       default:
         return '$current/$target';
     }
   }
 
-  String _buildTargetText() {
+  String _buildTargetText(BuildContext context) {
     final target = achievement.conditionValue;
     switch (achievement.conditionType) {
       case 'total_completed':
-        return '目标：累计完成 $target 个任务';
+        return context.tr(
+          'achievement.target.total_completed',
+          params: {'target': '$target'},
+        );
       case 'streak':
-        return '目标：连续签到 $target 天';
+        return context.tr(
+          'achievement.target.streak',
+          params: {'target': '$target'},
+        );
       case 'total_xp':
-        return '目标：累计获得 $target XP';
+        return context.tr(
+          'achievement.target.total_xp',
+          params: {'target': '$target'},
+        );
       case 'level':
-        return '目标：达到 $target 级';
+        return context.tr(
+          'achievement.target.level',
+          params: {'target': '$target'},
+        );
       case 'board_clear':
-        return '目标：首次清空任务面板';
+        return context.tr('achievement.target.board_clear');
       case 'first_wechat':
-        return '目标：首次通过微信创建任务';
+        return context.tr('achievement.target.first_wechat');
       default:
-        return '目标：达到条件';
+        return context.tr('achievement.target.default');
     }
   }
 
-  String _buildRewardText() {
+  String _buildTargetValue(BuildContext context) {
+    final targetText = _buildTargetText(context);
+    return targetText.replaceFirst(RegExp(r'^(目标：|Goal:\s*)'), '');
+  }
+
+  String _buildRewardText(BuildContext context) {
     final parts = <String>[
       if (achievement.xpBonus > 0) '+${achievement.xpBonus} XP',
-      if (achievement.goldBonus > 0) '+${achievement.goldBonus} 金币',
+      if (achievement.goldBonus > 0)
+        '+${achievement.goldBonus} ${context.tr('home.gold_label')}',
     ];
     return parts.join(' / ');
   }
@@ -243,7 +283,7 @@ class AchievementCard extends StatelessWidget {
           Text(achievement.icon, style: const TextStyle(fontSize: 48)),
           const SizedBox(height: 12),
           Text(
-            '成就详情',
+            context.tr('achievement.detail_title'),
             style: AppTextStyles.caption.copyWith(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -261,14 +301,34 @@ class AchievementCard extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
-          _buildDetailRow('状态', achievement.isUnlocked ? '已解锁' : '未解锁'),
-          _buildDetailRow('当前进度', _buildProgressText()),
-          _buildDetailRow('目标', _buildTargetText().replaceFirst('目标：', '')),
-          _buildDetailRow('规则说明', achievement.description),
+          _buildDetailRow(
+            context.tr('achievement.status_label'),
+            achievement.isUnlocked
+                ? context.tr('achievement.status_unlocked')
+                : context.tr('achievement.status_locked'),
+          ),
+          _buildDetailRow(
+            context.tr('achievement.progress_label'),
+            _buildProgressText(context),
+          ),
+          _buildDetailRow(
+            context.tr('achievement.target_label'),
+            _buildTargetValue(context),
+          ),
+          _buildDetailRow(
+            context.tr('achievement.rule_label'),
+            achievement.description,
+          ),
           if (achievement.unlockedAt != null)
-            _buildDetailRow('解锁时间', _formatDate(achievement.unlockedAt!)),
+            _buildDetailRow(
+              context.tr('achievement.unlocked_at_label'),
+              _formatDate(achievement.unlockedAt!),
+            ),
           if (achievement.xpBonus > 0 || achievement.goldBonus > 0)
-            _buildDetailRow('解锁奖励', _buildRewardText().replaceAll('+', '')),
+            _buildDetailRow(
+              context.tr('achievement.reward_label'),
+              _buildRewardText(context).replaceAll('+', ''),
+            ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -279,7 +339,7 @@ class AchievementCard extends StatelessWidget {
                   backgroundColor: categoryColor.withAlpha(220),
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('我知道了'),
+                child: Text(context.tr('achievement.acknowledge')),
               ),
             ],
           ),
@@ -297,7 +357,7 @@ class AchievementCard extends StatelessWidget {
           SizedBox(
             width: 70,
             child: Text(
-              '$label：',
+              '$label:',
               style: AppTextStyles.caption.copyWith(
                 fontSize: 13,
                 color: AppColors.textSecondary,
