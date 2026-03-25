@@ -1,93 +1,238 @@
-[English](./README.md) | [中文](./README.zh-CN.md)
+[English](./README.md) | [简体中文](./README.zh-CN.md)
 
 # Earth Online
 
-Earth Online 是一款具备记忆感知能力的效率游戏，把日常计划转化成持续演化的任务日志。它结合 Flutter 客户端、Supabase Edge Functions 与轻量后端，让用户既能记录真实任务、回看近期上下文，也能获得基于既往行为、记忆的引导与建议。
+Earth Online 是一款具备记忆感知能力的效率游戏，把日常计划转化成持续演化的任务日志。
 
-> 你可以把它理解成：任务面板、有记忆、懂陪伴的助手。
+它不只是任务面板，还会记住近期上下文，把行为沉淀为可用记忆，并以更有陪伴感的方式引导下一步。
 
-## 核心体验
+> 你可以把它理解为：任务面板、记忆层，以及一个会持续看见你近期生活脉络的助手。
 
-### 1. 把真实生活变成 Quest Board
+## 为什么做这个项目
 
-Earth Online 会把普通待办转成更有推进感的任务流：
+大多数任务工具擅长记录“要做什么”，却不太擅长帮助用户在节奏中断之后重新启动。
 
-- 在任务面板里创建、整理、完成 Quest
-- 累积 XP、等级、奖励、背包与成就进度
-- 让产品始终围绕真实任务，而不是只有抽象聊天
+一个任务一旦被推迟、做到一半，或已经完成，围绕它产生的上下文往往也随之消失了。刚刚完成了什么？最近卡在什么地方？这几天的节奏是推进、停滞，还是恢复中？传统待办产品通常不会以真正影响下一步建议的方式，把这些上下文保留下来。
 
-### 2. 一个有记忆感的助手
+Earth Online 想做的是另一种效率工具。它不只收集任务，还试图记住近期行为、保留短期上下文，并在用户需要继续的时候降低重新启动的摩擦。它的目标不是为了“游戏化”而游戏化，而是让进展更可见，让建议更有依据，让日常计划更像一段持续演化的旅程，而不是一张静态清单。
 
-这个助手不是无状态聊天机器人，而是会参考近期信号来回应你：
+## 核心功能
 
-- 近期记忆与行为信号会被打包进入向导提示
-- 助手会结合上下文和记忆给出恢复型或推进型建议
-- 每日事件、主动开场、夜间反思等链路共用同一层记忆能力
+### 1. 面向真实生活的 Quest 记录
 
-### 3. 微信成为真实可用的交互面
+- 把粗糙、真实的日常任务写入 Quest Board，而不是要求用户一开始就整理成完美计划。
+- 用 XP、等级、成就、奖励和背包系统把推进感做成可见反馈。
+- 让产品始终围绕真实行为，而不只是抽象对话。
 
-当前微信链路强调的是随时能记录任务：
+### 2. 上下文回看
 
-- 在 App 中绑定微信账号
-- 直接发普通文本，继续走现有任务录入链路
-- 在微信里求助，收到助手风格回复
-- 直接把最近一条建议任务收进任务树
+- 把近期任务、日记、行为信号和向导对话沉淀成可复用的上下文。
+- 让用户可以回看最近发生了什么，而不是把每一天都当作空白页重来。
+- 在中断之后通过连续性帮助恢复，而不是反复重新录入。
 
-### 4. 一个持续运转的个人循环
+### 3. 记忆驱动的引导
 
-除了聊天和任务录入，产品当前还已经包含：
+- 助手回复前先读取记忆摘要。
+- 建议会结合近期行为与上下文生成，而不是给出模板化鼓励。
+- 同一层记忆能力会被复用于 Guide 对话、日常事件、画像和周报。
 
-- 用于保留短期上下文的生活日记与回收站
-- 支持头像和助手名编辑的个人资料定制
-- 用于展示进展的统计、奖励商城与背包系统
-- 根据长期记忆，助手生成对您的用户画像
+### 4. 陪伴式反馈循环
 
-## 功能快照
+- 不只做提醒，还通过日常事件、夜间反思、周报和长期画像形成连续反馈。
+- 让产品更像一个持续支持、回看和推进的循环。
+- 强调连续体验，而不是一次性提示。
 
-| 模块 | 当前能力 |
-| --- | --- |
-| 任务录入 | Quest Board、异步 `parse-quest`、支持层级插入 |
-| 向导层 | 记忆感知聊天、主动消息、每日事件、夜间反思 |
-| 微信入口 | 绑定、记任务、Guide Chat、收下建议、自然语言分流 |
-| 身份同步 | App 助手名与微信助手名前缀共享同一份服务端来源 |
-| 成长系统 | XP、等级、奖励、成就、统计、背包 |
-| 商城系统 | 自行设置奖励激励自己 |
+### 5. 多入口交互
 
-## 演示
+- 以 Flutter 客户端作为 Quest、Guide、奖励、日记和统计的主体验入口。
+- 通过 Supabase Edge Functions 与轻量后端延伸任务记录和引导链路。
+- 支持微信场景下的任务记录与引导交互，让体验更贴近日常使用时刻。
 
-### 项目介绍视频
+## 演示 / 在线体验
 
-点击下方海报即可观看中文版演示视频：
+Earth Online 更适合以一条完整的产品链路来理解，而不是拆成孤立功能点来看。
 
-[![Earth Online 中文演示视频](./output/earth-online-poster-zh.png)](./output/earth-online-intro-zh.mp4)
+- 在线部署： [https://earth-online-wine.vercel.app](https://earth-online-wine.vercel.app)
+- 英文演示视频： [观看英文介绍视频](./output/earth-online-intro.mp4)
+- 中文演示视频： [观看中文介绍视频](./output/earth-online-intro-zh.mp4)
+- GitHub 仓库： [xunyud/Earth-Online](https://github.com/xunyud/Earth-Online)
 
-- 视频链接：[中文介绍视频](./output/earth-online-intro-zh.mp4)
-- 海报预览：[中文海报](./output/earth-online-poster-zh.png)
+建议的体验顺序是：先看短视频，再打开在线站点，把 Quest Board、Guide 和记忆链路连起来体验一次。
 
-### 在线访问地址
+[![Earth Online 海报](./output/earth-online-poster-zh.png)](./output/earth-online-intro-zh.mp4)
 
-在线地址：[https://earth-online-wine.vercel.app](https://earth-online-wine.vercel.app)
+## 项目亮点 / Differentiators
 
-## 仓库导览
+### 不只是另一个待办工具
 
-### 主要目录
+Earth Online 不止于记录任务，而是把行动、反馈、奖励与回看组织成一条持续推进的体验链。
 
-- `frontend/`：Flutter 应用，包含任务面板、向导面板、微信绑定界面、个人资料、日记、奖励、统计与成就
-- `backend/`：Node.js / Express 服务，用于 webhook 接入与消息防抖处理
-- `supabase/`：数据库迁移、共享向导逻辑，以及用于任务解析、向导对话、记忆同步、周总结、画像生成和微信流程的 Edge Functions
-- `docs/`：产品说明、实现计划与补充参考资料
+### 记忆是产品逻辑，不是装饰概念
 
+“记忆”不是一个独立页面，也不是 README 里的口号。它直接参与 Guide 回复、日常事件理由、画像和总结生成。
+
+### 建议会受到近期行为影响
+
+这个助手的目标是在回复前先读取用户近期节奏，因此建议不会那么像模板，而更像是基于刚刚发生过的事情给出的下一步判断。
+
+### 更像陪伴式效率循环
+
+它试图做的不只是提醒用户“去做事”，而是帮助用户恢复、继续、回看，并带着连续性重新启动。
+
+### 一款有演化感的效率游戏
+
+XP、等级、奖励、事件、日记和周报共同让进展具备累积感。整体体验更接近一份持续演化的任务日志，而不是静态清单管理器。
 
 ## 技术栈
 
-- Flutter + Dart
-- Supabase
-- Node.js + Express
-- Redis
-- TypeScript
+- Flutter + Dart：主客户端
+- Supabase：数据库、认证、迁移和 Edge Functions
+- TypeScript + Deno：服务端函数与记忆、引导、任务处理逻辑
+- Node.js + Express：轻量后端与 webhook 处理
+- Redis：消息缓冲与延迟处理
+- Remotion：演示视频制作管线
 
-## 仓库状态
+## 架构 / System Design
 
-- GitHub 仓库：[https://github.com/xunyud/Earth-Online](https://github.com/xunyud/Earth-Online)
-- 主分支：`main`
-- 许可证：MIT
+### Flutter Client
+
+`frontend/` 是主要交互入口，承载 Quest Board、Guide、生活日记、奖励、成就、统计和个人资料等核心体验。
+
+### Supabase Layer
+
+`supabase/` 目录包含数据库迁移与 Edge Functions，例如 `parse-quest`、`guide-bootstrap`、`guide-chat`、`guide-event-generate`、`guide-event-accept`、`sync-user-memory`、`weekly-summary` 及相关后台任务。这个层负责大部分任务解析、记忆感知引导、事件生成与总结流程的产品逻辑。
+
+### Lightweight Backend
+
+`backend/` 提供额外的 Node.js / Express 入口，用于 webhook 接入、去抖处理、Redis 缓冲，以及需要时的外部模型连接补位。
+
+### Memory Flow
+
+Earth Online 把近期行为当作“证据”来使用：
+
+1. 收集任务、日记、行为信号和历史对话。
+2. 将相关上下文整理成面向记忆的摘要或 payload。
+3. 让 Guide 回复、日常推荐、画像和总结在生成前先消费这些上下文。
+
+这也是项目“记忆感知”定位最核心的系统逻辑。
+
+## 本地运行 / Getting Started
+
+### 前置依赖
+
+- Flutter SDK
+- Node.js 和 npm
+- Supabase CLI
+
+### 仓库结构
+
+- `frontend/`：Flutter 应用
+- `backend/`：轻量 Node.js / Express 服务
+- `supabase/`：数据库迁移与 Edge Functions
+- `promo-video/`：基于 Remotion 的演示视频项目
+- `output/`：已渲染的演示资源
+
+### 1. 运行 Flutter 客户端
+
+```bash
+cd frontend
+flutter pub get
+flutter run -d chrome
+```
+
+如果需要桌面预览，也可以切换到受支持的 Flutter 桌面目标，例如 `windows`。
+
+### 2. 运行轻量后端
+
+在 `backend/` 下创建 `.env` 文件，并配置当前代码实际读取到的变量：
+
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
+- `REDIS_URL`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `PORT`
+
+然后启动服务：
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+### 3. 使用 Supabase
+
+需要本地 Supabase 环境时，可以先启动服务：
+
+```bash
+supabase start
+```
+
+推送迁移：
+
+```bash
+./supabase db push
+```
+
+当前仓库中的 Edge Functions 涵盖任务解析、Guide 对话、事件生成、画像生成、记忆同步和周报流程。根据你本地要运行的函数不同，代码中涉及的环境变量包括：
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY`
+- `EVERMEMOS_API_URL`
+- `EVERMEMOS_API_KEY`
+- `EVERMEMOS_SYNC_TIMEOUT_MS`
+- `POLLINATIONS_MODEL`
+- `POLLINATIONS_API_KEY`
+- `WECHAT_APP_ID`
+- `WECHAT_APP_SECRET`
+
+### 4. 渲染演示资源
+
+```bash
+cd promo-video
+npm install
+npm run render
+npm run render:zh
+npm run still
+npm run still:zh
+```
+
+### 5. 可选的 Flutter Dart Define
+
+`frontend/lib/core/config/app_config.dart` 还会读取以下编译期变量：
+
+- `EVERMEMOS_API_KEY`
+- `EVERMEMOS_BASE_URL`
+- `EVERMEMOS_SENDER`
+
+## 界面预览 / Preview Assets
+
+当前仓库中已经存在可直接预览的资源：
+
+- [英文海报](./output/earth-online-poster.png)
+- [中文海报](./output/earth-online-poster-zh.png)
+- [英文介绍视频](./output/earth-online-intro.mp4)
+- [中文介绍视频](./output/earth-online-intro-zh.mp4)
+
+后续随着线上界面继续演进，可以在这里补充更多应用截图或 GIF。
+
+## Roadmap / 后续方向
+
+- 让“系统记住了什么、为什么推荐这一项”在产品里变得更可见。
+- 强化首页和登录前体验，让核心价值在前几秒内就被看懂。
+- 持续让部署站、演示视频和 README 围绕同一个产品故事保持对齐。
+- 继续增强日常事件、日记、周报与长期回看之间的陪伴式反馈链路。
+- 继续打磨“效率游戏”本身，让成长系统通过体验证明概念，而不只是文案描述。
+
+## 项目理念 / Design Philosophy
+
+Earth Online 的出发点很简单：效率工具不该只会记录，还应该帮助人继续前进。
+
+这要求它具备记忆能力。没有记忆，建议很容易变得泛化，重新启动会更费力，回顾也会和真实发生过的事情脱节。
+
+这也要求它尊重上下文。任务不只是一个复选框，它属于某段近期节奏、某个尚未完成的推进过程，以及一段还在继续展开的生活叙事。
+
+同时，它也需要一种不同的助手形态。一个有陪伴感的系统不该只负责提醒，而应该能记住、理解，并帮助用户更平稳地继续往前走。
