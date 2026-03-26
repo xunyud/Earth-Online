@@ -3425,12 +3425,20 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         const SizedBox(width: 8),
+                        if (_controller.longestStreak > 0) ...[
+                          _buildTopStatChip(
+                            icon: Icons.local_fire_department_rounded,
+                            label: '${_controller.longestStreak}天',
+                            color: Colors.deepOrange,
+                          ),
+                          const SizedBox(width: 6),
+                        ],
                         _buildTopStatChip(
                           icon: Icons.auto_graph_rounded,
                           label: '${_controller.totalXp} XP',
                           color: theme.primaryAccentColor,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         _buildTopStatChip(
                           icon: Icons.monetization_on_rounded,
                           label: '${_controller.currentGold}',

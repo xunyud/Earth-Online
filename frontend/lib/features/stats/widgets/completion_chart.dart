@@ -1,83 +1,114 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../../core/theme/quest_theme.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
+import '../theme/stats_colors.dart';
+import '../theme/stats_text_styles.dart';
+import '../theme/stats_decorations.dart';
 import '../models/stats_data.dart';
+import 'segmented_toggle.dart';
 
-/// 任务完成趋势图
-/// 周视图（BarChart 7 天） / 月视图（LineChart 30 天），可切换
+/// 任务完成趋势图（卡片包裹版本）
+/// 周视图 BarChart 7天 / 月视图 LineChart 30天
 class CompletionChart extends StatefulWidget {
   final List<DailyStats> stats;
+  final Animation<double> animation;
+  final bool isCompact;
 
-  const CompletionChart({Key? key, required this.stats}) : super(key: key);
+  const CompletionChart({
+    Key? key,
+    required this.stats,
+    required this.animation,
+    this.isCompact = false,
+  }) : super(key: key);
 
   @override
   State<CompletionChart> createState() => _CompletionChartState();
 }
 
 class _CompletionChartState extends State<CompletionChart> {
-  bool _isWeekView = true; // true=周视图, false=月视图
+  int _selectedIndex = 0; // 0=周, 1=月
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context).extension<QuestTheme>()!;
+    final padding = widget.isCompact ? 16.0 : 20.0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 标题 + 切换按钮
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Text(
-                '任务完成趋势',
-                style: AppTextStyles.heading2.copyWith(
-                  color: theme.primaryAccentColor,
+    // 计算微统计数据
+    final recent7 = _recentDays(7);
+    final avg = recent7.fold<int>(0, (s, d) => s + d.completedCount) / 7;
+    final perfectCount =
+        widget.stats.where((s) => s.isPerfect).length;
+
+    return FadeTransition(
+      opacity: widget.animation,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.06),
+          end: Offset.zero,
+        ).animate(widget.animation),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: padding),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: StatsDecorations.card(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 标题行
+                Row(
+                  children: [
+                    Text('任务完成趋势', style: StatsTextStyles.sectionTitle),
+                    const Spacer(),
+                    SegmentedToggle(
+                      labels: const ['7天', '30天'],
+                      selectedIndex: _selectedIndex,
+                      onChanged: (i) => setState(() => _selectedIndex = i),
+                    ),
+                  ],
                 ),
-              ),
-              const Spacer(),
-              _ToggleChip(
-                label: '周',
-                isSelected: _isWeekView,
-                color: theme.primaryAccentColor,
-                onTap: () => setState(() => _isWeekView = true),
-              ),
-              const SizedBox(width: 6),
-              _ToggleChip(
-                label: '月',
-                isSelected: !_isWeekView,
-                color: theme.primaryAccentColor,
-                onTap: () => setState(() => _isWeekView = false),
-              ),
-            ],
+                const SizedBox(height: 20),
+                // 图表
+                SizedBox(
+                  height: widget.isCompact ? 180.0 : 200.0,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _selectedIndex == 0
+                        ? _buildBarChart(key: const ValueKey('bar'))
+                        : _buildLineChart(key: const ValueKey('line')),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // 微统计行
+                Row(
+                  children: [
+                    _MicroStat(
+                      label: '日均',
+                      value: avg.toStringAsFixed(1),
+                      color: StatsColors.softSage,
+                    ),
+                    const SizedBox(width: 20),
+                    _MicroStat(
+                      label: '完美天',
+                      value: '$perfectCount',
+                      color: StatsColors.goldPrimary,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 16),
-        // 图表
-        SizedBox(
-          height: 200,
-          child: Padding(
-            padding: const EdgeInsets.only(right: 16, left: 8),
-            child: _isWeekView
-                ? _buildBarChart(theme)
-                : _buildLineChart(theme),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  /// 获取最近 N 天的数据（补齐空日期）
+  /// 获取最近 N 天数据（补齐空日期）
   List<DailyStats> _recentDays(int days) {
     final now = DateTime.now();
-    final result = <DailyStats>[];
     final map = <String, DailyStats>{};
     for (final s in widget.stats) {
       final key = '${s.date.month}-${s.date.day}';
       map[key] = s;
     }
+    final result = <DailyStats>[];
     for (int i = days - 1; i >= 0; i--) {
       final d = now.subtract(Duration(days: i));
       final key = '${d.month}-${d.day}';
@@ -90,24 +121,28 @@ class _CompletionChartState extends State<CompletionChart> {
     return result;
   }
 
-  /// 周视图柱状图（7 天）
-  Widget _buildBarChart(QuestTheme theme) {
+  /// 周视图柱状图
+  Widget _buildBarChart({Key? key}) {
     final data = _recentDays(7);
-    final maxY = data.fold<int>(0, (m, s) => s.completedCount > m ? s.completedCount : m);
+    final maxY =
+        data.fold<int>(0, (m, s) => s.completedCount > m ? s.completedCount : m);
     final ceilY = (maxY < 5 ? 5 : maxY + 1).toDouble();
 
     return BarChart(
+      key: key,
       BarChartData(
         maxY: ceilY,
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
+            tooltipRoundedRadius: 8,
+            getTooltipColor: (_) => StatsColors.cardSurface,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               final s = data[group.x.toInt()];
               return BarTooltipItem(
-                '${s.completedCount}',
-                AppTextStyles.caption.copyWith(
-                  color: AppColors.pureWhite,
-                  fontWeight: FontWeight.w700,
+                '${s.completedCount} 个任务',
+                StatsTextStyles.chartLabel.copyWith(
+                  color: StatsColors.bodyText,
+                  fontWeight: FontWeight.w600,
                 ),
               );
             },
@@ -123,7 +158,7 @@ class _CompletionChartState extends State<CompletionChart> {
                 if (value == value.roundToDouble()) {
                   return Text(
                     '${value.toInt()}',
-                    style: AppTextStyles.caption.copyWith(fontSize: 10),
+                    style: StatsTextStyles.chartLabel,
                   );
                 }
                 return const SizedBox.shrink();
@@ -135,72 +170,91 @@ class _CompletionChartState extends State<CompletionChart> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 final idx = value.toInt();
-                if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+                if (idx < 0 || idx >= data.length) {
+                  return const SizedBox.shrink();
+                }
                 final d = data[idx].date;
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     '${d.month}/${d.day}',
-                    style: AppTextStyles.caption.copyWith(fontSize: 10),
+                    style: StatsTextStyles.chartLabel,
                   ),
                 );
               },
             ),
           ),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
           horizontalInterval: ceilY > 10 ? (ceilY / 5).ceilToDouble() : 1,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: AppColors.textHint.withAlpha(40),
-            strokeWidth: 0.8,
+            color: StatsColors.gridLine,
+            strokeWidth: 0.5,
+            dashArray: [4, 4],
           ),
         ),
         borderData: FlBorderData(show: false),
         barGroups: List.generate(data.length, (i) {
           final s = data[i];
+          final isPerfect = s.isPerfect;
           return BarChartGroupData(
             x: i,
             barRods: [
               BarChartRodData(
                 toY: s.completedCount.toDouble(),
-                width: 24,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                color: s.isPerfect
-                    ? const Color(0xFFFFD54F) // 完美日用金色
-                    : theme.primaryAccentColor.withAlpha(200),
+                width: 22,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(8)),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: isPerfect
+                      ? [
+                          StatsColors.goldPrimary,
+                          StatsColors.goldPrimary.withAlpha(180),
+                        ]
+                      : [
+                          StatsColors.softSage,
+                          StatsColors.softSage.withAlpha(180),
+                        ],
+                ),
               ),
             ],
-            // 完美日在柱子上方显示星标
-            showingTooltipIndicators: s.isPerfect ? [0] : [],
           );
         }),
       ),
     );
   }
 
-  /// 月视图折线图（30 天）
-  Widget _buildLineChart(QuestTheme theme) {
+  /// 月视图折线图
+  Widget _buildLineChart({Key? key}) {
     final data = _recentDays(30);
-    final maxY = data.fold<int>(0, (m, s) => s.completedCount > m ? s.completedCount : m);
+    final maxY =
+        data.fold<int>(0, (m, s) => s.completedCount > m ? s.completedCount : m);
     final ceilY = (maxY < 5 ? 5 : maxY + 1).toDouble();
 
     return LineChart(
+      key: key,
       LineChartData(
         maxY: ceilY,
         minY: 0,
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
+            tooltipRoundedRadius: 8,
+            getTooltipColor: (_) => StatsColors.cardSurface,
             getTooltipItems: (spots) => spots.map((s) {
               final d = data[s.x.toInt()];
               return LineTooltipItem(
                 '${d.date.month}/${d.date.day}: ${d.completedCount}',
-                AppTextStyles.caption.copyWith(
-                  color: AppColors.pureWhite,
-                  fontSize: 11,
+                StatsTextStyles.chartLabel.copyWith(
+                  color: StatsColors.bodyText,
+                  fontWeight: FontWeight.w600,
                 ),
               );
             }).toList(),
@@ -216,7 +270,7 @@ class _CompletionChartState extends State<CompletionChart> {
                 if (value == value.roundToDouble()) {
                   return Text(
                     '${value.toInt()}',
-                    style: AppTextStyles.caption.copyWith(fontSize: 10),
+                    style: StatsTextStyles.chartLabel,
                   );
                 }
                 return const SizedBox.shrink();
@@ -229,28 +283,33 @@ class _CompletionChartState extends State<CompletionChart> {
               interval: 7,
               getTitlesWidget: (value, meta) {
                 final idx = value.toInt();
-                if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+                if (idx < 0 || idx >= data.length) {
+                  return const SizedBox.shrink();
+                }
                 final d = data[idx].date;
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     '${d.month}/${d.day}',
-                    style: AppTextStyles.caption.copyWith(fontSize: 10),
+                    style: StatsTextStyles.chartLabel,
                   ),
                 );
               },
             ),
           ),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
           horizontalInterval: ceilY > 10 ? (ceilY / 5).ceilToDouble() : 1,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: AppColors.textHint.withAlpha(40),
-            strokeWidth: 0.8,
+            color: StatsColors.gridLine,
+            strokeWidth: 0.5,
+            dashArray: [4, 4],
           ),
         ),
         borderData: FlBorderData(show: false),
@@ -263,12 +322,19 @@ class _CompletionChartState extends State<CompletionChart> {
             isCurved: true,
             curveSmoothness: 0.25,
             preventCurveOverShooting: true,
-            color: theme.primaryAccentColor,
-            barWidth: 2.5,
+            color: StatsColors.softSage,
+            barWidth: 3,
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: theme.primaryAccentColor.withAlpha(30),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  StatsColors.softSage.withAlpha(40),
+                  StatsColors.softSage.withAlpha(5),
+                ],
+              ),
             ),
           ),
         ],
@@ -277,44 +343,44 @@ class _CompletionChartState extends State<CompletionChart> {
   }
 }
 
-/// 切换小标签
-class _ToggleChip extends StatelessWidget {
+/// 微统计指标
+class _MicroStat extends StatelessWidget {
   final String label;
-  final bool isSelected;
+  final String value;
   final Color color;
-  final VoidCallback onTap;
 
-  const _ToggleChip({
+  const _MicroStat({
     required this.label,
-    required this.isSelected,
+    required this.value,
     required this.color,
-    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withAlpha(30) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? color : AppColors.textHint.withAlpha(80),
-            width: 1,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
           ),
         ),
-        child: Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
-            color: isSelected ? color : AppColors.textSecondary,
+        const SizedBox(width: 6),
+        Text(
+          '$label ',
+          style: StatsTextStyles.chartLabel,
+        ),
+        Text(
+          value,
+          style: StatsTextStyles.chartLabel.copyWith(
+            fontWeight: FontWeight.w700,
+            color: StatsColors.bodyText,
           ),
         ),
-      ),
+      ],
     );
   }
 }

@@ -219,6 +219,30 @@ Current repository assets already available for preview:
 
 Additional app screenshots can be expanded here as the live UI evolves.
 
+## Recent Updates (v1.1.0 - 2026-03-26)
+
+### Growth Dashboard Redesign
+- Rebuilt the stats page as an inspiring growth dashboard with warm cream / soft green / desaturated gold palette
+- Hero XP card with animated counter and circular level progress ring
+- Three-metric summary row (weekly completed, streak days, best day) replacing horizontal scroll cards
+- Chart upgrades: card-wrapped containers, pill-shaped toggle, gradient bars, micro-stats row
+- Quest mix horizontal bars replacing the old donut chart
+- Motivational insight module and milestone badge highlights
+- Staggered entrance animations (1200ms orchestrated across 8 sections)
+- Responsive layout with mobile / tablet / desktop breakpoints
+
+### Daily Check-In System
+- Integrated `checkin_and_get_multiplier` RPC into the task completion flow
+- Auto check-in on first daily task completion with orange banner feedback
+- Streak counter displayed in the home page top bar (fire icon + days)
+- Streak data flows through stats header, summary metrics, and milestone badges
+
+### Make-Up Check-In (Retroactive Sign-In)
+- New `makeup_checkin` RPC with atomic gold deduction, date validation, and streak recalculation
+- 30-day streak calendar widget in the stats page with three cell states (checked / missed / today)
+- Tap a missed day to spend 50 gold and fill the gap, with confirmation dialog and balance display
+- Streak is fully recalculated after each make-up to maintain data consistency
+
 ## Roadmap / Future Work
 
 - Make memory evidence even more visible in the product, so users can clearly see what the system remembered and why it suggested a next step.

@@ -153,6 +153,9 @@ class QuestController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 从数据库重新读取 profile（XP、金币、streak 等），供外部调用
+  Future<void> refreshProfile() => _fetchProfileProgress();
+
   String _dateId(DateTime localDate) {
     final y = localDate.year.toString().padLeft(4, '0');
     final m = localDate.month.toString().padLeft(2, '0');
@@ -174,6 +177,33 @@ class QuestController extends ChangeNotifier {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final dateId = _dateId(today);
+
+    // 调用签到 RPC，更新连续天数、倍率、保护卡消耗
+    try {
+      final checkinResult = await _supabase.rpc(
+        'checkin_and_get_multiplier',
+        params: {'p_date_id': dateId},
+      );
+      if (checkinResult is List && checkinResult.isNotEmpty) {
+        final row = checkinResult.first;
+        final streak = (row['streak'] as num?)?.toInt() ?? 0;
+        final isNewCheckin = row['is_new_checkin'] as bool? ?? false;
+        // 始终用 RPC 返回的 streak 更新本地连续天数
+        _longestStreak = streak;
+        notifyListeners();
+        if (isNewCheckin && streak > 0) {
+          _showQuestFeedbackBanner(
+            message: '今日签到成功！已连续 $streak 天',
+            icon: Icons.local_fire_department_rounded,
+            backgroundColor: const Color(0xFFFFF3E0),
+            borderColor: const Color(0xFFFF9800),
+            textColor: const Color(0xFF5D4037),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('签到 RPC 调用失败（降级处理）: $e');
+    }
 
     final completedCountToday = activeQuests
         .where((q) =>
