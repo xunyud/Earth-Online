@@ -74,9 +74,8 @@ type PromoCompositionProps = {
 
 const shellStyle: React.CSSProperties = {
   fontFamily: '"Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif',
-  color: '#17341A',
-  background:
-    'radial-gradient(circle at top left, rgba(255,255,255,0.96), rgba(233,245,221,0.94) 34%, rgba(246,236,191,0.92) 70%, rgba(221,240,206,0.95))',
+  color: '#E8F5E9',
+  background: '#0B1E13',
 };
 
 const uiCopyEn: PromoUiCopy = {
@@ -274,8 +273,8 @@ const AccentOrb: React.FC<{
         left,
         right,
         background: color,
-        filter: 'blur(10px)',
-        opacity: 0.18,
+        filter: `blur(${Math.round(size * 0.45)}px)`,
+        opacity: 0.12,
         transform: `translateY(${drift}px)`,
       }}
     />
@@ -291,9 +290,9 @@ const CaptionBar: React.FC<{text: string; accent: string}> = ({text, accent}) =>
       bottom: 54,
       borderRadius: 28,
       padding: '18px 26px',
-      background: 'rgba(249, 247, 239, 0.92)',
-      border: '1px solid rgba(38, 73, 42, 0.09)',
-      boxShadow: '0 14px 40px rgba(0,0,0,0.08)',
+      background: 'rgba(255, 255, 255, 0.05)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      boxShadow: '0 14px 40px rgba(0,0,0,0.3)',
       display: 'flex',
       gap: 16,
       alignItems: 'center',
@@ -305,14 +304,14 @@ const CaptionBar: React.FC<{text: string; accent: string}> = ({text, accent}) =>
         height: 14,
         borderRadius: 999,
         background: accent,
-        boxShadow: `0 0 0 8px ${accent}20`,
+        boxShadow: `0 0 12px ${accent}50`,
       }}
     />
     <div
       style={{
         fontSize: 30,
         lineHeight: 1.35,
-        color: '#24442A',
+        color: 'rgba(200,230,202,0.8)',
         fontWeight: 600,
       }}
     >
@@ -337,10 +336,9 @@ const ScreenshotFrame: React.FC<{src: string; accent: string; width?: number}> =
         width,
         borderRadius: 34,
         padding: 18,
-        background:
-          'linear-gradient(145deg, rgba(255,255,255,0.96), rgba(252,248,232,0.9))',
-        border: '1px solid rgba(47, 95, 52, 0.14)',
-        boxShadow: '0 32px 90px rgba(29, 52, 31, 0.2)',
+        background: 'rgba(255,255,255,0.04)',
+        border: `1px solid ${accent}20`,
+        boxShadow: `0 32px 90px rgba(0,0,0,0.4), 0 0 40px ${accent}10`,
         transform: `scale(${1.06 - pop * 0.06}) translateY(${(1 - pop) * 24}px)`,
       }}
     >
@@ -349,7 +347,7 @@ const ScreenshotFrame: React.FC<{src: string; accent: string; width?: number}> =
           position: 'absolute',
           inset: 10,
           borderRadius: 28,
-          border: `2px solid ${accent}22`,
+          border: `1px solid ${accent}15`,
           pointerEvents: 'none',
         }}
       />
@@ -385,10 +383,10 @@ const FloatingChip: React.FC<{
         right,
         padding: '12px 18px',
         borderRadius: 999,
-        background: 'rgba(255,255,255,0.9)',
-        border: `1px solid ${accent}33`,
-        boxShadow: '0 16px 28px rgba(32, 52, 35, 0.12)',
-        color: '#315137',
+        background: 'rgba(255,255,255,0.06)',
+        border: `1px solid ${accent}30`,
+        boxShadow: `0 16px 28px rgba(0,0,0,0.3), 0 0 16px ${accent}12`,
+        color: accent,
         fontSize: 20,
         fontWeight: 700,
         whiteSpace: 'nowrap',
@@ -455,7 +453,8 @@ const SceneText: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, cop
           alignSelf: 'flex-start',
           padding: '12px 20px',
           borderRadius: 999,
-          background: `${scene.accent}16`,
+          background: `${scene.accent}18`,
+          border: `1px solid ${scene.accent}30`,
           color: scene.accent,
           fontSize: 22,
           fontWeight: 800,
@@ -469,8 +468,9 @@ const SceneText: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, cop
           fontSize: 78,
           lineHeight: 1.02,
           fontWeight: 900,
-          color: '#1A331F',
+          color: '#FFFFFF',
           maxWidth: 700,
+          textShadow: `0 0 40px ${scene.accent}25`,
         }}
       >
         {scene.title}
@@ -480,7 +480,7 @@ const SceneText: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, cop
           opacity: bodyIn,
           fontSize: 31,
           lineHeight: 1.48,
-          color: '#38533C',
+          color: 'rgba(200,230,202,0.7)',
           maxWidth: 660,
         }}
       >
@@ -493,10 +493,11 @@ const SceneText: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, cop
             style={{
               padding: '11px 16px',
               borderRadius: 999,
-              background: 'rgba(255,255,255,0.82)',
-              border: '1px solid rgba(30, 64, 36, 0.08)',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
               fontSize: 20,
               fontWeight: 700,
+              color: '#7BAF80',
             }}
           >
             {item}
@@ -521,7 +522,7 @@ const OpenerVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, 
           inset: 90,
           borderRadius: 999,
           background:
-            'radial-gradient(circle, rgba(122,170,74,0.38), rgba(122,170,74,0.05) 62%, rgba(255,255,255,0) 80%)',
+            `radial-gradient(circle, ${scene.accent}20, ${scene.accent}05 62%, transparent 80%)`,
           transform: `scale(${0.92 + orb * 0.08})`,
         }}
       />
@@ -533,10 +534,9 @@ const OpenerVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, 
           width: 380,
           height: 380,
           borderRadius: 190,
-          background:
-            'linear-gradient(160deg, rgba(255,255,255,0.95), rgba(233,245,221,0.94))',
-          border: `2px solid ${scene.accent}33`,
-          boxShadow: '0 30px 90px rgba(28, 52, 30, 0.18)',
+          background: 'rgba(255,255,255,0.04)',
+          border: `2px solid ${scene.accent}25`,
+          boxShadow: `0 30px 90px rgba(0,0,0,0.4), 0 0 60px ${scene.accent}15`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -544,13 +544,13 @@ const OpenerVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, 
           gap: 12,
         }}
       >
-        <div style={{fontSize: 28, fontWeight: 700, color: '#4F714F'}}>{copy.openerTop}</div>
-        <div style={{fontSize: 76, fontWeight: 900, color: scene.accent}}>{copy.openerTitle}</div>
+        <div style={{fontSize: 28, fontWeight: 700, color: '#7BAF80'}}>{copy.openerTop}</div>
+        <div style={{fontSize: 76, fontWeight: 900, color: scene.accent, textShadow: `0 0 30px ${scene.accent}40`}}>{copy.openerTitle}</div>
         <div
           style={{
             fontSize: 22,
             lineHeight: 1.45,
-            color: '#355538',
+            color: 'rgba(200,230,202,0.7)',
             maxWidth: 250,
             textAlign: 'center',
           }}
@@ -570,20 +570,8 @@ const OpenerVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, 
         <ScreenshotFrame src={staticFile(scene.image!)} accent={scene.accent} width={360} />
       </div>
       <FloatingChip label={copy.openerChips[0]} accent={scene.accent} start={16} top={88} left={40} />
-      <FloatingChip
-        label={copy.openerChips[1]}
-        accent={scene.accent}
-        start={26}
-        top={560}
-        left={90}
-      />
-      <FloatingChip
-        label={copy.openerChips[2]}
-        accent={scene.accent}
-        start={34}
-        top={520}
-        right={20}
-      />
+      <FloatingChip label={copy.openerChips[1]} accent={scene.accent} start={26} top={560} left={90} />
+      <FloatingChip label={copy.openerChips[2]} accent={scene.accent} start={34} top={520} right={20} />
     </div>
   );
 };
@@ -595,76 +583,45 @@ const CaptureVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene,
   const completed = appear(frame, 68, 18);
   const typed = typewriter(copy.typedTask, frame, 12, 1.05);
   const xpRise = interpolate(frame, [72, 92], [42, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
 
   return (
     <div style={{position: 'relative', width: 860, height: 680}}>
       <div
         style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: 34,
-          background:
-            'linear-gradient(145deg, rgba(255,255,255,0.95), rgba(245,249,236,0.92))',
-          border: '1px solid rgba(45, 89, 48, 0.12)',
-          boxShadow: '0 26px 70px rgba(32, 51, 35, 0.14)',
+          position: 'absolute', inset: 0, borderRadius: 34,
+          background: 'rgba(255,255,255,0.04)',
+          border: `1px solid ${scene.accent}18`,
+          boxShadow: `0 26px 70px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)`,
           overflow: 'hidden',
-          transform: `translateY(${(1 - boardIn) * 24}px)`,
-          opacity: boardIn,
+          transform: `translateY(${(1 - boardIn) * 24}px)`, opacity: boardIn,
         }}
       >
-        <div
-          style={{
-            height: 90,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 28px',
-            background: 'rgba(255,255,255,0.72)',
-            borderBottom: '1px solid rgba(38, 73, 42, 0.08)',
-          }}
-        >
-          <div style={{fontSize: 30, fontWeight: 800, color: '#234529'}}>{copy.captureBoardTitle}</div>
-          <div style={{fontSize: 20, fontWeight: 700, color: '#61805E'}}>XP 1260</div>
+        <div style={{
+          height: 90, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 28px', background: 'rgba(255,255,255,0.03)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <div style={{fontSize: 30, fontWeight: 800, color: '#E8F5E9'}}>{copy.captureBoardTitle}</div>
+          <div style={{fontSize: 20, fontWeight: 700, color: '#7BAF80'}}>XP 1260</div>
         </div>
         <div style={{padding: '24px 28px 0'}}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '18px',
-              borderRadius: 24,
-              background: 'rgba(248,251,244,0.95)',
-              border: `1px solid ${scene.accent}26`,
-            }}
-          >
-            <div
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: 999,
-                border: `2px solid ${scene.accent}`,
-              }}
-            />
-            <div style={{flex: 1, minHeight: 30, fontSize: 24, fontWeight: 600, color: '#305136'}}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '18px',
+            borderRadius: 24, background: 'rgba(255,255,255,0.04)',
+            border: `1px solid ${scene.accent}20`,
+          }}>
+            <div style={{width: 18, height: 18, borderRadius: 999, border: `2px solid ${scene.accent}60`}} />
+            <div style={{flex: 1, minHeight: 30, fontSize: 24, fontWeight: 600, color: '#C8E6CA'}}>
               {typed}
-              <span style={{color: scene.accent, opacity: Math.floor(frame / 10) % 2 === 0 ? 1 : 0}}>
-                |
-              </span>
+              <span style={{color: scene.accent, opacity: Math.floor(frame / 10) % 2 === 0 ? 1 : 0}}>|</span>
             </div>
-            <div
-              style={{
-                padding: '10px 18px',
-                borderRadius: 999,
-                background: scene.accent,
-                color: '#fff',
-                fontSize: 18,
-                fontWeight: 800,
-              }}
-            >
+            <div style={{
+              padding: '10px 18px', borderRadius: 999,
+              background: `linear-gradient(135deg, ${scene.accent}, ${scene.accent}cc)`,
+              color: '#0B1E13', fontSize: 18, fontWeight: 800,
+            }}>
               {copy.captureAddLabel}
             </div>
           </div>
@@ -674,48 +631,30 @@ const CaptureVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene,
             const rowIn = appear(frame, 24 + index * 10, 14);
             const isDone = index === 2 ? completed > 0.3 : false;
             return (
-              <div
-                key={label}
-                style={{
-                  opacity: rowIn,
-                  transform: `translateX(${(1 - rowIn) * 20}px)`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 14,
-                  padding: '16px 18px',
-                  borderRadius: 22,
-                  background: 'rgba(255,255,255,0.86)',
-                  border: '1px solid rgba(38, 73, 42, 0.07)',
-                }}
-              >
-                <div
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: 999,
-                    background: isDone ? scene.accent : 'transparent',
-                    border: `2px solid ${scene.accent}`,
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 15,
-                    fontWeight: 900,
-                  }}
-                >
+              <div key={label} style={{
+                opacity: rowIn, transform: `translateX(${(1 - rowIn) * 20}px)`,
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '16px 18px', borderRadius: 22,
+                background: isDone ? `${scene.accent}10` : 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.05)',
+              }}>
+                <div style={{
+                  width: 24, height: 24, borderRadius: 999,
+                  background: isDone ? scene.accent : 'transparent',
+                  border: `2px solid ${isDone ? scene.accent : `${scene.accent}50`}`,
+                  color: '#0B1E13', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 15, fontWeight: 900,
+                }}>
                   {isDone ? '✓' : ''}
                 </div>
-                <div
-                  style={{
-                    flex: 1,
-                    fontSize: 24,
-                    color: isDone ? '#6C7D6C' : '#29482E',
-                    textDecoration: isDone ? 'line-through' : 'none',
-                  }}
-                >
+                <div style={{
+                  flex: 1, fontSize: 24,
+                  color: isDone ? 'rgba(200,230,202,0.4)' : '#C8E6CA',
+                  textDecoration: isDone ? 'line-through' : 'none',
+                }}>
                   {label}
                 </div>
-                <div style={{fontSize: 18, fontWeight: 700, color: '#6B8A67'}}>+20 XP</div>
+                <div style={{fontSize: 18, fontWeight: 700, color: `${scene.accent}80`}}>+20 XP</div>
               </div>
             );
           })}
@@ -724,20 +663,12 @@ const CaptureVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene,
 
       <ClickPulse top={143} left={738} accent={scene.accent} start={52} />
       <ClickPulse top={340} left={112} accent={scene.accent} start={70} />
-      <div
-        style={{
-          position: 'absolute',
-          right: 44,
-          top: 250 + xpRise,
-          opacity: interpolate(frame, [72, 78, 108], [0, 1, 0], {
-            extrapolateLeft: 'clamp',
-            extrapolateRight: 'clamp',
-          }),
-          color: scene.accent,
-          fontSize: 34,
-          fontWeight: 900,
-        }}
-      >
+      <div style={{
+        position: 'absolute', right: 44, top: 250 + xpRise,
+        opacity: interpolate(frame, [72, 78, 108], [0, 1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}),
+        color: scene.accent, fontSize: 34, fontWeight: 900,
+        textShadow: `0 0 20px ${scene.accent}50`,
+      }}>
         +20 XP
       </div>
     </div>
@@ -749,79 +680,43 @@ const MemoryVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, 
 
   return (
     <div style={{position: 'relative', width: 860, height: 690}}>
-      <div
-        style={{
-          position: 'absolute',
-          left: 314,
-          top: 124,
-          width: 240,
-          height: 240,
-          borderRadius: 120,
-          background:
-            'linear-gradient(160deg, rgba(255,255,255,0.96), rgba(231,244,217,0.95))',
-          border: `2px solid ${scene.accent}35`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          gap: 10,
-          boxShadow: '0 28px 80px rgba(31, 58, 35, 0.16)',
-        }}
-      >
-        <div style={{fontSize: 20, fontWeight: 700, color: '#537255'}}>{copy.memoryTitle}</div>
-        <div style={{fontSize: 52, fontWeight: 900, color: scene.accent}}>{copy.memoryCount}</div>
-        <div style={{fontSize: 18, color: '#456646'}}>{copy.memorySources}</div>
+      <div style={{
+        position: 'absolute', left: 314, top: 124, width: 240, height: 240, borderRadius: 120,
+        background: 'rgba(255,255,255,0.04)',
+        border: `2px solid ${scene.accent}25`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10,
+        boxShadow: `0 28px 80px rgba(0,0,0,0.4), 0 0 50px ${scene.accent}12`,
+      }}>
+        <div style={{fontSize: 20, fontWeight: 700, color: '#7BAF80'}}>{copy.memoryTitle}</div>
+        <div style={{fontSize: 52, fontWeight: 900, color: scene.accent, textShadow: `0 0 20px ${scene.accent}40`}}>{copy.memoryCount}</div>
+        <div style={{fontSize: 18, color: 'rgba(200,230,202,0.5)'}}>{copy.memorySources}</div>
       </div>
       {copy.memoryIncoming.map((text, index) => {
         const show = appear(frame, 6 + index * 12, 16);
         const travel = appear(frame, 6 + index * 12, 52);
         return (
-          <div
-            key={text}
-            style={{
-              position: 'absolute',
-              left: 20 + travel * 160,
-              top: 50 + index * 110 + travel * (90 - index * 8),
-              width: 280,
-              padding: '18px 20px',
-              borderRadius: 22,
-              background: 'rgba(255,255,255,0.92)',
-              border: '1px solid rgba(38, 73, 42, 0.08)',
-              boxShadow: '0 18px 38px rgba(32, 51, 35, 0.1)',
-              opacity: show,
-              transform: `scale(${1 - travel * 0.08})`,
-            }}
-          >
-            <div style={{fontSize: 20, lineHeight: 1.4, fontWeight: 700, color: '#2A4B2F'}}>
-              {text}
-            </div>
+          <div key={text} style={{
+            position: 'absolute', left: 20 + travel * 160, top: 50 + index * 110 + travel * (90 - index * 8),
+            width: 280, padding: '18px 20px', borderRadius: 22,
+            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 18px 38px rgba(0,0,0,0.3)',
+            opacity: show, transform: `scale(${1 - travel * 0.08})`,
+          }}>
+            <div style={{fontSize: 20, lineHeight: 1.4, fontWeight: 700, color: '#C8E6CA'}}>{text}</div>
           </div>
         );
       })}
       {copy.memoryEvidence.map((text, index) => {
         const show = appear(frame, 68 + index * 10, 16);
         return (
-          <div
-            key={text}
-            style={{
-              position: 'absolute',
-              right: 0,
-              top: 80 + index * 126,
-              width: 288,
-              padding: '18px 20px',
-              borderRadius: 22,
-              background: 'rgba(247,250,240,0.96)',
-              border: `1px solid ${scene.accent}24`,
-              opacity: show,
-              transform: `translateX(${(1 - show) * 24}px)`,
-            }}
-          >
-            <div style={{fontSize: 14, fontWeight: 800, color: scene.accent, marginBottom: 8}}>
-              {copy.memoryEvidenceTag}
-            </div>
-            <div style={{fontSize: 23, lineHeight: 1.35, fontWeight: 700, color: '#2D4D31'}}>
-              {text}
-            </div>
+          <div key={text} style={{
+            position: 'absolute', right: 0, top: 80 + index * 126, width: 288,
+            padding: '18px 20px', borderRadius: 22,
+            background: `${scene.accent}08`, border: `1px solid ${scene.accent}20`,
+            opacity: show, transform: `translateX(${(1 - show) * 24}px)`,
+          }}>
+            <div style={{fontSize: 14, fontWeight: 800, color: scene.accent, marginBottom: 8}}>{copy.memoryEvidenceTag}</div>
+            <div style={{fontSize: 23, lineHeight: 1.35, fontWeight: 700, color: '#C8E6CA'}}>{text}</div>
           </div>
         );
       })}
@@ -839,151 +734,71 @@ const GuideVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, c
 
   return (
     <div style={{position: 'relative', width: 860, height: 700}}>
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: 34,
-          overflow: 'hidden',
-          boxShadow: '0 28px 80px rgba(25, 45, 28, 0.16)',
-          transform: `translateY(${(1 - panel) * 24}px)`,
-          opacity: panel,
-        }}
-      >
-        <Img
-          src={staticFile(scene.image!)}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            filter: 'blur(1px) saturate(0.92)',
-            opacity: 0.26,
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'linear-gradient(180deg, rgba(249,247,239,0.92), rgba(243,247,236,0.96))',
-          }}
-        />
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 34, overflow: 'hidden',
+        boxShadow: `0 28px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)`,
+        transform: `translateY(${(1 - panel) * 24}px)`, opacity: panel,
+      }}>
+        <Img src={staticFile(scene.image!)} style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', filter: 'blur(2px) saturate(0.6) brightness(0.2)', opacity: 0.4,
+        }} />
+        <div style={{position: 'absolute', inset: 0, background: 'rgba(11,30,19,0.85)'}} />
         <div style={{position: 'absolute', inset: 0, padding: 28}}>
           <div style={{display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18}}>
-            <div
-              style={{
-                width: 54,
-                height: 54,
-                borderRadius: 18,
-                background: scene.accent,
-                color: '#fff',
-                fontSize: 30,
-                fontWeight: 900,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              X
-            </div>
+            <div style={{
+              width: 54, height: 54, borderRadius: 18,
+              background: `linear-gradient(145deg, ${scene.accent}, ${scene.accent}aa)`,
+              color: '#0B1E13', fontSize: 30, fontWeight: 900,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: `0 0 20px ${scene.accent}30`,
+            }}>X</div>
             <div>
-              <div style={{fontSize: 28, fontWeight: 900, color: '#254329'}}>{copy.guideName}</div>
-              <div style={{fontSize: 18, color: '#567157'}}>{copy.guideSubtitle}</div>
+              <div style={{fontSize: 28, fontWeight: 900, color: '#E8F5E9'}}>{copy.guideName}</div>
+              <div style={{fontSize: 18, color: '#7BAF80'}}>{copy.guideSubtitle}</div>
             </div>
           </div>
 
-          <div
-            style={{
-              borderRadius: 24,
-              padding: '18px 20px',
-              background: 'rgba(255,255,255,0.88)',
-              border: `1px solid ${scene.accent}24`,
-              marginBottom: 18,
-              opacity: digest,
-              transform: `translateY(${(1 - digest) * 18}px)`,
-            }}
-          >
-            <div style={{fontSize: 14, fontWeight: 800, color: scene.accent, marginBottom: 8}}>
-              {copy.guideDigestLabel}
-            </div>
-            <div style={{fontSize: 22, lineHeight: 1.45, color: '#2E4E33', fontWeight: 700}}>
-              {copy.guideDigestText}
-            </div>
+          <div style={{
+            borderRadius: 24, padding: '18px 20px',
+            background: `${scene.accent}0a`, border: `1px solid ${scene.accent}20`,
+            marginBottom: 18, opacity: digest, transform: `translateY(${(1 - digest) * 18}px)`,
+          }}>
+            <div style={{fontSize: 14, fontWeight: 800, color: scene.accent, marginBottom: 8}}>{copy.guideDigestLabel}</div>
+            <div style={{fontSize: 22, lineHeight: 1.45, color: '#C8E6CA', fontWeight: 700}}>{copy.guideDigestText}</div>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              marginBottom: 14,
-              opacity: appear(frame, 28, 14),
-            }}
-          >
-            <div
-              style={{
-                maxWidth: 470,
-                padding: '16px 18px',
-                borderRadius: 24,
-                background: scene.accent,
-                color: '#fff',
-                fontSize: 22,
-                lineHeight: 1.45,
-                fontWeight: 600,
-              }}
-            >
+          <div style={{display: 'flex', justifyContent: 'flex-end', marginBottom: 14, opacity: appear(frame, 28, 14)}}>
+            <div style={{
+              maxWidth: 470, padding: '16px 18px', borderRadius: 24,
+              background: `linear-gradient(135deg, ${scene.accent}, ${scene.accent}cc)`,
+              color: '#0B1E13', fontSize: 22, lineHeight: 1.45, fontWeight: 600,
+            }}>
               {typedQuestion}
               <span style={{opacity: Math.floor(frame / 10) % 2 === 0 ? 1 : 0}}>|</span>
             </div>
           </div>
 
-          <div
-            style={{
-              maxWidth: 560,
-              padding: '18px 20px',
-              borderRadius: 24,
-              background: 'rgba(255,255,255,0.94)',
-              border: '1px solid rgba(38, 73, 42, 0.08)',
-              opacity: reply,
-              transform: `translateY(${(1 - reply) * 20}px)`,
-            }}
-          >
-            <div style={{fontSize: 23, lineHeight: 1.5, color: '#29482E', fontWeight: 600}}>
-              {copy.guideReply}
-            </div>
-            <div
-              style={{
-                marginTop: 12,
-                display: 'inline-flex',
-                padding: '10px 14px',
-                borderRadius: 999,
-                background: '#EEF7E1',
-                color: '#4F6E4F',
-                fontSize: 17,
-                fontWeight: 800,
-              }}
-            >
-              {copy.guideRefLabel}
-            </div>
+          <div style={{
+            maxWidth: 560, padding: '18px 20px', borderRadius: 24,
+            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+            opacity: reply, transform: `translateY(${(1 - reply) * 20}px)`,
+          }}>
+            <div style={{fontSize: 23, lineHeight: 1.5, color: '#C8E6CA', fontWeight: 600}}>{copy.guideReply}</div>
+            <div style={{
+              marginTop: 12, display: 'inline-flex', padding: '10px 14px', borderRadius: 999,
+              background: `${scene.accent}15`, border: `1px solid ${scene.accent}25`,
+              color: scene.accent, fontSize: 17, fontWeight: 800,
+            }}>{copy.guideRefLabel}</div>
           </div>
 
           <div style={{marginTop: 18, display: 'flex', gap: 10, opacity: appear(frame, 78, 14)}}>
             {copy.guideActions.map((item) => (
-              <div
-                key={item}
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: 999,
-                  background: 'rgba(255,255,255,0.9)',
-                  border: '1px solid rgba(38, 73, 42, 0.08)',
-                  fontSize: 18,
-                  fontWeight: 700,
-                  color: '#355537',
-                }}
-              >
-                {item}
-              </div>
+              <div key={item} style={{
+                padding: '12px 16px', borderRadius: 999,
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                fontSize: 18, fontWeight: 700, color: '#7BAF80',
+              }}>{item}</div>
             ))}
           </div>
         </div>
@@ -1004,95 +819,48 @@ const EventVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, c
       <div style={{position: 'absolute', inset: 0}}>
         <ScreenshotFrame src={staticFile(scene.image!)} accent={scene.accent} width={820} />
       </div>
-      <div
-        style={{
-          position: 'absolute',
-          left: 86,
-          right: 86,
-          top: 92,
-          borderRadius: 30,
-          padding: 28,
-          background:
-            'linear-gradient(160deg, rgba(255,252,243,0.98), rgba(249,247,239,0.97))',
-          border: `1px solid ${scene.accent}2e`,
-          boxShadow: '0 28px 80px rgba(30, 48, 32, 0.2)',
-          opacity: modal,
-          transform: `translateY(${(1 - modal) * 26}px)`,
-        }}
-      >
-        <div style={{fontSize: 18, fontWeight: 800, color: '#A06C00', marginBottom: 10}}>
-          {copy.eventTag}
-        </div>
-        <div style={{fontSize: 42, lineHeight: 1.12, fontWeight: 900, color: '#203622'}}>
-          {copy.eventTitle}
-        </div>
-        <div style={{marginTop: 14, fontSize: 24, lineHeight: 1.5, color: '#415843'}}>
-          {copy.eventReason}
-        </div>
-        <div
-          style={{
-            marginTop: 18,
-            padding: '16px 18px',
-            borderRadius: 22,
-            background: '#FFF4D7',
-            border: '1px solid rgba(218, 171, 63, 0.34)',
-          }}
-        >
-          <div style={{fontSize: 16, fontWeight: 800, color: '#A06C00', marginBottom: 8}}>
-            {copy.eventMemoryLabel}
-          </div>
-          <div style={{fontSize: 21, lineHeight: 1.45, fontWeight: 700, color: '#6D5310'}}>
-            {copy.eventMemoryText}
-          </div>
+      <div style={{
+        position: 'absolute', left: 86, right: 86, top: 92, borderRadius: 30, padding: 28,
+        background: 'rgba(15,30,20,0.92)', border: `1px solid ${scene.accent}25`,
+        boxShadow: `0 28px 80px rgba(0,0,0,0.5), 0 0 40px ${scene.accent}08`,
+        opacity: modal, transform: `translateY(${(1 - modal) * 26}px)`,
+      }}>
+        <div style={{fontSize: 18, fontWeight: 800, color: scene.accent, marginBottom: 10}}>{copy.eventTag}</div>
+        <div style={{fontSize: 42, lineHeight: 1.12, fontWeight: 900, color: '#FFFFFF'}}>{copy.eventTitle}</div>
+        <div style={{marginTop: 14, fontSize: 24, lineHeight: 1.5, color: 'rgba(200,230,202,0.7)'}}>{copy.eventReason}</div>
+        <div style={{
+          marginTop: 18, padding: '16px 18px', borderRadius: 22,
+          background: `${scene.accent}0c`, border: `1px solid ${scene.accent}20`,
+        }}>
+          <div style={{fontSize: 16, fontWeight: 800, color: scene.accent, marginBottom: 8}}>{copy.eventMemoryLabel}</div>
+          <div style={{fontSize: 21, lineHeight: 1.45, fontWeight: 700, color: '#C8E6CA'}}>{copy.eventMemoryText}</div>
         </div>
         <div style={{display: 'flex', gap: 14, marginTop: 20}}>
           {copy.eventRewards.map((item, index) => (
-            <div
-              key={item}
-              style={{
-                padding: '12px 16px',
-                borderRadius: 999,
-                background: 'rgba(255,255,255,0.9)',
-                fontSize: 18,
-                fontWeight: 800,
-                color: index === 0 ? '#5D6C58' : '#8B5B00',
-              }}
-            >
-              {item}
-            </div>
+            <div key={item} style={{
+              padding: '12px 16px', borderRadius: 999,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+              fontSize: 18, fontWeight: 800,
+              color: index === 0 ? '#7BAF80' : scene.accent,
+            }}>{item}</div>
           ))}
-          <div
-            style={{
-              marginLeft: 'auto',
-              padding: '12px 22px',
-              borderRadius: 999,
-              background: scene.accent,
-              color: '#fff',
-              fontSize: 20,
-              fontWeight: 900,
-            }}
-          >
-            {copy.eventAcceptLabel}
-          </div>
+          <div style={{
+            marginLeft: 'auto', padding: '12px 22px', borderRadius: 999,
+            background: `linear-gradient(135deg, ${scene.accent}, ${scene.accent}cc)`,
+            color: '#0B1E13', fontSize: 20, fontWeight: 900,
+            boxShadow: `0 0 20px ${scene.accent}30`,
+          }}>{copy.eventAcceptLabel}</div>
         </div>
       </div>
       <ClickPulse top={496} left={666} accent={scene.accent} start={84} />
-      <div
-        style={{
-          position: 'absolute',
-          right: 114,
-          bottom: 78,
-          padding: '16px 20px',
-          borderRadius: 22,
-          background: 'rgba(246, 250, 239, 0.96)',
-          border: `1px solid ${scene.accent}22`,
-          boxShadow: '0 18px 40px rgba(31, 48, 33, 0.12)',
-          opacity: accepted,
-          transform: `translateY(${(1 - accepted) * 20}px)`,
-        }}
-      >
+      <div style={{
+        position: 'absolute', right: 114, bottom: 78, padding: '16px 20px', borderRadius: 22,
+        background: `${scene.accent}10`, border: `1px solid ${scene.accent}25`,
+        boxShadow: '0 18px 40px rgba(0,0,0,0.3)',
+        opacity: accepted, transform: `translateY(${(1 - accepted) * 20}px)`,
+      }}>
         <div style={{fontSize: 18, fontWeight: 800, color: scene.accent}}>{copy.eventAcceptedTag}</div>
-        <div style={{fontSize: 22, color: '#2C4B31', marginTop: 4}}>{copy.eventAcceptedText}</div>
+        <div style={{fontSize: 22, color: '#C8E6CA', marginTop: 4}}>{copy.eventAcceptedText}</div>
       </div>
     </div>
   );
@@ -1105,8 +873,7 @@ const ProgressionVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({sc
   const shopIn = appear(frame, 42, 18);
   const redeemed = appear(frame, 92, 14);
   const ringProgress = interpolate(frame, [14, 72], [0, 0.68], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: Easing.bezier(0.2, 0.8, 0.2, 1),
   });
   const ringRadius = 64;
@@ -1115,115 +882,52 @@ const ProgressionVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({sc
   return (
     <div style={{position: 'relative', width: 860, height: 700}}>
       {/* Left: Growth Dashboard */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          width: 400,
-          height: 680,
-          borderRadius: 32,
-          overflow: 'hidden',
-          background:
-            'linear-gradient(180deg, rgba(255,253,243,0.97), rgba(252,247,230,0.95))',
-          border: '1px solid rgba(212, 149, 22, 0.14)',
-          boxShadow: '0 24px 70px rgba(40, 36, 20, 0.14)',
-          opacity: dashIn,
-          transform: `translateY(${(1 - dashIn) * 22}px)`,
-        }}
-      >
+      <div style={{
+        position: 'absolute', left: 0, top: 0, width: 400, height: 680, borderRadius: 32, overflow: 'hidden',
+        background: 'rgba(255,255,255,0.04)',
+        border: `1px solid ${scene.accent}18`,
+        boxShadow: `0 24px 70px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)`,
+        opacity: dashIn, transform: `translateY(${(1 - dashIn) * 22}px)`,
+      }}>
         <div style={{padding: '24px 24px 16px', display: 'flex', gap: 12, alignItems: 'center'}}>
-          <div
-            style={{
-              padding: '10px 16px',
-              borderRadius: 999,
-              background: 'rgba(255, 87, 34, 0.12)',
-              color: '#E64A19',
-              fontSize: 20,
-              fontWeight: 800,
-              display: 'flex',
-              gap: 6,
-              alignItems: 'center',
-            }}
-          >
-            <span style={{fontSize: 22}}>🔥</span>
-            {copy.progressionCheckinLabel}
+          <div style={{
+            padding: '10px 16px', borderRadius: 999,
+            background: 'rgba(255,138,80,0.12)', border: '1px solid rgba(255,138,80,0.25)',
+            color: '#FF8A50', fontSize: 20, fontWeight: 800, display: 'flex', gap: 6, alignItems: 'center',
+          }}>
+            <span style={{fontSize: 22}}>🔥</span>{copy.progressionCheckinLabel}
           </div>
-          <div
-            style={{
-              padding: '10px 16px',
-              borderRadius: 999,
-              background: `${scene.accent}18`,
-              color: scene.accent,
-              fontSize: 18,
-              fontWeight: 800,
-            }}
-          >
-            {copy.progressionLevelLabel}
-          </div>
+          <div style={{
+            padding: '10px 16px', borderRadius: 999,
+            background: `${scene.accent}12`, border: `1px solid ${scene.accent}25`,
+            color: scene.accent, fontSize: 18, fontWeight: 800,
+          }}>{copy.progressionLevelLabel}</div>
         </div>
 
-        {/* XP Ring */}
         <div style={{display: 'flex', justifyContent: 'center', padding: '18px 0'}}>
           <div style={{position: 'relative', width: 160, height: 160}}>
             <svg width="160" height="160" viewBox="0 0 160 160" style={{transform: 'rotate(-90deg)'}}>
-              <circle
-                cx="80" cy="80" r={ringRadius}
-                fill="none"
-                stroke="rgba(212,149,22,0.14)"
-                strokeWidth="12"
-              />
-              <circle
-                cx="80" cy="80" r={ringRadius}
-                fill="none"
-                stroke={scene.accent}
-                strokeWidth="12"
-                strokeLinecap="round"
-                strokeDasharray={ringCircumference}
-                strokeDashoffset={ringCircumference * (1 - ringProgress)}
-              />
+              <circle cx="80" cy="80" r={ringRadius} fill="none" stroke={`${scene.accent}18`} strokeWidth="12" />
+              <circle cx="80" cy="80" r={ringRadius} fill="none" stroke={scene.accent} strokeWidth="12"
+                strokeLinecap="round" strokeDasharray={ringCircumference} strokeDashoffset={ringCircumference * (1 - ringProgress)} />
             </svg>
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <div style={{fontSize: 28, fontWeight: 900, color: scene.accent}}>
-                {Math.round(ringProgress * 100)}%
-              </div>
-              <div style={{fontSize: 14, color: '#8A7340', fontWeight: 700}}>
-                {copy.progressionXpLabel}
-              </div>
+            <div style={{position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
+              <div style={{fontSize: 28, fontWeight: 900, color: scene.accent}}>{Math.round(ringProgress * 100)}%</div>
+              <div style={{fontSize: 14, color: `${scene.accent}80`, fontWeight: 700}}>{copy.progressionXpLabel}</div>
             </div>
           </div>
         </div>
 
-        {/* 3-stat row */}
         <div style={{padding: '0 18px', display: 'flex', gap: 8}}>
           {copy.progressionStats.map((stat, i) => {
             const statIn = appear(frame, 30 + i * 8, 14);
             return (
-              <div
-                key={stat}
-                style={{
-                  flex: 1,
-                  padding: '14px 10px',
-                  borderRadius: 18,
-                  background: 'rgba(255,255,255,0.88)',
-                  border: '1px solid rgba(212, 149, 22, 0.1)',
-                  textAlign: 'center',
-                  opacity: statIn,
-                  transform: `translateY(${(1 - statIn) * 12}px)`,
-                }}
-              >
-                <div style={{fontSize: 17, fontWeight: 800, color: '#44381C', lineHeight: 1.4}}>
-                  {stat}
-                </div>
+              <div key={stat} style={{
+                flex: 1, padding: '14px 10px', borderRadius: 18,
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+                textAlign: 'center' as const, opacity: statIn, transform: `translateY(${(1 - statIn) * 12}px)`,
+              }}>
+                <div style={{fontSize: 17, fontWeight: 800, color: '#C8E6CA', lineHeight: 1.4}}>{stat}</div>
               </div>
             );
           })}
@@ -1231,79 +935,42 @@ const ProgressionVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({sc
       </div>
 
       {/* Right: Reward Shop */}
-      <div
-        style={{
-          position: 'absolute',
-          right: 0,
-          top: 60,
-          width: 410,
-          borderRadius: 30,
-          padding: 24,
-          background:
-            'linear-gradient(155deg, rgba(255,255,249,0.98), rgba(249,245,234,0.96))',
-          border: `1px solid ${scene.accent}28`,
-          boxShadow: '0 26px 68px rgba(40, 36, 20, 0.15)',
-          opacity: shopIn,
-          transform: `translateX(${(1 - shopIn) * 24}px)`,
-        }}
-      >
-        <div style={{fontSize: 26, fontWeight: 900, color: '#3A2F14', marginBottom: 18}}>
-          {copy.progressionShopTitle}
-        </div>
+      <div style={{
+        position: 'absolute', right: 0, top: 60, width: 410, borderRadius: 30, padding: 24,
+        background: 'rgba(255,209,102,0.04)',
+        border: `1px solid ${scene.accent}18`,
+        boxShadow: '0 26px 68px rgba(0,0,0,0.4)',
+        opacity: shopIn, transform: `translateX(${(1 - shopIn) * 24}px)`,
+      }}>
+        <div style={{fontSize: 26, fontWeight: 900, color: scene.accent, marginBottom: 18}}>{copy.progressionShopTitle}</div>
         {copy.progressionShopItems.map((item, i) => {
           const rowIn = appear(frame, 48 + i * 10, 14);
           const isRedeemed = i === 0 && redeemed > 0.3;
           return (
-            <div
-              key={item}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                padding: '16px 14px',
-                marginBottom: 10,
-                borderRadius: 20,
-                background: isRedeemed ? `${scene.accent}14` : 'rgba(255,255,255,0.86)',
-                border: `1px solid ${isRedeemed ? `${scene.accent}40` : 'rgba(212,149,22,0.08)'}`,
-                opacity: rowIn,
-                transform: `translateX(${(1 - rowIn) * 16}px)`,
-              }}
-            >
-              <div
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 14,
-                  background: `${scene.accent}18`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 22,
-                }}
-              >
-                {i === 0 ? '☕' : i === 1 ? '🍰' : '🎬'}
-              </div>
+            <div key={item} style={{
+              display: 'flex', alignItems: 'center', gap: 14,
+              padding: '16px 14px', marginBottom: 10, borderRadius: 20,
+              background: isRedeemed ? `${scene.accent}10` : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${isRedeemed ? `${scene.accent}30` : 'rgba(255,255,255,0.06)'}`,
+              opacity: rowIn, transform: `translateX(${(1 - rowIn) * 16}px)`,
+            }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: 14,
+                background: `${scene.accent}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+              }}>{i === 0 ? '☕' : i === 1 ? '🍰' : '🎬'}</div>
               <div style={{flex: 1}}>
-                <div style={{fontSize: 20, fontWeight: 800, color: '#3A2F14'}}>
+                <div style={{fontSize: 20, fontWeight: 800, color: '#E8F5E9'}}>
                   {isRedeemed ? <s>{item}</s> : item}
                 </div>
-                <div style={{fontSize: 16, fontWeight: 700, color: '#8A7340'}}>
-                  {copy.progressionShopPrices[i]}
-                </div>
+                <div style={{fontSize: 16, fontWeight: 700, color: `${scene.accent}80`}}>{copy.progressionShopPrices[i]}</div>
               </div>
               {isRedeemed && (
-                <div
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: 999,
-                    background: scene.accent,
-                    color: '#fff',
-                    fontSize: 16,
-                    fontWeight: 900,
-                  }}
-                >
-                  {copy.progressionRedeemedLabel}
-                </div>
+                <div style={{
+                  padding: '8px 14px', borderRadius: 999,
+                  background: `linear-gradient(135deg, ${scene.accent}, ${scene.accent}cc)`,
+                  color: '#0B1E13', fontSize: 16, fontWeight: 900,
+                  boxShadow: `0 0 16px ${scene.accent}30`,
+                }}>{copy.progressionRedeemedLabel}</div>
               )}
             </div>
           );
@@ -1321,118 +988,56 @@ const DiaryVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, c
   const shell = springIn(frame, fps, 8);
   const summary = appear(frame, 56, 18);
   const scroll = interpolate(frame, [10, 110], [0, -130], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
 
   return (
     <div style={{position: 'relative', width: 860, height: 700}}>
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          width: 360,
-          height: 700,
-          borderRadius: 32,
-          overflow: 'hidden',
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,248,238,0.94))',
-          border: '1px solid rgba(38, 73, 42, 0.09)',
-          boxShadow: '0 24px 72px rgba(30, 47, 32, 0.14)',
-          opacity: shell,
-          transform: `translateY(${(1 - shell) * 22}px)`,
-        }}
-      >
-        <div
-          style={{
-            padding: '24px 24px 16px',
-            borderBottom: '1px solid rgba(38, 73, 42, 0.08)',
-            fontSize: 28,
-            fontWeight: 900,
-            color: '#214128',
-          }}
-        >
-          {copy.diaryTitle}
-        </div>
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            top: 86 + scroll,
-            padding: '0 18px 18px',
-            display: 'grid',
-            gap: 12,
-          }}
-        >
+      <div style={{
+        position: 'absolute', left: 0, top: 0, width: 360, height: 700, borderRadius: 32, overflow: 'hidden',
+        background: 'rgba(255,255,255,0.04)',
+        border: `1px solid ${scene.accent}15`,
+        boxShadow: `0 24px 72px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)`,
+        opacity: shell, transform: `translateY(${(1 - shell) * 22}px)`,
+      }}>
+        <div style={{
+          padding: '24px 24px 16px',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          fontSize: 28, fontWeight: 900, color: '#E8F5E9',
+        }}>{copy.diaryTitle}</div>
+        <div style={{
+          position: 'absolute', left: 0, right: 0, top: 86 + scroll,
+          padding: '0 18px 18px', display: 'grid', gap: 12,
+        }}>
           {copy.diaryEntries.map(([date, text]) => (
-            <div
-              key={date}
-              style={{
-                padding: '16px',
-                borderRadius: 20,
-                background: 'rgba(255,255,255,0.88)',
-                border: '1px solid rgba(38, 73, 42, 0.07)',
-              }}
-            >
-              <div style={{fontSize: 16, fontWeight: 800, color: scene.accent, marginBottom: 8}}>
-                {date}
-              </div>
-              <div style={{fontSize: 20, lineHeight: 1.4, color: '#2C4B31', fontWeight: 700}}>
-                {text}
-              </div>
-              <div style={{fontSize: 16, color: '#657A66', marginTop: 8}}>{copy.diaryStoredLabel}</div>
+            <div key={date} style={{
+              padding: '16px', borderRadius: 20,
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <div style={{fontSize: 16, fontWeight: 800, color: scene.accent, marginBottom: 8}}>{date}</div>
+              <div style={{fontSize: 20, lineHeight: 1.4, color: '#C8E6CA', fontWeight: 700}}>{text}</div>
+              <div style={{fontSize: 16, color: 'rgba(123,175,128,0.5)', marginTop: 8}}>{copy.diaryStoredLabel}</div>
             </div>
           ))}
         </div>
       </div>
-      <div
-        style={{
-          position: 'absolute',
-          right: 0,
-          top: 116,
-          width: 450,
-          borderRadius: 30,
-          padding: 28,
-          background:
-            'linear-gradient(155deg, rgba(255,253,246,0.98), rgba(240,247,236,0.95))',
-          border: `1px solid ${scene.accent}28`,
-          boxShadow: '0 28px 70px rgba(31, 48, 33, 0.16)',
-          opacity: summary,
-          transform: `translateX(${(1 - summary) * 24}px)`,
-        }}
-      >
-        <div style={{fontSize: 18, fontWeight: 800, color: scene.accent, marginBottom: 12}}>
-          {copy.diarySummaryTag}
-        </div>
-        <div style={{fontSize: 38, lineHeight: 1.15, fontWeight: 900, color: '#203622'}}>
-          {copy.diarySummaryTitle}
-        </div>
-        <div style={{fontSize: 22, lineHeight: 1.55, color: '#415843', marginTop: 16}}>
-          {copy.diarySummaryText}
-        </div>
+      <div style={{
+        position: 'absolute', right: 0, top: 116, width: 450, borderRadius: 30, padding: 28,
+        background: 'rgba(255,255,255,0.04)',
+        border: `1px solid ${scene.accent}20`,
+        boxShadow: '0 28px 70px rgba(0,0,0,0.4)',
+        opacity: summary, transform: `translateX(${(1 - summary) * 24}px)`,
+      }}>
+        <div style={{fontSize: 18, fontWeight: 800, color: scene.accent, marginBottom: 12}}>{copy.diarySummaryTag}</div>
+        <div style={{fontSize: 38, lineHeight: 1.15, fontWeight: 900, color: '#FFFFFF'}}>{copy.diarySummaryTitle}</div>
+        <div style={{fontSize: 22, lineHeight: 1.55, color: 'rgba(200,230,202,0.7)', marginTop: 16}}>{copy.diarySummaryText}</div>
         <div style={{marginTop: 18, display: 'grid', gap: 10}}>
           {copy.diaryBullets.map((line) => (
-            <div
-              key={line}
-              style={{
-                display: 'flex',
-                gap: 12,
-                alignItems: 'center',
-                fontSize: 20,
-                fontWeight: 700,
-                color: '#2D4D31',
-              }}
-            >
-              <div
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: 999,
-                  background: scene.accent,
-                }}
-              />
+            <div key={line} style={{
+              display: 'flex', gap: 12, alignItems: 'center',
+              fontSize: 20, fontWeight: 700, color: '#C8E6CA',
+            }}>
+              <div style={{width: 14, height: 14, borderRadius: 999, background: scene.accent, boxShadow: `0 0 8px ${scene.accent}40`}} />
               {line}
             </div>
           ))}
@@ -1473,9 +1078,15 @@ const SceneView: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, cop
 
   return (
     <AbsoluteFill style={{...shellStyle, opacity: fade}}>
-      <AccentOrb size={220} top={120} left={56} color={scene.accent} />
-      <AccentOrb size={180} top={780} right={120} color="#F6D768" delay={14} />
-      <AccentOrb size={150} top={420} right={280} color="#73C37E" delay={26} />
+      {/* deep background layers */}
+      <div style={{position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 30% 20%, #143024 0%, #0B1E13 50%, #0D1A10 100%)'}} />
+      <div style={{position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 75% 80%, rgba(26,46,32,0.9) 0%, transparent 60%)'}} />
+      {/* subtle grid */}
+      <div style={{position: 'absolute', inset: 0, opacity: 0.025, backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '80px 80px'}} />
+
+      <AccentOrb size={320} top={-40} left={-30} color={scene.accent} />
+      <AccentOrb size={260} top={700} right={80} color="#FFD166" delay={14} />
+      <AccentOrb size={200} top={350} right={300} color={scene.accent} delay={26} />
 
       <div
         style={{
@@ -1567,6 +1178,17 @@ type PosterCopy = {
   memoryFlow: [string, string, string];
   achievements: [string, string, string];
   guideBubble: string;
+  guideLabel: string;
+  guideMemoryTag: string;
+  questBoardTitle: string;
+  questRows: [string, string, string, string];
+  rewardShopTitle: string;
+  rewardItems: [string, string];
+  rewardPrices: [string, string];
+  streakChip: string;
+  redeemChip: string;
+  levelLabel: string;
+  xpLabel: string;
 };
 
 const posterCopyEn: PosterCopy = {
@@ -1580,6 +1202,17 @@ const posterCopyEn: PosterCopy = {
   memoryFlow: ['Tasks completed', 'Context packed', 'Guide informed'],
   achievements: ['First Quest', '7-Day Streak', 'Memory Master'],
   guideBubble: 'Recovery looks smart right now. Try one light task to get back in rhythm.',
+  guideLabel: 'Guide',
+  guideMemoryTag: '6 memory refs',
+  questBoardTitle: 'Quest Board',
+  questRows: ['Review weekly summary', 'Prepare recovery quest', 'Upload memory snapshot', 'Check guide flow'],
+  rewardShopTitle: 'Reward Shop',
+  rewardItems: ['30-min Break', 'Dessert Voucher'],
+  rewardPrices: ['80g', '150g'],
+  streakChip: '7-day streak',
+  redeemChip: 'Redeemed!',
+  levelLabel: 'Lv.12',
+  xpLabel: '1,260 XP',
 };
 
 const posterCopyZh: PosterCopy = {
@@ -1593,268 +1226,321 @@ const posterCopyZh: PosterCopy = {
   memoryFlow: ['完成任务', '打包上下文', '助手就绪'],
   achievements: ['首个任务', '连续7天', '记忆大师'],
   guideBubble: '现在适合恢复节奏，试试从一个轻量任务开始。',
+  guideLabel: '助手',
+  guideMemoryTag: '6 段记忆参考',
+  questBoardTitle: '任务面板',
+  questRows: ['整理本周回顾', '准备恢复任务', '上传记忆快照', '检查引导流程'],
+  rewardShopTitle: '奖励商店',
+  rewardItems: ['30分钟休息', '甜品兑换券'],
+  rewardPrices: ['80金', '150金'],
+  streakChip: '连续 7 天',
+  redeemChip: '已兑换!',
+  levelLabel: 'Lv.12',
+  xpLabel: '1,260 XP',
 };
 
 const PosterComposition: React.FC<{copy: PosterCopy}> = ({copy}) => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const {fps: fpsVal} = useVideoConfig();
 
-  const titleIn = springIn(frame, fps, 0);
-  const subIn = appear(frame, 6, 14);
-  const tagIn = appear(frame, 12, 14);
-  const chipsIn = appear(frame, 18, 16);
-  const ctaIn = springIn(frame, fps, 24);
-  const flowIn = appear(frame, 14, 18);
-  const badgesIn = appear(frame, 20, 16);
-  const ringProgress = interpolate(frame, [6, 30], [0, 0.72], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+  /* ── animation helpers (all fully visible at frame 30) ── */
+  const a = (start: number, dur = 14) => appear(frame, start, dur);
+  const sIn = (start: number) => springIn(frame, fpsVal, start);
+
+  const ringProgress = interpolate(frame, [4, 28], [0, 0.72], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: Easing.bezier(0.2, 0.8, 0.2, 1),
   });
-  const ringR = 72;
+  const ringR = 62;
   const ringC = 2 * Math.PI * ringR;
 
-  const chipColors = ['#2F8A43', '#2F7C39', '#E64A19', '#D49516', '#8A6B1A'];
+  const chipColors = ['#3CD05B', '#34C759', '#FF8A50', '#FFD166', '#C9A84C'];
   const chipIcons = ['📋', '🧠', '🔥', '📊', '🎁'];
   const badgeIcons = ['⚔️', '🔥', '🧠'];
 
+  const font = '"Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif';
+
   return (
-    <AbsoluteFill
-      style={{
-        ...shellStyle,
-        background:
-          'radial-gradient(ellipse at 20% 25%, rgba(233,245,221,0.96) 0%, rgba(255,253,243,0.97) 35%, rgba(246,236,191,0.92) 70%, rgba(221,240,206,0.95) 100%)',
-      }}
-    >
-      {/* Decorative orbs */}
-      <div style={{position: 'absolute', top: 40, left: 30, width: 320, height: 320, borderRadius: 320, background: 'rgba(47,138,67,0.08)', filter: 'blur(50px)'}} />
-      <div style={{position: 'absolute', bottom: 60, right: 60, width: 280, height: 280, borderRadius: 280, background: 'rgba(212,149,22,0.1)', filter: 'blur(40px)'}} />
-      <div style={{position: 'absolute', top: 500, left: 400, width: 200, height: 200, borderRadius: 200, background: 'rgba(115,195,126,0.08)', filter: 'blur(30px)'}} />
-      <div style={{position: 'absolute', top: 150, right: 500, width: 140, height: 140, borderRadius: 140, background: 'rgba(230,74,25,0.06)', filter: 'blur(25px)'}} />
+    <AbsoluteFill style={{fontFamily: font, color: '#E8F5E9', background: '#0B1E13'}}>
+      {/* ── deep background gradient ── */}
+      <div style={{position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 30% 20%, #143024 0%, #0B1E13 50%, #0D1A10 100%)'}} />
+      <div style={{position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 75% 80%, rgba(26,46,32,0.9) 0%, transparent 60%)'}} />
 
-      <div style={{position: 'absolute', inset: 0, display: 'flex', padding: '60px 90px', gap: 60}}>
-        {/* ─── Left column ─── */}
-        <div style={{flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 18, transform: `translateY(${(1 - titleIn) * 16}px)`}}>
-          {/* Product icon (globe + checkmark) + title */}
-          <div style={{display: 'flex', alignItems: 'center', gap: 18}}>
-            <div style={{
-              width: 78, height: 78, borderRadius: 24, position: 'relative',
-              background: 'linear-gradient(145deg, #2F8A43, #4BA556)',
-              boxShadow: '0 14px 40px rgba(47,138,67,0.35)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <div style={{fontSize: 40, lineHeight: 1}}>🌍</div>
-              <div style={{
-                position: 'absolute', right: -4, bottom: -4,
-                width: 28, height: 28, borderRadius: 999,
-                background: '#fff', border: '2px solid #2F8A43',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 14, fontWeight: 900, color: '#2F8A43',
-              }}>✓</div>
-            </div>
-            <div style={{fontSize: 62, fontWeight: 900, color: '#1A331F', letterSpacing: -1}}>{copy.title}</div>
-          </div>
+      {/* ── ambient glow orbs ── */}
+      <div style={{position: 'absolute', top: -80, left: -60, width: 600, height: 600, borderRadius: 600, background: 'rgba(60,208,91,0.12)', filter: 'blur(120px)'}} />
+      <div style={{position: 'absolute', bottom: -100, right: -40, width: 500, height: 500, borderRadius: 500, background: 'rgba(255,209,102,0.10)', filter: 'blur(100px)'}} />
+      <div style={{position: 'absolute', top: 300, left: 700, width: 350, height: 350, borderRadius: 350, background: 'rgba(255,138,80,0.07)', filter: 'blur(80px)'}} />
+      <div style={{position: 'absolute', top: 100, right: 300, width: 250, height: 250, borderRadius: 250, background: 'rgba(60,208,91,0.06)', filter: 'blur(60px)'}} />
 
-          {/* Subtitle */}
-          <div style={{opacity: subIn, fontSize: 32, fontWeight: 800, color: '#2F8A43', transform: `translateY(${(1 - subIn) * 10}px)`}}>
-            {copy.subtitle}
-          </div>
+      {/* ── subtle grid overlay ── */}
+      <div style={{
+        position: 'absolute', inset: 0, opacity: 0.03,
+        backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
+        backgroundSize: '80px 80px',
+      }} />
 
-          {/* Tagline */}
-          <div style={{opacity: tagIn, fontSize: 23, lineHeight: 1.55, color: '#38533C', maxWidth: 580, transform: `translateY(${(1 - tagIn) * 8}px)`}}>
-            {copy.tagline}
-          </div>
-
-          {/* Feature chips with icons */}
-          <div style={{display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 4, opacity: chipsIn, transform: `translateY(${(1 - chipsIn) * 12}px)`}}>
-            {copy.features.map((f, i) => (
-              <div key={f} style={{
-                padding: '10px 18px', borderRadius: 999, display: 'flex', gap: 8, alignItems: 'center',
-                background: 'rgba(255,255,255,0.9)',
-                border: `1px solid ${chipColors[i]}20`,
-                boxShadow: '0 4px 14px rgba(30,50,32,0.06)',
-                fontSize: 18, fontWeight: 700, color: chipColors[i],
-              }}>
-                <span style={{fontSize: 16}}>{chipIcons[i]}</span>{f}
-              </div>
-            ))}
-          </div>
-
-          {/* Memory flow pipeline */}
+      {/* ═══════ CENTER COLUMN: Brand identity ═══════ */}
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', zIndex: 10,
+      }}>
+        {/* Product icon */}
+        <div style={{
+          width: 110, height: 110, borderRadius: 32, position: 'relative',
+          background: 'linear-gradient(145deg, #2F8A43, #3CD05B)',
+          boxShadow: '0 0 60px rgba(60,208,91,0.4), 0 20px 50px rgba(0,0,0,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          opacity: sIn(0), transform: `scale(${0.8 + sIn(0) * 0.2})`,
+          marginBottom: 20,
+        }}>
+          <div style={{fontSize: 56, lineHeight: 1}}>🌍</div>
           <div style={{
-            marginTop: 8, padding: '14px 20px', borderRadius: 20,
-            background: 'rgba(255,255,255,0.8)',
-            border: '1px solid rgba(47,138,67,0.1)',
-            boxShadow: '0 8px 28px rgba(30,50,32,0.06)',
-            opacity: flowIn, transform: `translateY(${(1 - flowIn) * 10}px)`,
-            display: 'flex', alignItems: 'center', gap: 14,
-          }}>
-            {copy.memoryFlow.map((step, i) => (
-              <React.Fragment key={step}>
-                <div style={{
-                  padding: '8px 14px', borderRadius: 14,
-                  background: i === 2 ? '#2F8A4316' : 'rgba(248,251,244,0.95)',
-                  border: `1px solid ${i === 2 ? '#2F8A4330' : 'rgba(38,73,42,0.06)'}`,
-                  fontSize: 16, fontWeight: 700, color: '#2A5E30', whiteSpace: 'nowrap',
-                }}>{step}</div>
-                {i < 2 && <div style={{fontSize: 18, color: '#2F8A4360', fontWeight: 800}}>→</div>}
-              </React.Fragment>
-            ))}
-          </div>
-
-          {/* Achievement badges row */}
-          <div style={{display: 'flex', gap: 12, opacity: badgesIn, transform: `translateY(${(1 - badgesIn) * 10}px)`}}>
-            {copy.achievements.map((badge, i) => (
-              <div key={badge} style={{
-                padding: '10px 16px', borderRadius: 18, display: 'flex', gap: 8, alignItems: 'center',
-                background: 'linear-gradient(145deg, rgba(255,253,240,0.95), rgba(255,248,220,0.92))',
-                border: '1px solid rgba(212,149,22,0.18)',
-                boxShadow: '0 6px 20px rgba(40,36,20,0.08)',
-                fontSize: 16, fontWeight: 800, color: '#6D5310',
-              }}>
-                <span style={{fontSize: 18}}>{badgeIcons[i]}</span>{badge}
-              </div>
-            ))}
-          </div>
-
-          {/* Stats line */}
-          <div style={{opacity: badgesIn, fontSize: 17, fontWeight: 700, color: '#5B8A5E', marginTop: 2}}>
-            {copy.statsLine}
-          </div>
-
-          {/* CTA */}
-          <div style={{display: 'flex', alignItems: 'center', gap: 16, transform: `scale(${0.95 + ctaIn * 0.05})`}}>
-            <div style={{
-              padding: '14px 30px', borderRadius: 999,
-              background: 'linear-gradient(135deg, #2F8A43, #5B9E48)',
-              color: '#fff', fontSize: 21, fontWeight: 900,
-              boxShadow: '0 10px 28px rgba(47,138,67,0.3)',
-            }}>
-              {copy.cta}
-            </div>
-            <div style={{fontSize: 18, color: '#5B8A5E', fontWeight: 600}}>{copy.url}</div>
-          </div>
+            position: 'absolute', right: -6, bottom: -6,
+            width: 34, height: 34, borderRadius: 999,
+            background: '#fff', border: '3px solid #3CD05B',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 17, fontWeight: 900, color: '#2F8A43',
+          }}>✓</div>
         </div>
 
-        {/* ─── Right column ─── */}
-        <div style={{width: 560, position: 'relative'}}>
-          {/* Quest board card */}
-          <div style={{
-            position: 'absolute', left: 0, top: 20, width: 400, borderRadius: 28, padding: 20,
-            background: 'linear-gradient(155deg, rgba(255,255,255,0.96), rgba(245,249,236,0.93))',
-            border: '1px solid rgba(45,89,48,0.1)',
-            boxShadow: '0 24px 64px rgba(32,51,35,0.14)',
-            opacity: appear(frame, 8, 16),
-            transform: `translateY(${(1 - appear(frame, 8, 16)) * 16}px)`,
-          }}>
-            <div style={{display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12}}>
-              <div style={{width: 11, height: 11, borderRadius: 999, background: '#2F8A43'}} />
-              <div style={{fontSize: 20, fontWeight: 800, color: '#234529'}}>Quest Board</div>
-              <div style={{marginLeft: 'auto', fontSize: 15, fontWeight: 700, color: '#61805E'}}>Lv.12</div>
+        {/* Title */}
+        <div style={{
+          fontSize: 82, fontWeight: 900, color: '#fff', letterSpacing: -2, lineHeight: 1,
+          textShadow: '0 0 40px rgba(60,208,91,0.3)',
+          opacity: sIn(2), transform: `translateY(${(1 - sIn(2)) * 20}px)`,
+        }}>{copy.title}</div>
+
+        {/* Subtitle */}
+        <div style={{
+          fontSize: 30, fontWeight: 800, color: '#FFD166', marginTop: 10,
+          textShadow: '0 0 20px rgba(255,209,102,0.3)',
+          opacity: a(4), transform: `translateY(${(1 - a(4)) * 12}px)`,
+        }}>{copy.subtitle}</div>
+
+        {/* Tagline */}
+        <div style={{
+          fontSize: 20, lineHeight: 1.6, color: 'rgba(200,230,202,0.7)', maxWidth: 620,
+          textAlign: 'center', marginTop: 10,
+          opacity: a(6), transform: `translateY(${(1 - a(6)) * 8}px)`,
+        }}>{copy.tagline}</div>
+
+        {/* Feature chips row */}
+        <div style={{
+          display: 'flex', gap: 12, marginTop: 22,
+          opacity: a(8, 16), transform: `translateY(${(1 - a(8, 16)) * 14}px)`,
+        }}>
+          {copy.features.map((f, i) => (
+            <div key={f} style={{
+              padding: '10px 18px', borderRadius: 999, display: 'flex', gap: 8, alignItems: 'center',
+              background: 'rgba(255,255,255,0.06)',
+              border: `1px solid ${chipColors[i]}40`,
+              boxShadow: `0 0 20px ${chipColors[i]}15`,
+              fontSize: 17, fontWeight: 700, color: chipColors[i],
+            }}>
+              <span style={{fontSize: 15}}>{chipIcons[i]}</span>{f}
             </div>
-            {['Review weekly summary', 'Prepare recovery quest', 'Upload memory snapshot', 'Check guide flow'].map((t, i) => (
-              <div key={t} style={{
-                display: 'flex', gap: 10, alignItems: 'center',
-                padding: '10px 12px', marginBottom: 6, borderRadius: 14,
-                background: i < 2 ? '#2F8A4310' : 'rgba(255,255,255,0.7)',
-                border: '1px solid rgba(38,73,42,0.05)',
-              }}>
-                <div style={{
-                  width: 18, height: 18, borderRadius: 999,
-                  background: i < 2 ? '#2F8A43' : 'transparent',
-                  border: '2px solid #2F8A43',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: 11, fontWeight: 900,
-                }}>{i < 2 ? '✓' : ''}</div>
-                <div style={{
-                  fontSize: 16, fontWeight: 600,
-                  color: i < 2 ? '#6C7D6C' : '#29482E',
-                  textDecoration: i < 2 ? 'line-through' : 'none',
-                }}>{t}</div>
-                <div style={{marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: '#6B8A67'}}>+20 XP</div>
-              </div>
-            ))}
-          </div>
+          ))}
+        </div>
 
-          {/* XP Ring */}
-          <div style={{
-            position: 'absolute', right: 10, top: 160, width: 180, height: 180,
-            borderRadius: 28, padding: 16,
-            background: 'linear-gradient(155deg, rgba(255,253,243,0.98), rgba(252,247,230,0.96))',
-            border: '1px solid rgba(212,149,22,0.16)',
-            boxShadow: '0 20px 54px rgba(40,36,20,0.15)',
-            opacity: appear(frame, 16, 16),
-            transform: `translateX(${(1 - appear(frame, 16, 16)) * 18}px)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <svg width="148" height="148" viewBox="0 0 180 180" style={{transform: 'rotate(-90deg)'}}>
-              <circle cx="90" cy="90" r={ringR} fill="none" stroke="rgba(212,149,22,0.14)" strokeWidth="12" />
-              <circle cx="90" cy="90" r={ringR} fill="none" stroke="#D49516" strokeWidth="12"
-                strokeLinecap="round" strokeDasharray={ringC} strokeDashoffset={ringC * (1 - ringProgress)} />
-            </svg>
-            <div style={{position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-              <div style={{fontSize: 26, fontWeight: 900, color: '#D49516'}}>{Math.round(ringProgress * 100)}%</div>
-              <div style={{fontSize: 12, fontWeight: 700, color: '#8A7340'}}>1,260 XP</div>
-            </div>
-          </div>
-
-          {/* Streak + reward chips */}
-          <FloatingChip label="🔥 7-day streak" accent="#E64A19" start={20} top={370} left={10} />
-          <FloatingChip label="☕ Redeemed!" accent="#D49516" start={24} top={370} right={30} />
-
-          {/* Reward shop mini card */}
-          <div style={{
-            position: 'absolute', right: 0, top: 420, width: 260, borderRadius: 22, padding: 16,
-            background: 'linear-gradient(155deg, rgba(255,255,249,0.97), rgba(249,245,234,0.95))',
-            border: '1px solid rgba(212,149,22,0.14)',
-            boxShadow: '0 18px 48px rgba(40,36,20,0.12)',
-            opacity: appear(frame, 26, 14),
-            transform: `translateX(${(1 - appear(frame, 26, 14)) * 16}px)`,
-          }}>
-            <div style={{fontSize: 16, fontWeight: 800, color: '#3A2F14', marginBottom: 10}}>🎁 Reward Shop</div>
-            {['30-min Break', 'Dessert Voucher'].map((item, i) => (
-              <div key={item} style={{
-                display: 'flex', gap: 8, alignItems: 'center',
-                padding: '8px 10px', marginBottom: 6, borderRadius: 14,
-                background: i === 0 ? '#D4951610' : 'rgba(255,255,255,0.7)',
-                border: '1px solid rgba(212,149,22,0.06)',
-              }}>
-                <span style={{fontSize: 16}}>{i === 0 ? '☕' : '🍰'}</span>
-                <div style={{flex: 1, fontSize: 14, fontWeight: 700, color: '#3A2F14'}}>{item}</div>
-                <div style={{fontSize: 12, fontWeight: 700, color: '#8A7340'}}>{i === 0 ? '80g' : '150g'}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Guide bubble */}
-          <div style={{
-            position: 'absolute', left: 0, bottom: 30, width: 340, borderRadius: 22,
-            padding: '14px 16px',
-            background: 'rgba(255,255,255,0.94)',
-            border: '1px solid rgba(47,138,67,0.12)',
-            boxShadow: '0 16px 40px rgba(32,51,35,0.12)',
-            opacity: appear(frame, 28, 14),
-            transform: `translateY(${(1 - appear(frame, 28, 14)) * 14}px)`,
-          }}>
-            <div style={{display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6}}>
+        {/* Memory flow pipeline */}
+        <div style={{
+          marginTop: 18, padding: '12px 22px', borderRadius: 20,
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(60,208,91,0.15)',
+          opacity: a(10, 16), transform: `translateY(${(1 - a(10, 16)) * 10}px)`,
+          display: 'flex', alignItems: 'center', gap: 14,
+        }}>
+          {copy.memoryFlow.map((step, i) => (
+            <React.Fragment key={step}>
               <div style={{
-                width: 28, height: 28, borderRadius: 9,
-                background: '#2F7C39', color: '#fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 15, fontWeight: 900,
-              }}>🧠</div>
-              <div style={{fontSize: 15, fontWeight: 800, color: '#254329'}}>Guide</div>
-              <div style={{
-                marginLeft: 'auto', padding: '3px 8px', borderRadius: 999,
-                background: '#EEF7E1', fontSize: 11, fontWeight: 800, color: '#4F6E4F',
-              }}>6 memory refs</div>
+                padding: '8px 14px', borderRadius: 14,
+                background: i === 2 ? 'rgba(60,208,91,0.12)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${i === 2 ? 'rgba(60,208,91,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                fontSize: 15, fontWeight: 700, color: i === 2 ? '#3CD05B' : '#7BAF80', whiteSpace: 'nowrap' as const,
+              }}>{step}</div>
+              {i < 2 && <div style={{fontSize: 18, color: 'rgba(60,208,91,0.4)', fontWeight: 800}}>→</div>}
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* Achievement badges */}
+        <div style={{
+          display: 'flex', gap: 12, marginTop: 16,
+          opacity: a(14, 16), transform: `translateY(${(1 - a(14, 16)) * 10}px)`,
+        }}>
+          {copy.achievements.map((badge, i) => (
+            <div key={badge} style={{
+              padding: '9px 16px', borderRadius: 16, display: 'flex', gap: 8, alignItems: 'center',
+              background: 'linear-gradient(145deg, rgba(255,209,102,0.1), rgba(255,209,102,0.05))',
+              border: '1px solid rgba(255,209,102,0.2)',
+              fontSize: 15, fontWeight: 800, color: '#FFD166',
+            }}>
+              <span style={{fontSize: 17}}>{badgeIcons[i]}</span>{badge}
             </div>
-            <div style={{fontSize: 14, lineHeight: 1.5, color: '#2E4E33', fontWeight: 600}}>
-              {copy.guideBubble}
-            </div>
-          </div>
+          ))}
+        </div>
+
+        {/* Stats line */}
+        <div style={{
+          fontSize: 16, fontWeight: 700, color: 'rgba(123,175,128,0.6)', marginTop: 12,
+          opacity: a(16),
+        }}>{copy.statsLine}</div>
+
+        {/* CTA row */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 18, marginTop: 18,
+          opacity: a(18, 12), transform: `scale(${0.95 + a(18, 12) * 0.05})`,
+        }}>
+          <div style={{
+            padding: '14px 34px', borderRadius: 999,
+            background: 'linear-gradient(135deg, #2F8A43, #3CD05B)',
+            color: '#fff', fontSize: 20, fontWeight: 900,
+            boxShadow: '0 0 30px rgba(60,208,91,0.35), 0 12px 30px rgba(0,0,0,0.2)',
+          }}>{copy.cta}</div>
+          <div style={{fontSize: 17, color: '#7BAF80', fontWeight: 600}}>{copy.url}</div>
         </div>
       </div>
+
+      {/* ═══════ LEFT SIDE: Quest Board card ═══════ */}
+      <div style={{
+        position: 'absolute', left: 50, top: 80, width: 370, borderRadius: 24, padding: 18,
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(60,208,91,0.12)',
+        boxShadow: '0 30px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+        opacity: a(6, 18),
+        transform: `rotate(-3deg) translateY(${(1 - a(6, 18)) * 20}px)`,
+        zIndex: 5,
+      }}>
+        <div style={{display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12}}>
+          <div style={{width: 10, height: 10, borderRadius: 999, background: '#3CD05B', boxShadow: '0 0 8px rgba(60,208,91,0.5)'}} />
+          <div style={{fontSize: 18, fontWeight: 800, color: '#E8F5E9'}}>{copy.questBoardTitle}</div>
+          <div style={{marginLeft: 'auto', fontSize: 14, fontWeight: 700, color: '#7BAF80'}}>{copy.levelLabel}</div>
+        </div>
+        {copy.questRows.map((t, i) => (
+          <div key={t} style={{
+            display: 'flex', gap: 10, alignItems: 'center',
+            padding: '9px 11px', marginBottom: 5, borderRadius: 12,
+            background: i < 2 ? 'rgba(60,208,91,0.08)' : 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.04)',
+          }}>
+            <div style={{
+              width: 16, height: 16, borderRadius: 999,
+              background: i < 2 ? '#3CD05B' : 'transparent',
+              border: `2px solid ${i < 2 ? '#3CD05B' : 'rgba(60,208,91,0.4)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#0B1E13', fontSize: 10, fontWeight: 900,
+            }}>{i < 2 ? '✓' : ''}</div>
+            <div style={{
+              fontSize: 14, fontWeight: 600,
+              color: i < 2 ? 'rgba(200,230,202,0.4)' : '#C8E6CA',
+              textDecoration: i < 2 ? 'line-through' : 'none',
+            }}>{t}</div>
+            <div style={{marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'rgba(60,208,91,0.5)'}}>+20 XP</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ═══════ LEFT BOTTOM: XP Ring ═══════ */}
+      <div style={{
+        position: 'absolute', left: 80, bottom: 100, width: 170, height: 170,
+        borderRadius: 28, padding: 14,
+        background: 'rgba(255,209,102,0.05)',
+        border: '1px solid rgba(255,209,102,0.15)',
+        boxShadow: '0 24px 60px rgba(0,0,0,0.35), 0 0 30px rgba(255,209,102,0.08)',
+        opacity: a(10, 18),
+        transform: `rotate(2deg) translateY(${(1 - a(10, 18)) * 20}px)`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 5,
+      }}>
+        <svg width="130" height="130" viewBox="0 0 160 160" style={{transform: 'rotate(-90deg)'}}>
+          <circle cx="80" cy="80" r={ringR} fill="none" stroke="rgba(255,209,102,0.12)" strokeWidth="10" />
+          <circle cx="80" cy="80" r={ringR} fill="none" stroke="#FFD166" strokeWidth="10"
+            strokeLinecap="round" strokeDasharray={ringC} strokeDashoffset={ringC * (1 - ringProgress)} />
+        </svg>
+        <div style={{position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+          <div style={{fontSize: 24, fontWeight: 900, color: '#FFD166'}}>{Math.round(ringProgress * 100)}%</div>
+          <div style={{fontSize: 11, fontWeight: 700, color: 'rgba(255,209,102,0.6)'}}>{copy.xpLabel}</div>
+        </div>
+      </div>
+
+      {/* ═══════ RIGHT SIDE: Guide bubble ═══════ */}
+      <div style={{
+        position: 'absolute', right: 50, top: 100, width: 350, borderRadius: 22,
+        padding: '16px 18px',
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(60,208,91,0.12)',
+        boxShadow: '0 24px 60px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05)',
+        opacity: a(8, 18),
+        transform: `rotate(2deg) translateY(${(1 - a(8, 18)) * 18}px)`,
+        zIndex: 5,
+      }}>
+        <div style={{display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8}}>
+          <div style={{
+            width: 30, height: 30, borderRadius: 10,
+            background: 'linear-gradient(145deg, #2F7C39, #3CD05B)',
+            color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 16, fontWeight: 900,
+            boxShadow: '0 0 12px rgba(60,208,91,0.3)',
+          }}>🧠</div>
+          <div style={{fontSize: 16, fontWeight: 800, color: '#E8F5E9'}}>{copy.guideLabel}</div>
+          <div style={{
+            marginLeft: 'auto', padding: '4px 10px', borderRadius: 999,
+            background: 'rgba(60,208,91,0.1)',
+            border: '1px solid rgba(60,208,91,0.2)',
+            fontSize: 11, fontWeight: 800, color: '#3CD05B',
+          }}>{copy.guideMemoryTag}</div>
+        </div>
+        <div style={{fontSize: 14, lineHeight: 1.55, color: 'rgba(200,230,202,0.8)', fontWeight: 600}}>
+          {copy.guideBubble}
+        </div>
+      </div>
+
+      {/* ═══════ RIGHT BOTTOM: Reward shop mini card ═══════ */}
+      <div style={{
+        position: 'absolute', right: 60, bottom: 80, width: 260, borderRadius: 22, padding: 16,
+        background: 'rgba(255,209,102,0.04)',
+        border: '1px solid rgba(255,209,102,0.12)',
+        boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
+        opacity: a(14, 16),
+        transform: `rotate(-2deg) translateY(${(1 - a(14, 16)) * 18}px)`,
+        zIndex: 5,
+      }}>
+        <div style={{fontSize: 15, fontWeight: 800, color: '#FFD166', marginBottom: 10}}>🎁 {copy.rewardShopTitle}</div>
+        {copy.rewardItems.map((item, i) => (
+          <div key={item} style={{
+            display: 'flex', gap: 8, alignItems: 'center',
+            padding: '8px 10px', marginBottom: 5, borderRadius: 12,
+            background: i === 0 ? 'rgba(255,209,102,0.08)' : 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,209,102,0.06)',
+          }}>
+            <span style={{fontSize: 15}}>{i === 0 ? '☕' : '🍰'}</span>
+            <div style={{flex: 1, fontSize: 13, fontWeight: 700, color: '#E8F5E9'}}>{item}</div>
+            <div style={{fontSize: 11, fontWeight: 700, color: 'rgba(255,209,102,0.6)'}}>{copy.rewardPrices[i]}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ═══════ FLOATING CHIPS: streak / redeemed ═══════ */}
+      <div style={{
+        position: 'absolute', left: 440, bottom: 60, zIndex: 6,
+        padding: '11px 18px', borderRadius: 999,
+        background: 'rgba(255,138,80,0.08)',
+        border: '1px solid rgba(255,138,80,0.25)',
+        boxShadow: '0 0 20px rgba(255,138,80,0.1)',
+        color: '#FF8A50', fontSize: 17, fontWeight: 700,
+        opacity: a(18), transform: `translateY(${(1 - a(18)) * 12}px)`,
+      }}>🔥 {copy.streakChip}</div>
+
+      <div style={{
+        position: 'absolute', right: 420, bottom: 55, zIndex: 6,
+        padding: '11px 18px', borderRadius: 999,
+        background: 'rgba(255,209,102,0.08)',
+        border: '1px solid rgba(255,209,102,0.25)',
+        boxShadow: '0 0 20px rgba(255,209,102,0.1)',
+        color: '#FFD166', fontSize: 17, fontWeight: 700,
+        opacity: a(20), transform: `translateY(${(1 - a(20)) * 12}px)`,
+      }}>☕ {copy.redeemChip}</div>
     </AbsoluteFill>
   );
 };

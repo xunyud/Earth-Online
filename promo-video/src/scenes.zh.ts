@@ -13,7 +13,7 @@ export const promoScenesZh: PromoScene[] = [
     voice:
       '很多任务工具会记录任务，却记不住你刚刚经历了什么。Earth Online 会保留近期上下文，让下一步建议从你真实的一天继续往前，而不是重新从零开始。',
     durationInFrames: 240,
-    accent: '#2F8A43',
+    accent: '#3CD05B',
     image: 'screens/login.png',
   },
   {
@@ -28,7 +28,7 @@ export const promoScenesZh: PromoScene[] = [
     voice:
       '一条很粗糙的想法，会先变成任务，再变成完成动作。Earth Online 从真实行为开始，让用户输入任务、放入任务板，再通过完成反馈看到进展。',
     durationInFrames: 285,
-    accent: '#5B9E48',
+    accent: '#4ADE80',
     image: 'screens/board.png',
   },
   {
@@ -43,7 +43,7 @@ export const promoScenesZh: PromoScene[] = [
     voice:
       '完成过的事情不会消失。Earth Online 会把已完成任务、每日记录、行为信号和之前的回溯整理成记忆包，让系统后面给出的建议有依据可查。',
     durationInFrames: 300,
-    accent: '#7AAA4A',
+    accent: '#86EFAC',
   },
   {
     id: 'guide',
@@ -57,7 +57,7 @@ export const promoScenesZh: PromoScene[] = [
     voice:
       '当助手面板打开时，它会先读记忆，再开始回答。这样给出的就不是空泛鼓励，而是结合你最近节奏的回应，甚至还能说明引用了多少段近期记忆。',
     durationInFrames: 300,
-    accent: '#2F7C39',
+    accent: '#34D399',
     image: 'screens/guide.png',
   },
   {
@@ -72,7 +72,7 @@ export const promoScenesZh: PromoScene[] = [
     voice:
       '每日事件不只是推荐任务，还会解释为什么是现在、为什么是这件事。系统会把记忆依据一起展示出来，并允许用户一键接受，直接加入任务板。',
     durationInFrames: 285,
-    accent: '#F0B323',
+    accent: '#FFD166',
     image: 'screens/event.png',
   },
   {
@@ -87,7 +87,7 @@ export const promoScenesZh: PromoScene[] = [
     voice:
       '每日签到积累连续天数，完成任务获得经验和金币。成长仪表盘追踪你的全部进展，奖励商店让你的付出变成实实在在的收获。',
     durationInFrames: 285,
-    accent: '#D49516',
+    accent: '#FFD166',
   },
   {
     id: 'outro',
@@ -101,7 +101,7 @@ export const promoScenesZh: PromoScene[] = [
     voice:
       'Life Diary 和周总结，会把零散动作整理成可以回看的连续故事。记忆真正的用处，是让系统知道你刚经历了什么，于是你就能更快重新启动，带着更少阻力继续往前。',
     durationInFrames: 255,
-    accent: '#2C7A51',
+    accent: '#3CD05B',
   },
 ];
 

@@ -37,7 +37,7 @@ export const promoScenes: PromoScene[] = [
     voice:
       'Most task apps record work, but they do not remember your context. Earth Online keeps recent context alive, so the next step can start from where your real day left off.',
     durationInFrames: 240,
-    accent: '#2F8A43',
+    accent: '#3CD05B',
     image: 'screens/login.png',
   },
   {
@@ -52,7 +52,7 @@ export const promoScenes: PromoScene[] = [
     voice:
       'A rough note becomes a quest, then a completed action. Earth Online starts from real behavior: type the task, place it on the board, and finish it with visible progress.',
     durationInFrames: 285,
-    accent: '#5B9E48',
+    accent: '#4ADE80',
     image: 'screens/board.png',
   },
   {
@@ -67,7 +67,7 @@ export const promoScenes: PromoScene[] = [
     voice:
       'Finished work does not disappear. Earth Online turns completed quests, daily logs, behavior signals, and prior recall into a memory bundle that can be used as evidence later.',
     durationInFrames: 300,
-    accent: '#7AAA4A',
+    accent: '#86EFAC',
   },
   {
     id: 'guide',
@@ -81,7 +81,7 @@ export const promoScenes: PromoScene[] = [
     voice:
       'When the guide opens, it reads memory before replying. Instead of a generic pep talk, it answers from recent rhythm and can show how many memory references informed that response.',
     durationInFrames: 300,
-    accent: '#2F7C39',
+    accent: '#34D399',
     image: 'screens/guide.png',
   },
   {
@@ -96,7 +96,7 @@ export const promoScenes: PromoScene[] = [
     voice:
       'Daily events do not just suggest a task. They explain why it matters right now, surface the memory evidence, and let the user accept it directly into the board.',
     durationInFrames: 285,
-    accent: '#F0B323',
+    accent: '#FFD166',
     image: 'screens/event.png',
   },
   {
@@ -111,7 +111,7 @@ export const promoScenes: PromoScene[] = [
     voice:
       'Daily check-ins build streaks. Completed quests earn XP and gold. The growth dashboard tracks everything, and the reward shop turns your effort into something you can actually use.',
     durationInFrames: 285,
-    accent: '#D49516',
+    accent: '#FFD166',
   },
   {
     id: 'outro',
@@ -125,7 +125,7 @@ export const promoScenes: PromoScene[] = [
     voice:
       'Life Diary and weekly summaries keep the story going. When the system remembers what just happened, people can restart faster, recover with less friction, and keep moving forward.',
     durationInFrames: 255,
-    accent: '#2C7A51',
+    accent: '#3CD05B',
   },
 ];
 
