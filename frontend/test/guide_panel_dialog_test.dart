@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/core/services/guide_service.dart';
 import 'package:frontend/core/theme/quest_theme.dart';
 import 'package:frontend/features/quest/widgets/guide_panel_dialog.dart';
 
 void main() {
-  testWidgets('GuidePanelDialog 展示小忆记忆胶囊与任务提案卡', (tester) async {
+  testWidgets('GuidePanelDialog 展示小忆记忆胶囊与对话消息', (tester) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(900, 620));
 
@@ -41,25 +40,20 @@ void main() {
               ),
             ],
             quickActions: const ['继续聊今天', '给我一个恢复任务'],
-            suggestedTask: const GuideSuggestedTask(
-              title: '恢复支线：整理会议材料 1 个小块',
-              description: '先只整理一个议题或一页材料，完成后立即停 5 分钟。',
-              xpReward: 20,
-              questTier: 'Daily',
-            ),
+            examplePrompts: const ['帮我拆解今天的任务', '最近我完成了什么？'],
+            currentMessageCard: null,
+            currentResultCard: null,
             inputController: controller,
             inputHintText: '告诉小忆你现在的状态...',
             sendLabel: '发送',
             retryLabel: '重试',
-            addTaskLabel: '加入任务板',
-            proposalTitle: '小忆提案',
             closeLabel: '关闭',
             sending: false,
             memoryRefsLabelBuilder: (count) => '参考了 $count 段近期记忆',
             onRetry: () {},
             onSubmit: (_) {},
             onQuickActionTap: (_) {},
-            onAddSuggestedTask: () {},
+            onExamplePromptTap: (_) {},
             onEditGuideName: () {},
             onClose: () {},
           ),
@@ -70,7 +64,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('小忆'), findsWidgets);
-    expect(find.text('修改名字'), findsOneWidget);
+    expect(find.byTooltip('修改名字'), findsOneWidget);
     expect(find.text('小忆记得'), findsOneWidget);
     expect(find.text('连续推进'), findsOneWidget);
     expect(find.text('参考了 2 段近期记忆'), findsOneWidget);
@@ -78,7 +72,6 @@ void main() {
     await tester.drag(find.byType(ListView), const Offset(0, -240));
     await tester.pump();
 
-    expect(find.text('加入任务板'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
   });
 }

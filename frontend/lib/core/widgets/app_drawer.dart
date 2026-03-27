@@ -23,6 +23,7 @@ class AppDrawer extends StatefulWidget {
   final QuestController questController;
   final VoidCallback onOpenSettings;
   final VoidCallback onOpenGuide;
+  final VoidCallback? onOpenTutorial;
   final String? userEmail;
   final UserProfileController? profileController;
   final AvatarPickerCallback? onPickAvatarBase64;
@@ -32,6 +33,7 @@ class AppDrawer extends StatefulWidget {
     required this.questController,
     required this.onOpenSettings,
     required this.onOpenGuide,
+    this.onOpenTutorial,
     this.userEmail,
     this.profileController,
     this.onPickAvatarBase64,
@@ -155,6 +157,18 @@ class _AppDrawerState extends State<AppDrawer> {
                       );
                     },
                   ),
+                  if (widget.onOpenTutorial != null)
+                    _buildMenuItem(
+                      context,
+                      questTheme: questTheme,
+                      icon: Icons.help_outline_rounded,
+                      title: context.tr('drawer.tutorial'),
+                      subtitle: context.tr('drawer.tutorial.desc'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Future.microtask(widget.onOpenTutorial!);
+                      },
+                    ),
                   const Padding(
                     padding: EdgeInsets.fromLTRB(18, 18, 18, 10),
                     child: Divider(height: 1),

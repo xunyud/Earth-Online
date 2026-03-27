@@ -219,7 +219,27 @@ Current repository assets already available for preview:
 
 Additional app screenshots can be expanded here as the live UI evolves.
 
-## Recent Updates (v1.1.0 - 2026-03-26)
+## Recent Updates (v1.2.0 - 2026-03-27)
+
+### New User Registration & Onboarding Fix
+- Fixed OTP type mismatch that caused new user email signup to fail (signup uses `OtpType.signup`, login uses `OtpType.magiclink`)
+- Fixed race condition where onboarding tutorial data check ran before controller initialization completed
+- Coach marks overlay moved to full-screen layer above AppBar so highlight targets align correctly with their actual UI positions
+- Highlight areas now pass through taps to underlying widgets, allowing users to interact with the app during the tutorial
+- Added automatic skip-forward when a coach mark target is not found, preventing the overlay from locking the app
+- Added "User Guide" entry in the app drawer for replaying the onboarding tutorial at any time
+
+### Guide Assistant Improvements
+- Chat input now supports Enter to send and Shift+Enter for newline (previously Enter did nothing in multiline mode)
+- Fixed false "referenced N recent memories" display for new users by correcting local fallback paths that incorrectly used behavior signals as memory refs
+
+### Stats Navigation
+- Level bar area (level, XP, gold, streak, progress bar) in the home page top bar is now tappable and navigates to the Stats page
+
+### Test Suite Maintenance
+- Updated 4 stale test files to match current UI: login screen, guide panel dialog, i18n source checks
+
+## Previous Updates (v1.1.0 - 2026-03-26)
 
 ### Growth Dashboard Redesign
 - Rebuilt the stats page as an inspiring growth dashboard with warm cream / soft green / desaturated gold palette
@@ -242,14 +262,6 @@ Additional app screenshots can be expanded here as the live UI evolves.
 - 30-day streak calendar widget in the stats page with three cell states (checked / missed / today)
 - Tap a missed day to spend 50 gold and fill the gap, with confirmation dialog and balance display
 - Streak is fully recalculated after each make-up to maintain data consistency
-
-## Roadmap / Future Work
-
-- Make memory evidence even more visible in the product, so users can clearly see what the system remembered and why it suggested a next step.
-- Strengthen the landing and login experience so the core value is obvious within the first few seconds.
-- Continue aligning the deployed site, demo video, and README around the same product story.
-- Improve companion-like loops across events, diary, weekly summaries, and long-term recall.
-- Keep refining the "efficiency game" so progression systems prove the concept through experience, not just wording.
 
 ## Design Philosophy
 

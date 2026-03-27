@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -789,36 +790,71 @@ class _GuideComposer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context).extension<QuestTheme>() ??
+        QuestTheme.forestAdventure();
+    final accent = theme.primaryAccentColor;
+
     return Row(
       children: [
         Expanded(
-          child: TextField(
-            controller: controller,
-            minLines: 1,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: hintText,
-              filled: true,
-              fillColor: Colors.white.withAlpha(214),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(22),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(22),
-                borderSide: const BorderSide(color: Color(0x255B8A58)),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 16,
+          child: KeyboardListener(
+            focusNode: FocusNode(),
+            onKeyEvent: (event) {
+              if (sending) return;
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.enter &&
+                  !HardwareKeyboard.instance.isShiftPressed) {
+                final text = controller.text.trim();
+                if (text.isNotEmpty) onSubmit(text);
+              }
+            },
+            child: TextField(
+              controller: controller,
+              minLines: 1,
+              maxLines: 3,
+              cursorColor: accent,
+              textInputAction: TextInputAction.newline,
+              decoration: InputDecoration(
+                hintText: hintText,
+                hintStyle: AppTextStyles.body.copyWith(
+                  color: AppColors.textHint,
+                ),
+                filled: true,
+                fillColor: theme.surfaceColor.withValues(alpha: 0.85),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  borderSide: BorderSide(
+                    color: accent.withValues(alpha: 0.15),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  borderSide: BorderSide(
+                    color: accent.withValues(alpha: 0.15),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  borderSide: BorderSide(
+                    color: accent.withValues(alpha: 0.45),
+                    width: 1.5,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 16,
+                ),
               ),
             ),
-            onSubmitted: sending ? null : onSubmit,
           ),
         ),
         const SizedBox(width: 10),
         FilledButton(
           onPressed: sending ? null : () => onSubmit(controller.text),
           style: FilledButton.styleFrom(
+            backgroundColor: accent,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: accent.withValues(alpha: 0.4),
             minimumSize: const Size(110, 56),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(22),

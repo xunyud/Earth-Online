@@ -16,6 +16,7 @@ import '../../../core/theme/quest_theme.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../core/widgets/app_drawer.dart';
 import '../../../shared/widgets/celebration_overlay.dart';
+import '../../../shared/widgets/coach_marks_overlay.dart';
 import '../../../shared/widgets/quest_dialog_shell.dart';
 import '../../../shared/widgets/sync_indicator.dart';
 import '../../achievement/screens/achievement_page.dart';
@@ -99,6 +100,16 @@ class _HomePageState extends State<HomePage> {
   final ConfettiController _confetti =
       ConfettiController(duration: const Duration(seconds: 2));
 
+  // Coach Marks GlobalKeys
+  final GlobalKey _coachKeyQuickAdd = GlobalKey(debugLabel: 'coach_quick_add');
+  final GlobalKey _coachKeyQuestBoard =
+      GlobalKey(debugLabel: 'coach_quest_board');
+  final GlobalKey _coachKeyLevelBar = GlobalKey(debugLabel: 'coach_level_bar');
+  final GlobalKey _coachKeyGuideBtn = GlobalKey(debugLabel: 'coach_guide_btn');
+  final GlobalKey _coachKeyShopBtn = GlobalKey(debugLabel: 'coach_shop_btn');
+  bool _showCoachMarks = false;
+  late final Future<void> _initFuture;
+
   int _previousUncompletedCount = -1;
   bool _isSyncingMemory = false;
   bool _isGeneratingProfile = false;
@@ -109,6 +120,7 @@ class _HomePageState extends State<HomePage> {
   final List<_GuideChatMessage> _guideMessages = <_GuideChatMessage>[];
   GuideDailyEvent? _latestDailyEvent;
   String? _guideDisplayName;
+  String? _profileDisplayName;
   String _guideMemoryDigest = '';
   List<String> _guideBehaviorSignals = const <String>[];
   GuideTaskEditDraft? _pendingGuideTaskEditDraft;
@@ -119,8 +131,9 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _controller.addListener(_onQuestStateChanged);
-    _controller.init();
+    _initFuture = _controller.init();
     unawaited(_loadGuideDisplayName());
+    unawaited(_loadProfileDisplayName());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_runGuideBootstrapIfNeeded());
     });
@@ -167,11 +180,15 @@ class _HomePageState extends State<HomePage> {
 
   String _guideMemorySummary() {
     final digest = _guideMemoryDigest.trim();
-    if (digest.isNotEmpty) return digest;
-    return context.tr(
-      'guide.memory.empty',
-      params: {'name': _guideName},
-    );
+    if (digest.isEmpty) {
+      return context.tr(
+        'guide.memory.empty',
+        params: {'name': _guideName},
+      );
+    }
+    // 只取第一行的自然语言摘要，隐藏原始统计数据
+    final firstLine = digest.split('\n').first.trim();
+    return firstLine;
   }
 
   Future<void> _loadGuideDisplayName() async {
@@ -181,6 +198,12 @@ class _HomePageState extends State<HomePage> {
     await PreferencesService.setGuideDisplayName(resolved);
     if (!mounted) return;
     setState(() => _guideDisplayName = resolved);
+  }
+
+  Future<void> _loadProfileDisplayName() async {
+    final name = await PreferencesService.profileDisplayName();
+    if (!mounted) return;
+    setState(() => _profileDisplayName = name);
   }
 
   Map<String, dynamic> _buildGuideClientContext() {
@@ -219,6 +242,43 @@ class _HomePageState extends State<HomePage> {
       return false;
     }
     return true;
+  }
+
+  Future<void> _onCoachMarksComplete() async {
+    final userId = SupabaseAuthService.instance.getCurrentUserId();
+    final alreadySeen =
+        (await PreferencesService.coachMarksSeenUserId()) == userId;
+    await PreferencesService.setCoachMarksSeenUserId(userId);
+    await PreferencesService.setGuideOnboardingSeenUserId(userId);
+    if (!mounted) return;
+    setState(() => _showCoachMarks = false);
+    // 首次引导时插入教程任务，重播时不重复插入
+    if (!alreadySeen) {
+      final inserted = await _controller.addOnboardingTutorialBundle(
+          guideName: _guideName);
+      if (mounted && inserted.isNotEmpty) {
+        showForestSnackBar(context, context.tr('guide.onboarding.accepted'));
+      }
+    }
+  }
+
+  Future<void> _onCoachMarksSkip() async {
+    final userId = SupabaseAuthService.instance.getCurrentUserId();
+    final alreadySeen =
+        (await PreferencesService.coachMarksSeenUserId()) == userId;
+    await PreferencesService.setCoachMarksSeenUserId(userId);
+    await PreferencesService.setGuideOnboardingSeenUserId(userId);
+    if (!mounted) return;
+    setState(() => _showCoachMarks = false);
+    // 首次引导时插入教程任务，重播时不重复插入
+    if (!alreadySeen) {
+      await _controller.addOnboardingTutorialBundle(guideName: _guideName);
+    }
+  }
+
+  void _replayCoachMarks() {
+    if (_showCoachMarks) return;
+    setState(() => _showCoachMarks = true);
   }
 
   GuideDailyEvent _buildOnboardingDailyEvent() {
@@ -383,6 +443,9 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _runGuideBootstrapIfNeeded() async {
     if (_isGuideBootstrapping) return;
+    // 等待数据加载完成，确保 quests/xp/gold 等状态已就绪
+    await _initFuture;
+    if (!mounted) return;
     final guideEnabled = await PreferencesService.guideEnabled();
     final proactiveEnabled = await PreferencesService.guideProactiveEnabled();
     if (!guideEnabled || !proactiveEnabled) return;
@@ -391,7 +454,15 @@ class _HomePageState extends State<HomePage> {
     if (lastDate == today || !mounted) return;
 
     if (await _shouldOfferOnboardingTutorial()) {
-      final userId = SupabaseAuthService.instance.getCurrentUserId();
+      final userId = SupabaseAuthService.instance.getCurrentUserId() ?? '';
+      final coachSeen = await PreferencesService.coachMarksSeenUserId();
+      if (coachSeen != userId && userId.isNotEmpty) {
+        // 新用户：显示 Coach Marks 高亮引导
+        if (!mounted) return;
+        setState(() => _showCoachMarks = true);
+        return;
+      }
+      // 已看过 Coach Marks 但仍符合 onboarding 条件时走原有对话框路径
       await PreferencesService.setGuideOnboardingSeenUserId(userId);
       if (!mounted) return;
       final event = _buildOnboardingDailyEvent();
@@ -1160,7 +1231,7 @@ class _HomePageState extends State<HomePage> {
       resultCard: null,
       suggestedTask: null,
       taskEditDraft: null,
-      memoryRefs: _guideBehaviorSignals,
+      memoryRefs: const <String>[],
     );
   }
 
@@ -1187,7 +1258,7 @@ class _HomePageState extends State<HomePage> {
       resultCard: null,
       suggestedTask: null,
       taskEditDraft: null,
-      memoryRefs: _guideBehaviorSignals,
+      memoryRefs: const <String>[],
     );
   }
 
@@ -1197,9 +1268,20 @@ class _HomePageState extends State<HomePage> {
     return quoted.group(1)?.trim() ?? '';
   }
 
+  static const List<String> _recoveryTasks = [
+    '站起来拉伸 5 分钟',
+    '喝一杯温水',
+    '出门散步 10 分钟',
+    '闭眼深呼吸 3 分钟',
+    '洗把脸，活动一下肩颈',
+    '听一首喜欢的歌放松一下',
+    '整理一下桌面',
+    '给自己泡一杯茶',
+  ];
+
   String _normalizeGuideTaskTitle(String raw) {
     if (raw.contains('恢复任务')) {
-      return '恢复一下节奏';
+      return (_recoveryTasks.toList()..shuffle()).first;
     }
 
     var cleaned = raw
@@ -1237,7 +1319,7 @@ class _HomePageState extends State<HomePage> {
       cleaned = cleaned.substring(0, cleaned.length - 1).trim();
     }
     if (cleaned == '恢复' || cleaned == '恢复一下') {
-      return '恢复一下节奏';
+      return (_recoveryTasks.toList()..shuffle()).first;
     }
     if (cleaned.isEmpty) return '';
     final segments = cleaned.split(RegExp(r'[，,；;：:]'));
@@ -3366,12 +3448,18 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context).extension<QuestTheme>()!;
 
-    return Scaffold(
+    return Stack(
+      children: [
+        Scaffold(
       backgroundColor: theme.backgroundColor,
+      onDrawerChanged: (isOpened) {
+        if (!isOpened) _loadProfileDisplayName();
+      },
       drawer: AppDrawer(
         questController: _controller,
         onOpenSettings: _openUnifiedSettings,
         onOpenGuide: _openGuidePanel,
+        onOpenTutorial: _replayCoachMarks,
       ),
       appBar: AppBar(
         elevation: 0,
@@ -3385,7 +3473,9 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         title: Text(
-          context.tr('app.title'),
+          (_profileDisplayName?.trim().isNotEmpty == true)
+              ? context.tr('app.title', params: {'name': _profileDisplayName!.trim()})
+              : context.tr('app.title.default'),
           style:
               AppTextStyles.heading1.copyWith(color: theme.primaryAccentColor),
         ),
@@ -3395,7 +3485,15 @@ class _HomePageState extends State<HomePage> {
             animation: _controller,
             builder: (context, _) {
               final statsLevel = _controller.levelProgress;
-              return Padding(
+              return GestureDetector(
+                key: _coachKeyLevelBar,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => StatsPage(questController: _controller),
+                  ),
+                ),
+                child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -3460,12 +3558,14 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
+              ),
               );
             },
           ),
         ),
         actions: [
           IconButton(
+            key: _coachKeyGuideBtn,
             onPressed: _openGuidePanel,
             icon: const Icon(Icons.smart_toy_rounded),
             tooltip: context.tr('home.guide.tooltip'),
@@ -3512,6 +3612,7 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.emoji_events_rounded),
           ),
           IconButton(
+            key: _coachKeyShopBtn,
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -3554,22 +3655,26 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, _) => QuestBoard(
-                entries: _controller.timelineEntries,
-                quests: _controller.activeQuests,
-                isAnalyzing: _controller.isAnalyzing,
-                onQuestCompleted: _controller.toggleQuestCompletion,
-                onQuestDeleted: _deleteQuestWithGuideMemory,
-                onQuestToggleExpanded: _controller.toggleQuestExpanded,
-                onQuestMove: (questId, dropIndex, targetDepth) =>
-                    _controller.moveQuestByDrop(
-                  questId: questId,
-                  dropIndex: dropIndex,
-                  targetDepth: targetDepth,
+            child: KeyedSubtree(
+              key: _coachKeyQuestBoard,
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) => QuestBoard(
+                  entries: _controller.timelineEntries,
+                  quests: _controller.activeQuests,
+                  isAnalyzing: _controller.isAnalyzing,
+                  guideName: _guideName,
+                  onQuestCompleted: _controller.toggleQuestCompletion,
+                  onQuestDeleted: _deleteQuestWithGuideMemory,
+                  onQuestToggleExpanded: _controller.toggleQuestExpanded,
+                  onQuestMove: (questId, dropIndex, targetDepth) =>
+                      _controller.moveQuestByDrop(
+                    questId: questId,
+                    dropIndex: dropIndex,
+                    targetDepth: targetDepth,
+                  ),
+                  onQuestUpdateDetails: _controller.updateQuestDetails,
                 ),
-                onQuestUpdateDetails: _controller.updateQuestDetails,
               ),
             ),
           ),
@@ -3605,11 +3710,14 @@ class _HomePageState extends State<HomePage> {
             bottom: 0,
             left: 0,
             right: 0,
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, _) => QuickAddBar(
-                isLoading: _controller.isAnalyzing,
-                onSubmitted: _controller.simulateAIParsing,
+            child: KeyedSubtree(
+              key: _coachKeyQuickAdd,
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) => QuickAddBar(
+                  isLoading: _controller.isAnalyzing,
+                  onSubmitted: _controller.simulateAIParsing,
+                ),
               ),
             ),
           ),
@@ -3628,6 +3736,48 @@ class _HomePageState extends State<HomePage> {
                   : const Icon(Icons.flash_on_rounded),
               label: Text(_eventBadgeLabel(_latestDailyEvent!)),
             ),
+    ),
+        // Coach Marks 新手引导遮罩（全屏覆盖，包括 AppBar）
+        if (_showCoachMarks)
+          CoachMarksOverlay(
+            steps: [
+              CoachMarkStep(
+                targetKey: _coachKeyQuickAdd,
+                titleKey: 'coach.step1.title',
+                descriptionKey: 'coach.step1.description',
+                icon: Icons.edit_note_rounded,
+              ),
+              CoachMarkStep(
+                targetKey: _coachKeyQuestBoard,
+                titleKey: 'coach.step2.title',
+                descriptionKey: 'coach.step2.description',
+                icon: Icons.task_alt_rounded,
+                highlightPadding:
+                    const EdgeInsets.fromLTRB(12, 12, 12, 80),
+              ),
+              CoachMarkStep(
+                targetKey: _coachKeyLevelBar,
+                titleKey: 'coach.step3.title',
+                descriptionKey: 'coach.step3.description',
+                icon: Icons.local_fire_department_rounded,
+              ),
+              CoachMarkStep(
+                targetKey: _coachKeyGuideBtn,
+                titleKey: 'coach.step4.title',
+                descriptionKey: 'coach.step4.description',
+                icon: Icons.smart_toy_rounded,
+              ),
+              CoachMarkStep(
+                targetKey: _coachKeyShopBtn,
+                titleKey: 'coach.step5.title',
+                descriptionKey: 'coach.step5.description',
+                icon: Icons.shopping_bag_rounded,
+              ),
+            ],
+            onComplete: _onCoachMarksComplete,
+            onSkip: _onCoachMarksSkip,
+          ),
+      ],
     );
   }
 }

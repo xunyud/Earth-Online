@@ -19,23 +19,25 @@ void main() {
 
     await tester.pump();
 
-    expect(find.text('地球 Online'), findsOneWidget);
-    expect(find.text('登录你的现实副本'), findsOneWidget);
+    // 登录模式默认文案
+    expect(find.text('欢迎来到地球Online'), findsOneWidget);
     expect(find.text('发送验证码'), findsOneWidget);
     expect(find.text('登录'), findsOneWidget);
     expect(find.text('注册'), findsOneWidget);
+    expect(find.text('继续登录'), findsOneWidget);
 
+    // 切换到注册模式
     await tester.tap(find.text('注册'));
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('创建你的现实副本'), findsOneWidget);
-    expect(find.text('发送注册验证码'), findsOneWidget);
-    expect(find.text('开始注册'), findsOneWidget);
+    expect(find.text('创建账号'), findsOneWidget);
+    expect(find.text('发送验证码'), findsOneWidget);
 
+    // 切换回登录模式
     await tester.tap(find.text('登录'));
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('登录你的现实副本'), findsOneWidget);
+    expect(find.text('继续登录'), findsOneWidget);
     expect(find.text('发送验证码'), findsOneWidget);
   });
 }

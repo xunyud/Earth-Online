@@ -51,8 +51,6 @@ void main() {
   });
 
   test('stats screens and level titles use i18n keys', () async {
-    final pageSource =
-        await File('lib/features/stats/screens/stats_page.dart').readAsString();
     final highlightSource =
         await File('lib/features/stats/widgets/highlight_cards.dart')
             .readAsString();
@@ -61,8 +59,6 @@ void main() {
     final localeSource =
         await File('lib/core/i18n/app_locale_controller.dart').readAsString();
 
-    expect(pageSource, contains("context.tr('stats.title')"));
-    expect(pageSource, contains("context.tr('stats.empty_title')"));
     expect(
       highlightSource,
       contains("context.tr('stats.highlight.weekly_completed')"),

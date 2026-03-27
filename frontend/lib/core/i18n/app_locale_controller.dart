@@ -67,7 +67,9 @@ const Map<String, Map<String, String>> _localizedTexts =
   'common.loading': {'zh': '加载中...', 'en': 'Loading...'},
   'common.not_available': {'zh': '暂不可用', 'en': 'Unavailable'},
   'common.not_logged_in': {'zh': '未登录', 'en': 'Not Signed In'},
-  'app.title': {'zh': 'Quest Log', 'en': 'Quest Log'},
+  'app.title': {'zh': '{name}的日志', 'en': "{name}'s Log"},
+  'app.title.default': {'zh': '日志', 'en': 'Log'},
+  'quest.analyzing': {'zh': '{name}正在思考...', 'en': '{name} is thinking...'},
   'home.guide.tooltip': {'zh': '专属助手', 'en': 'Personal Assistant'},
   'home.profile.tooltip': {'zh': '记忆画像', 'en': 'Memory Portrait'},
   'home.sync.tooltip': {'zh': '上传今日记忆', 'en': 'Upload Today Memory'},
@@ -231,27 +233,44 @@ const Map<String, Map<String, String>> _localizedTexts =
   },
   'guide.onboarding.reason_badge': {'zh': '教程说明', 'en': 'Why start here'},
   'guide.onboarding.event.title': {
-    'zh': '新手教程：先用 4 步熟悉每日任务',
-    'en': 'Starter Tutorial: Learn Daily Tasks in 4 Steps'
+    'zh': '新手教程：5 步开始你的旅程',
+    'en': 'Starter Tutorial: Begin Your Journey in 5 Steps'
   },
   'guide.onboarding.event.description': {
-    'zh': '这组任务会带你走一遍输入待办、完成任务、和助手对话、查看记忆画像四个核心功能。',
+    'zh': '这组任务会带你走一遍输入任务、完成任务、签到打卡、和助手对话、逛奖励商店五个核心功能。',
     'en':
-        'These starter tasks walk you through adding a task, completing one, chatting with your assistant, and viewing your memory portrait.'
+        'These starter tasks walk you through adding a task, completing one, checking in, chatting with your assistant, and visiting the reward shop.'
   },
   'guide.onboarding.event.reason': {
     'zh': '当前账户还是空白状态，先用一组上手任务带你认识这个软件最常用的功能。',
     'en':
         'Your account is still fresh, so this starter set is the fastest way to learn the core features.'
   },
+  'guide.onboarding.step.checkin.title': {
+    'zh': '签到打卡',
+    'en': 'Daily Check-In'
+  },
+  'guide.onboarding.step.checkin.description': {
+    'zh': '打开成长仪表盘，完成今日签到，开始积累连续天数。',
+    'en':
+        'Open the growth dashboard and check in today to start building your streak.'
+  },
+  'guide.onboarding.step.shop.title': {
+    'zh': '逛逛奖励商店',
+    'en': 'Visit the Reward Shop'
+  },
+  'guide.onboarding.step.shop.description': {
+    'zh': '看看金币可以兑换什么，给自己设定一个小目标。',
+    'en': 'See what your gold can buy and set a small reward goal for yourself.'
+  },
   'guide.onboarding.parent.title': {
-    'zh': '新手教程：认识每日任务',
-    'en': 'Starter Tutorial: Meet Daily Tasks'
+    'zh': '新手教程：开始你的旅程',
+    'en': 'Starter Tutorial: Begin Your Journey'
   },
   'guide.onboarding.parent.description': {
-    'zh': '跟着下面 4 个小步骤走一遍输入、完成、助手和记忆功能，完成后再回来勾掉这条总任务。',
+    'zh': '跟着下面 5 个小步骤走一遍核心功能：输入任务、完成任务、签到打卡、聊助手、逛商店，完成后再回来勾掉这条总任务。',
     'en':
-        'Follow the 4 steps below to try task input, completion, assistant chat, and memory features, then come back and mark this main quest done.'
+        'Follow the 5 steps below to explore core features: add a task, complete it, check in, chat with your assistant, and visit the shop — then come back and mark this main quest done.'
   },
   'guide.onboarding.step.capture.title': {
     'zh': '输入一句今天要做的事',
@@ -288,6 +307,42 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '试试上传今日记忆，或打开记忆画像，看看系统怎样理解你的状态。',
     'en':
         'Try uploading today’s memory or open the memory portrait to see how the app reads your current state.'
+  },
+  // Coach Marks 新手引导
+  'coach.step1.title': {'zh': '写下第一个任务', 'en': 'Write Your First Quest'},
+  'coach.step1.description': {
+    'zh': '在底部输入框输入一件今天想做的事，系统会帮你整理成任务。',
+    'en': 'Type one thing you want to do today in the input bar below.'
+  },
+  'coach.step2.title': {'zh': '完成它，获得经验', 'en': 'Complete It, Earn XP'},
+  'coach.step2.description': {
+    'zh': '点击任务左侧圆圈标记完成，获得经验值和金币奖励。',
+    'en':
+        'Tap the circle on the left side of a quest to mark it done and earn rewards.'
+  },
+  'coach.step3.title': {'zh': '签到打卡', 'en': 'Daily Check-In'},
+  'coach.step3.description': {
+    'zh': '打开成长仪表盘，完成今日签到，保持连续天数。',
+    'en':
+        'Open the growth dashboard and check in today to keep your streak alive.'
+  },
+  'coach.step4.title': {'zh': '和助手聊一句', 'en': 'Chat With Your Assistant'},
+  'coach.step4.description': {
+    'zh': '打开助手面板，随便说点什么，它会帮你整理今天。',
+    'en':
+        'Open the assistant panel and share anything — it helps you sort out your day.'
+  },
+  'coach.step5.title': {'zh': '逛逛奖励商店', 'en': 'Visit the Reward Shop'},
+  'coach.step5.description': {
+    'zh': '看看金币可以兑换什么，给自己设定一个小目标。',
+    'en': 'See what your gold can buy and set a small reward goal for yourself.'
+  },
+  'coach.next': {'zh': '下一步', 'en': 'Next'},
+  'coach.skip': {'zh': '跳过引导', 'en': 'Skip Tour'},
+  'coach.finish': {'zh': '开始冒险', 'en': 'Start Adventure'},
+  'coach.step_label': {
+    'zh': '第{current}步 / 共{total}步',
+    'en': 'Step {current} of {total}'
   },
   'guide.status.ready': {'zh': '{name}在线', 'en': '{name} is online'},
   'guide.status.auth': {'zh': '登录已过期', 'en': 'Session Expired'},
@@ -422,6 +477,8 @@ const Map<String, Map<String, String>> _localizedTexts =
   'drawer.guide.desc': {'zh': '打开专属助手对话', 'en': 'Open assistant chat'},
   'drawer.binding': {'zh': '微信绑定', 'en': 'WeChat Binding'},
   'drawer.binding.desc': {'zh': '同步微信消息', 'en': 'Sync WeChat messages'},
+  'drawer.tutorial': {'zh': '使用说明', 'en': 'User Guide'},
+  'drawer.tutorial.desc': {'zh': '重新查看功能引导', 'en': 'Replay the feature walkthrough'},
   'drawer.settings': {'zh': '设置中心', 'en': 'Settings'},
   'drawer.settings.desc': {'zh': '个性化配置', 'en': 'Personalize preferences'},
   'drawer.logout': {'zh': '退出登录', 'en': 'Sign Out'},

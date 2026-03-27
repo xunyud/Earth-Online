@@ -51,11 +51,12 @@ class SupabaseAuthService {
   Future<AuthResponse> verifyOtp({
     required String email,
     required String otp,
+    bool isSignUp = false,
   }) async {
     return _requiredClient.auth.verifyOTP(
       email: email.trim(),
       token: otp.trim(),
-      type: OtpType.magiclink,
+      type: isSignUp ? OtpType.signup : OtpType.magiclink,
     );
   }
 

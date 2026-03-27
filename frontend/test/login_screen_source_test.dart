@@ -3,18 +3,17 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('登录页保留森林主题背景与入场动画', () async {
+  test('登录页保留柔和背景与入场动画', () async {
     final content = await File('lib/features/auth/screens/login_screen.dart')
         .readAsString();
 
     expect(
-      content.contains('assets/images/backgrounds/forest/login_backdrop.png') &&
+      content.contains('SoftAuthBackground') &&
           content.contains('FadeTransition(') &&
           content.contains('SlideTransition(') &&
-          content.contains('ScaleTransition(') &&
-          content.contains('AnimatedSize('),
+          content.contains('ScaleTransition('),
       isTrue,
-      reason: '登录页需要延续当前森林主题，并保留现有动效层次。',
+      reason: '登录页需要使用 SoftAuthBackground 背景，并保留现有动效层次。',
     );
   });
 
@@ -36,8 +35,8 @@ void main() {
     expect(
       content.contains("'登录'") &&
           content.contains("'注册'") &&
-          content.contains('创建你的现实副本') &&
-          content.contains('开始注册'),
+          content.contains('欢迎来到地球Online') &&
+          content.contains('创建账号'),
       isTrue,
       reason: '登录页需要明确提供注册模式，并显示独立的注册引导文案。',
     );

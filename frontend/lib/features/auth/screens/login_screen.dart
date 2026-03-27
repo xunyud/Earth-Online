@@ -181,7 +181,11 @@ class _LoginScreenState extends State<LoginScreen>
     if (_submitting) return;
     setState(() => _submitting = true);
     try {
-      await SupabaseAuthService.instance.verifyOtp(email: email, otp: otp);
+      await SupabaseAuthService.instance.verifyOtp(
+        email: email,
+        otp: otp,
+        isSignUp: _authMode == _AuthMode.signUp,
+      );
       if (!mounted) return;
       _showMessage(copy.verifySuccessMessage);
     } catch (_) {
