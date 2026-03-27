@@ -282,28 +282,86 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
           ),
-          // 阳光渐变叠加
+          // 阳光主光晕（大面积暖光）
           Positioned.fill(
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
-                    center: const Alignment(-0.7, -0.9),
-                    radius: 1.2,
+                    center: const Alignment(-0.65, -0.95),
+                    radius: 1.3,
                     colors: [
-                      const Color(0xFFFFF8D0).withValues(alpha: 0.45),
-                      const Color(0xFFFFF0B0).withValues(alpha: 0.15),
+                      const Color(0xFFFFFCE0).withValues(alpha: 0.55),
+                      const Color(0xFFFFF0B0).withValues(alpha: 0.2),
                       Colors.transparent,
                     ],
-                    stops: const [0.0, 0.35, 1.0],
+                    stops: const [0.0, 0.3, 1.0],
                   ),
                 ),
               ),
             ),
           ),
-          // 森林粒子（树叶 + 光斑）
+          // 阳光副光晕（偏移暖色扩散）
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(-0.4, -0.6),
+                    radius: 0.8,
+                    colors: [
+                      const Color(0xFFFFF8C8).withValues(alpha: 0.2),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // 雾气层（底部偏上）
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 300,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      const Color(0xFFDDEBD2).withValues(alpha: 0.2),
+                      const Color(0xFFCCE0C0).withValues(alpha: 0.35),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // 粒子系统（树叶 + 萤火虫 + 阳光浮尘 + 光斑）
           const Positioned.fill(
             child: ForestParticles(),
+          ),
+          // 暗角
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 0.85,
+                    colors: [
+                      Colors.transparent,
+                      const Color(0xFF1E3214).withValues(alpha: 0.3),
+                    ],
+                    stops: const [0.55, 1.0],
+                  ),
+                ),
+              ),
+            ),
           ),
           SafeArea(
             child: Center(
@@ -321,7 +379,10 @@ class _LoginScreenState extends State<LoginScreen>
                         child: AnimatedBuilder(
                           animation: AppLocaleController.instance,
                           builder: (context, _) {
-                            return _LoginPanel(
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                            _LoginPanel(
                               theme: questTheme,
                               heroAnimation: _heroFade,
                               authMode: _authMode,
@@ -340,6 +401,27 @@ class _LoginScreenState extends State<LoginScreen>
                                   : () {
                                       setState(_resetOtpState);
                                     },
+                            ),
+                            // 藤蔓装饰
+                            const Positioned(
+                              top: -14,
+                              left: -10,
+                              child: Text('🌿',
+                                  style: TextStyle(fontSize: 28)),
+                            ),
+                            const Positioned(
+                              top: -10,
+                              right: -6,
+                              child: Text('🍃',
+                                  style: TextStyle(fontSize: 22)),
+                            ),
+                            const Positioned(
+                              bottom: -8,
+                              right: 16,
+                              child: Text('🌱',
+                                  style: TextStyle(fontSize: 18)),
+                            ),
+                              ],
                             );
                           },
                         ),
