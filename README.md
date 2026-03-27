@@ -2,6 +2,12 @@
 
 # Earth Online
 
+[![Earth Online poster](./output/earth-online-poster.png)](https://earth-online-wine.vercel.app)
+
+<p align="center">
+  <a href="https://earth-online-wine.vercel.app"><strong>Live Demo</strong></a> · <a href="./output/earth-online-intro.mp4"><strong>English Video</strong></a> · <a href="./output/earth-online-intro-zh.mp4"><strong>Chinese Video</strong></a> · <a href="https://github.com/xunyud/Earth-Online"><strong>GitHub</strong></a>
+</p>
+
 Earth Online is a memory-aware productivity game that turns everyday planning into an evolving quest log.
 
 It is not just a task board. It remembers recent context, turns actions into usable memory, and guides the next step with a steadier sense of companionship.
@@ -47,19 +53,6 @@ Earth Online was built around a different idea: productivity tools should not on
 - Use the Flutter client as the main home for quests, guidance, rewards, diary, and stats.
 - Extend capture and guidance flows through Supabase Edge Functions and the lightweight backend.
 - Support WeChat-based interaction so tasks and guidance can happen in more natural moments.
-
-## Demo / Live Experience
-
-Earth Online is easier to understand as a full product loop than as a list of isolated features.
-
-- Live deployment: [https://earth-online-wine.vercel.app](https://earth-online-wine.vercel.app)
-- English demo video: [Watch the intro video](./output/earth-online-intro.mp4)
-- Chinese demo video: [Watch the Chinese intro video](./output/earth-online-intro-zh.mp4)
-- GitHub repository: [xunyud/Earth-Online](https://github.com/xunyud/Earth-Online)
-
-Recommended path: watch the short intro video first, then open the live app and trace the quest board, guide, and memory flows together.
-
-[![Earth Online poster](./output/earth-online-poster.png)](./output/earth-online-intro.mp4)
 
 ## Differentiators
 
