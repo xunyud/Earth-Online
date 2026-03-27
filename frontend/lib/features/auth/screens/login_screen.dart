@@ -8,7 +8,8 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../core/i18n/app_locale_controller.dart';
 import '../../../core/services/supabase_auth_service.dart';
 import '../../../core/theme/quest_theme.dart';
-import '../widgets/soft_auth_background.dart';
+import '../widgets/forest_particles.dart';
+import '../widgets/parallax_background.dart';
 
 enum _AuthMode { signIn, signUp }
 
@@ -225,10 +226,84 @@ class _LoginScreenState extends State<LoginScreen>
     return Scaffold(
       body: Stack(
         children: [
+          // 森林视差背景
           Positioned.fill(
-            child: SoftAuthBackground(
-              accentColor: questTheme.primaryAccentColor,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFF0EACC),
+                    Color(0xFFC4D8A0),
+                    Color(0xFF8ABF6E),
+                    Color(0xFF3D7A3A),
+                  ],
+                  stops: [0.0, 0.3, 0.6, 1.0],
+                ),
+              ),
             ),
+          ),
+          // 静态底图
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.5,
+              child: Image.asset(
+                'assets/images/backgrounds/forest/login_backdrop.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+          // 视差滚动层
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.78,
+              child: ParallaxBackground(
+                scrollSpeed: 18,
+                layers: const [
+                  ParallaxLayer(
+                    assetPath: 'assets/images/backgrounds/forest/sky.png',
+                    speed: 0.08,
+                  ),
+                  ParallaxLayer(
+                    assetPath: 'assets/images/backgrounds/forest/far.png',
+                    speed: 0.16,
+                  ),
+                  ParallaxLayer(
+                    assetPath: 'assets/images/backgrounds/forest/mid.png',
+                    speed: 0.32,
+                  ),
+                  ParallaxLayer(
+                    assetPath: 'assets/images/backgrounds/forest/near.png',
+                    speed: 0.58,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // 阳光渐变叠加
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(-0.7, -0.9),
+                    radius: 1.2,
+                    colors: [
+                      const Color(0xFFFFF8D0).withValues(alpha: 0.45),
+                      const Color(0xFFFFF0B0).withValues(alpha: 0.15),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.35, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // 森林粒子（树叶 + 光斑）
+          const Positioned.fill(
+            child: ForestParticles(),
           ),
           SafeArea(
             child: Center(
