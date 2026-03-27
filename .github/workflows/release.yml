@@ -1,0 +1,152 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.41.2'
+
+jobs:
+  # ── Windows 构建 ──────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Build Windows
+        working-directory: frontend
+        run: flutter build windows --release
+
+      - name: Package Windows build
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "frontend/build/windows/x64/runner/Release/*" `
+            -DestinationPath "Earth-Online-v${{ steps.version.outputs.VERSION }}-windows-x64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: Earth-Online-v${{ steps.version.outputs.VERSION }}-windows-x64.zip
+
+  # ── Web 构建 ──────────────────────────────────
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Build Web
+        working-directory: frontend
+        run: flutter build web --release
+
+      - name: Package Web build
+        run: |
+          tar -czf "Earth-Online-v${{ steps.version.outputs.VERSION }}-web.tar.gz" \
+            -C frontend/build web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: Earth-Online-v${{ steps.version.outputs.VERSION }}-web.tar.gz
+
+  # ── Android 构建 ──────────────────────────────
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Build Android APK
+        working-directory: frontend
+        run: flutter build apk --release
+
+      - name: Rename APK
+        run: |
+          cp frontend/build/app/outputs/flutter-apk/app-release.apk \
+             "Earth-Online-v${{ steps.version.outputs.VERSION }}-android.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-build
+          path: Earth-Online-v${{ steps.version.outputs.VERSION }}-android.apk
+
+  # ── 创建 GitHub Release ──────────────────────
+  create-release:
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-web, build-android]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Earth Online v${{ steps.version.outputs.VERSION }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release-assets/Earth-Online-v${{ steps.version.outputs.VERSION }}-windows-x64.zip
+            release-assets/Earth-Online-v${{ steps.version.outputs.VERSION }}-web.tar.gz
+            release-assets/Earth-Online-v${{ steps.version.outputs.VERSION }}-android.apk

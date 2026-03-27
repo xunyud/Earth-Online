@@ -27,6 +27,9 @@ class PreferencesService {
       'guide_onboarding_seen_user_id';
   static String? _cachedGuideOnboardingSeenUserId;
 
+  static const String _keyCoachMarksSeenUserId = 'coach_marks_seen_user_id';
+  static String? _cachedCoachMarksSeenUserId;
+
   static const String _keyProfileDisplayName = 'profile_display_name';
   static String? _cachedProfileDisplayName;
 
@@ -169,6 +172,26 @@ class PreferencesService {
     await prefs.setString(_keyGuideOnboardingSeenUserId, normalized);
   }
 
+  static Future<String?> coachMarksSeenUserId() async {
+    final cached = _cachedCoachMarksSeenUserId;
+    if (cached != null) return cached;
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_keyCoachMarksSeenUserId);
+    _cachedCoachMarksSeenUserId = value;
+    return value;
+  }
+
+  static Future<void> setCoachMarksSeenUserId(String? value) async {
+    final normalized = _normalizeOptionalString(value);
+    _cachedCoachMarksSeenUserId = normalized;
+    final prefs = await SharedPreferences.getInstance();
+    if (normalized == null) {
+      await prefs.remove(_keyCoachMarksSeenUserId);
+      return;
+    }
+    await prefs.setString(_keyCoachMarksSeenUserId, normalized);
+  }
+
   static Future<String?> profileDisplayName() async {
     final cached = _cachedProfileDisplayName;
     if (cached != null) return cached;
@@ -225,6 +248,7 @@ class PreferencesService {
     _cachedGuideLastBootstrapDate = null;
     _cachedGuideDisplayName = null;
     _cachedGuideOnboardingSeenUserId = null;
+    _cachedCoachMarksSeenUserId = null;
     _cachedProfileDisplayName = null;
     _cachedProfileAvatarBase64 = null;
   }

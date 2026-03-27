@@ -975,6 +975,14 @@ class QuestController extends ChangeNotifier {
       _GuideOnboardingQuestSpec(
         index: 3,
         parentIndex: 0,
+        title: _t('guide.onboarding.step.checkin.title'),
+        description: _t('guide.onboarding.step.checkin.description'),
+        xpReward: 20,
+        questTier: 'Side_Quest',
+      ),
+      _GuideOnboardingQuestSpec(
+        index: 4,
+        parentIndex: 0,
         title: _t(
           'guide.onboarding.step.assistant.title',
           params: {'name': guideName},
@@ -984,10 +992,10 @@ class QuestController extends ChangeNotifier {
         questTier: 'Side_Quest',
       ),
       _GuideOnboardingQuestSpec(
-        index: 4,
+        index: 5,
         parentIndex: 0,
-        title: _t('guide.onboarding.step.portrait.title'),
-        description: _t('guide.onboarding.step.portrait.description'),
+        title: _t('guide.onboarding.step.shop.title'),
+        description: _t('guide.onboarding.step.shop.description'),
         xpReward: 20,
         questTier: 'Side_Quest',
       ),

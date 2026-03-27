@@ -60,10 +60,14 @@ export function parseBoundWechatMessage(content: string) {
   }
 
   const guidePrefixes = [
-    "\u95ee\u6751\u957f\uff1a",
-    "\u95ee\u6751\u957f:",
-    "\u6751\u957f\uff1a",
-    "\u6751\u957f:",
+    "\u95ee\u52a9\u624b\uff1a",  // 问助手：
+    "\u95ee\u52a9\u624b:",        // 问助手:
+    "\u52a9\u624b\uff1a",        // 助手：
+    "\u52a9\u624b:",              // 助手:
+    "\u95ee\u6751\u957f\uff1a",  // 问村长：（兼容旧用户）
+    "\u95ee\u6751\u957f:",        // 问村长:（兼容旧用户）
+    "\u6751\u957f\uff1a",        // 村长：（兼容旧用户）
+    "\u6751\u957f:",              // 村长:（兼容旧用户）
   ];
   for (const prefix of guidePrefixes) {
     if (text.startsWith(prefix)) {

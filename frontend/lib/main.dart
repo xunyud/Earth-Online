@@ -183,6 +183,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return AnimatedBuilder(
       animation: _localeController,
       builder: (context, _) {
+        final questTheme = _resolveQuestTheme(_currentThemeId);
         final baseTheme = ThemeData.light();
         final home = HomePage(
           currentThemeId: _currentThemeId,
@@ -200,9 +201,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           navigatorKey: rootNavigatorKey,
           scaffoldMessengerKey: scaffoldMessengerKey,
           theme: baseTheme.copyWith(
-            extensions: [
-              _resolveQuestTheme(_currentThemeId),
-            ],
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: questTheme.primaryAccentColor,
+              primary: questTheme.primaryAccentColor,
+              surface: questTheme.surfaceColor,
+            ),
+            extensions: [questTheme],
           ),
           locale: _localeController.locale,
           supportedLocales: const [

@@ -281,7 +281,7 @@ async function handleBoundWechatMessage(
 
   const parsedMessage = parseBoundWechatMessage(content);
   if (parsedMessage.kind === "empty") {
-    return "如果要记任务，直接发内容就可以。如果想聊天，请发送“问村长：...”";
+    return `如果要记任务，直接发内容就可以。如果想聊天，请发送\u201C问村长：...\u201D`;
   }
 
   if (parsedMessage.kind === "accept_suggestion") {
@@ -289,7 +289,7 @@ async function handleBoundWechatMessage(
     if (result.accepted && result.task) {
       return `✅ 已帮你创建任务：${result.task.title}`;
     }
-    return "暂时没有可以收下的建议任务，先发“问村长：...”和我聊聊吧。";
+    return `暂时没有可以收下的建议任务，先发\u201C问村长：...\u201D和我聊聊吧。`;
   }
 
   if (parsedMessage.kind === "guide_chat") {

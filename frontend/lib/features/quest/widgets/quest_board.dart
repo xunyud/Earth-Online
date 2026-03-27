@@ -6,6 +6,7 @@ import '../models/quest_node.dart';
 import '../../../core/theme/quest_theme.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import 'quest_item.dart';
 
 class QuestBoard extends StatefulWidget {
@@ -17,6 +18,7 @@ class QuestBoard extends StatefulWidget {
   final void Function(String questId, int dropIndex, int targetDepth) onQuestMove;
   final QuestDetailsUpdater onQuestUpdateDetails;
   final bool isAnalyzing;
+  final String guideName;
 
   const QuestBoard({
     Key? key,
@@ -28,6 +30,7 @@ class QuestBoard extends StatefulWidget {
     required this.onQuestMove,
     required this.onQuestUpdateDetails,
     this.isAnalyzing = false,
+    this.guideName = '',
   }) : super(key: key);
 
   @override
@@ -160,7 +163,7 @@ class _QuestBoardState extends State<QuestBoard> {
                       ),
                       const SizedBox(width: 16),
                       Text(
-                        "Quest Master 正在解析情报...",
+                        context.tr('quest.analyzing', params: {'name': widget.guideName}),
                         style: AppTextStyles.body.copyWith(
                           color: theme.primaryAccentColor,
                           fontWeight: FontWeight.w600,
