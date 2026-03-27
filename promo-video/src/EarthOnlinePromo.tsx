@@ -1563,24 +1563,36 @@ type PosterCopy = {
   features: [string, string, string, string, string];
   cta: string;
   url: string;
+  statsLine: string;
+  memoryFlow: [string, string, string];
+  achievements: [string, string, string];
+  guideBubble: string;
 };
 
 const posterCopyEn: PosterCopy = {
   title: 'Earth Online',
   subtitle: 'Memory-Aware Productivity Game',
-  tagline: 'The task app that remembers your rhythm.',
+  tagline: 'The task app that remembers your rhythm, tracks your growth, and turns effort into real rewards.',
   features: ['Quest Board', 'Memory Guide', 'Daily Check-in', 'Growth Stats', 'Reward Shop'],
   cta: 'Try it live',
   url: 'earth-online-wine.vercel.app',
+  statsLine: '247 quests · 38-day streak · Lv.12',
+  memoryFlow: ['Tasks completed', 'Context packed', 'Guide informed'],
+  achievements: ['First Quest', '7-Day Streak', 'Memory Master'],
+  guideBubble: 'Recovery looks smart right now. Try one light task to get back in rhythm.',
 };
 
 const posterCopyZh: PosterCopy = {
   title: 'Earth Online',
   subtitle: '会记忆的效率游戏',
-  tagline: '记住你节奏的任务工具。',
+  tagline: '记住你的节奏，追踪你的成长，把每一份付出变成看得见的奖励。',
   features: ['任务面板', '记忆助手', '每日签到', '成长仪表盘', '奖励商店'],
   cta: '立即体验',
   url: 'earth-online-wine.vercel.app',
+  statsLine: '247 个任务 · 连续 38 天 · Lv.12',
+  memoryFlow: ['完成任务', '打包上下文', '助手就绪'],
+  achievements: ['首个任务', '连续7天', '记忆大师'],
+  guideBubble: '现在适合恢复节奏，试试从一个轻量任务开始。',
 };
 
 const PosterComposition: React.FC<{copy: PosterCopy}> = ({copy}) => {
@@ -1588,197 +1600,257 @@ const PosterComposition: React.FC<{copy: PosterCopy}> = ({copy}) => {
   const {fps} = useVideoConfig();
 
   const titleIn = springIn(frame, fps, 0);
-  const subIn = appear(frame, 8, 16);
-  const tagIn = appear(frame, 16, 14);
-  const chipsIn = appear(frame, 22, 18);
-  const ctaIn = springIn(frame, fps, 28);
+  const subIn = appear(frame, 6, 14);
+  const tagIn = appear(frame, 12, 14);
+  const chipsIn = appear(frame, 18, 16);
+  const ctaIn = springIn(frame, fps, 24);
+  const flowIn = appear(frame, 14, 18);
+  const badgesIn = appear(frame, 20, 16);
   const ringProgress = interpolate(frame, [6, 30], [0, 0.72], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
     easing: Easing.bezier(0.2, 0.8, 0.2, 1),
   });
-  const ringR = 82;
+  const ringR = 72;
   const ringC = 2 * Math.PI * ringR;
+
+  const chipColors = ['#2F8A43', '#2F7C39', '#E64A19', '#D49516', '#8A6B1A'];
+  const chipIcons = ['📋', '🧠', '🔥', '📊', '🎁'];
+  const badgeIcons = ['⚔️', '🔥', '🧠'];
 
   return (
     <AbsoluteFill
       style={{
         ...shellStyle,
         background:
-          'radial-gradient(ellipse at 25% 30%, rgba(233,245,221,0.96) 0%, rgba(255,253,243,0.97) 40%, rgba(246,236,191,0.92) 75%, rgba(221,240,206,0.95) 100%)',
+          'radial-gradient(ellipse at 20% 25%, rgba(233,245,221,0.96) 0%, rgba(255,253,243,0.97) 35%, rgba(246,236,191,0.92) 70%, rgba(221,240,206,0.95) 100%)',
       }}
     >
       {/* Decorative orbs */}
-      <div style={{position: 'absolute', top: 80, left: 60, width: 260, height: 260, borderRadius: 260, background: 'rgba(47,138,67,0.1)', filter: 'blur(40px)'}} />
-      <div style={{position: 'absolute', bottom: 120, right: 100, width: 200, height: 200, borderRadius: 200, background: 'rgba(212,149,22,0.12)', filter: 'blur(30px)'}} />
-      <div style={{position: 'absolute', top: 400, right: 300, width: 160, height: 160, borderRadius: 160, background: 'rgba(115,195,126,0.1)', filter: 'blur(25px)'}} />
+      <div style={{position: 'absolute', top: 40, left: 30, width: 320, height: 320, borderRadius: 320, background: 'rgba(47,138,67,0.08)', filter: 'blur(50px)'}} />
+      <div style={{position: 'absolute', bottom: 60, right: 60, width: 280, height: 280, borderRadius: 280, background: 'rgba(212,149,22,0.1)', filter: 'blur(40px)'}} />
+      <div style={{position: 'absolute', top: 500, left: 400, width: 200, height: 200, borderRadius: 200, background: 'rgba(115,195,126,0.08)', filter: 'blur(30px)'}} />
+      <div style={{position: 'absolute', top: 150, right: 500, width: 140, height: 140, borderRadius: 140, background: 'rgba(230,74,25,0.06)', filter: 'blur(25px)'}} />
 
-      <div style={{position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', padding: '0 110px', gap: 80}}>
-        {/* Left: Text content */}
-        <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: 22, transform: `translateY(${(1 - titleIn) * 20}px)`}}>
-          {/* Logo + title */}
+      <div style={{position: 'absolute', inset: 0, display: 'flex', padding: '60px 90px', gap: 60}}>
+        {/* ─── Left column ─── */}
+        <div style={{flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 18, transform: `translateY(${(1 - titleIn) * 16}px)`}}>
+          {/* Product icon (globe + checkmark) + title */}
           <div style={{display: 'flex', alignItems: 'center', gap: 18}}>
             <div style={{
-              width: 72, height: 72, borderRadius: 22,
-              background: 'linear-gradient(145deg, #2F8A43, #5B9E48)',
+              width: 78, height: 78, borderRadius: 24, position: 'relative',
+              background: 'linear-gradient(145deg, #2F8A43, #4BA556)',
+              boxShadow: '0 14px 40px rgba(47,138,67,0.35)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 12px 36px rgba(47,138,67,0.3)',
             }}>
-              <div style={{fontSize: 36, color: '#fff', fontWeight: 900}}>E</div>
+              <div style={{fontSize: 40, lineHeight: 1}}>🌍</div>
+              <div style={{
+                position: 'absolute', right: -4, bottom: -4,
+                width: 28, height: 28, borderRadius: 999,
+                background: '#fff', border: '2px solid #2F8A43',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, fontWeight: 900, color: '#2F8A43',
+              }}>✓</div>
             </div>
-            <div style={{fontSize: 64, fontWeight: 900, color: '#1A331F', letterSpacing: -1}}>{copy.title}</div>
+            <div style={{fontSize: 62, fontWeight: 900, color: '#1A331F', letterSpacing: -1}}>{copy.title}</div>
           </div>
 
           {/* Subtitle */}
-          <div style={{
-            opacity: subIn,
-            fontSize: 34, fontWeight: 800, color: '#2F8A43',
-            transform: `translateY(${(1 - subIn) * 12}px)`,
-          }}>
+          <div style={{opacity: subIn, fontSize: 32, fontWeight: 800, color: '#2F8A43', transform: `translateY(${(1 - subIn) * 10}px)`}}>
             {copy.subtitle}
           </div>
 
           {/* Tagline */}
-          <div style={{
-            opacity: tagIn,
-            fontSize: 26, lineHeight: 1.5, color: '#38533C', maxWidth: 560,
-            transform: `translateY(${(1 - tagIn) * 10}px)`,
-          }}>
+          <div style={{opacity: tagIn, fontSize: 23, lineHeight: 1.55, color: '#38533C', maxWidth: 580, transform: `translateY(${(1 - tagIn) * 8}px)`}}>
             {copy.tagline}
           </div>
 
-          {/* Feature chips */}
-          <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8,
-            opacity: chipsIn,
-            transform: `translateY(${(1 - chipsIn) * 14}px)`,
-          }}>
+          {/* Feature chips with icons */}
+          <div style={{display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 4, opacity: chipsIn, transform: `translateY(${(1 - chipsIn) * 12}px)`}}>
             {copy.features.map((f, i) => (
               <div key={f} style={{
-                padding: '12px 20px', borderRadius: 999,
-                background: 'rgba(255,255,255,0.88)',
-                border: `1px solid ${i < 2 ? '#2F8A4322' : i === 4 ? '#D4951622' : '#73C37E22'}`,
-                fontSize: 20, fontWeight: 700,
-                color: i < 2 ? '#2A5E30' : i === 4 ? '#8A6B1A' : '#3D6B3D',
-                boxShadow: '0 4px 16px rgba(30,50,32,0.06)',
+                padding: '10px 18px', borderRadius: 999, display: 'flex', gap: 8, alignItems: 'center',
+                background: 'rgba(255,255,255,0.9)',
+                border: `1px solid ${chipColors[i]}20`,
+                boxShadow: '0 4px 14px rgba(30,50,32,0.06)',
+                fontSize: 18, fontWeight: 700, color: chipColors[i],
               }}>
-                {f}
+                <span style={{fontSize: 16}}>{chipIcons[i]}</span>{f}
               </div>
             ))}
+          </div>
+
+          {/* Memory flow pipeline */}
+          <div style={{
+            marginTop: 8, padding: '14px 20px', borderRadius: 20,
+            background: 'rgba(255,255,255,0.8)',
+            border: '1px solid rgba(47,138,67,0.1)',
+            boxShadow: '0 8px 28px rgba(30,50,32,0.06)',
+            opacity: flowIn, transform: `translateY(${(1 - flowIn) * 10}px)`,
+            display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            {copy.memoryFlow.map((step, i) => (
+              <React.Fragment key={step}>
+                <div style={{
+                  padding: '8px 14px', borderRadius: 14,
+                  background: i === 2 ? '#2F8A4316' : 'rgba(248,251,244,0.95)',
+                  border: `1px solid ${i === 2 ? '#2F8A4330' : 'rgba(38,73,42,0.06)'}`,
+                  fontSize: 16, fontWeight: 700, color: '#2A5E30', whiteSpace: 'nowrap',
+                }}>{step}</div>
+                {i < 2 && <div style={{fontSize: 18, color: '#2F8A4360', fontWeight: 800}}>→</div>}
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* Achievement badges row */}
+          <div style={{display: 'flex', gap: 12, opacity: badgesIn, transform: `translateY(${(1 - badgesIn) * 10}px)`}}>
+            {copy.achievements.map((badge, i) => (
+              <div key={badge} style={{
+                padding: '10px 16px', borderRadius: 18, display: 'flex', gap: 8, alignItems: 'center',
+                background: 'linear-gradient(145deg, rgba(255,253,240,0.95), rgba(255,248,220,0.92))',
+                border: '1px solid rgba(212,149,22,0.18)',
+                boxShadow: '0 6px 20px rgba(40,36,20,0.08)',
+                fontSize: 16, fontWeight: 800, color: '#6D5310',
+              }}>
+                <span style={{fontSize: 18}}>{badgeIcons[i]}</span>{badge}
+              </div>
+            ))}
+          </div>
+
+          {/* Stats line */}
+          <div style={{opacity: badgesIn, fontSize: 17, fontWeight: 700, color: '#5B8A5E', marginTop: 2}}>
+            {copy.statsLine}
           </div>
 
           {/* CTA */}
-          <div style={{
-            marginTop: 12, display: 'flex', alignItems: 'center', gap: 16,
-            transform: `scale(${0.94 + ctaIn * 0.06})`,
-          }}>
+          <div style={{display: 'flex', alignItems: 'center', gap: 16, transform: `scale(${0.95 + ctaIn * 0.05})`}}>
             <div style={{
-              padding: '16px 32px', borderRadius: 999,
+              padding: '14px 30px', borderRadius: 999,
               background: 'linear-gradient(135deg, #2F8A43, #5B9E48)',
-              color: '#fff', fontSize: 22, fontWeight: 900,
-              boxShadow: '0 10px 30px rgba(47,138,67,0.3)',
+              color: '#fff', fontSize: 21, fontWeight: 900,
+              boxShadow: '0 10px 28px rgba(47,138,67,0.3)',
             }}>
               {copy.cta}
             </div>
-            <div style={{fontSize: 20, color: '#5B8A5E', fontWeight: 600}}>{copy.url}</div>
+            <div style={{fontSize: 18, color: '#5B8A5E', fontWeight: 600}}>{copy.url}</div>
           </div>
         </div>
 
-        {/* Right: Visual showcase */}
-        <div style={{width: 520, height: 700, position: 'relative'}}>
-          {/* Mock quest board card */}
+        {/* ─── Right column ─── */}
+        <div style={{width: 560, position: 'relative'}}>
+          {/* Quest board card */}
           <div style={{
-            position: 'absolute', left: 0, top: 0, width: 460, borderRadius: 30,
-            padding: 22, overflow: 'hidden',
+            position: 'absolute', left: 0, top: 20, width: 400, borderRadius: 28, padding: 20,
             background: 'linear-gradient(155deg, rgba(255,255,255,0.96), rgba(245,249,236,0.93))',
             border: '1px solid rgba(45,89,48,0.1)',
-            boxShadow: '0 28px 72px rgba(32,51,35,0.14)',
-            opacity: appear(frame, 10, 16),
-            transform: `translateY(${(1 - appear(frame, 10, 16)) * 18}px)`,
+            boxShadow: '0 24px 64px rgba(32,51,35,0.14)',
+            opacity: appear(frame, 8, 16),
+            transform: `translateY(${(1 - appear(frame, 8, 16)) * 16}px)`,
           }}>
-            <div style={{display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14}}>
-              <div style={{width: 12, height: 12, borderRadius: 999, background: '#2F8A43'}} />
-              <div style={{fontSize: 22, fontWeight: 800, color: '#234529'}}>Quest Board</div>
-              <div style={{marginLeft: 'auto', fontSize: 16, fontWeight: 700, color: '#61805E'}}>Lv.5</div>
+            <div style={{display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12}}>
+              <div style={{width: 11, height: 11, borderRadius: 999, background: '#2F8A43'}} />
+              <div style={{fontSize: 20, fontWeight: 800, color: '#234529'}}>Quest Board</div>
+              <div style={{marginLeft: 'auto', fontSize: 15, fontWeight: 700, color: '#61805E'}}>Lv.12</div>
             </div>
-            {['Review weekly summary', 'Prepare recovery quest', 'Upload memory snapshot'].map((t, i) => (
+            {['Review weekly summary', 'Prepare recovery quest', 'Upload memory snapshot', 'Check guide flow'].map((t, i) => (
               <div key={t} style={{
                 display: 'flex', gap: 10, alignItems: 'center',
-                padding: '12px 14px', marginBottom: 8, borderRadius: 16,
-                background: i === 0 ? '#2F8A4312' : 'rgba(255,255,255,0.7)',
-                border: '1px solid rgba(38,73,42,0.06)',
+                padding: '10px 12px', marginBottom: 6, borderRadius: 14,
+                background: i < 2 ? '#2F8A4310' : 'rgba(255,255,255,0.7)',
+                border: '1px solid rgba(38,73,42,0.05)',
               }}>
                 <div style={{
-                  width: 20, height: 20, borderRadius: 999,
-                  background: i === 0 ? '#2F8A43' : 'transparent',
+                  width: 18, height: 18, borderRadius: 999,
+                  background: i < 2 ? '#2F8A43' : 'transparent',
                   border: '2px solid #2F8A43',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: 12, fontWeight: 900,
-                }}>
-                  {i === 0 ? '✓' : ''}
-                </div>
+                  color: '#fff', fontSize: 11, fontWeight: 900,
+                }}>{i < 2 ? '✓' : ''}</div>
                 <div style={{
-                  fontSize: 18, color: i === 0 ? '#6C7D6C' : '#29482E',
-                  textDecoration: i === 0 ? 'line-through' : 'none', fontWeight: 600,
+                  fontSize: 16, fontWeight: 600,
+                  color: i < 2 ? '#6C7D6C' : '#29482E',
+                  textDecoration: i < 2 ? 'line-through' : 'none',
                 }}>{t}</div>
-                <div style={{marginLeft: 'auto', fontSize: 14, fontWeight: 700, color: '#6B8A67'}}>+20 XP</div>
+                <div style={{marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: '#6B8A67'}}>+20 XP</div>
               </div>
             ))}
           </div>
 
-          {/* XP Ring overlay */}
+          {/* XP Ring */}
           <div style={{
-            position: 'absolute', right: 0, top: 200, width: 200, height: 200,
-            borderRadius: 30, padding: 20,
+            position: 'absolute', right: 10, top: 160, width: 180, height: 180,
+            borderRadius: 28, padding: 16,
             background: 'linear-gradient(155deg, rgba(255,253,243,0.98), rgba(252,247,230,0.96))',
             border: '1px solid rgba(212,149,22,0.16)',
-            boxShadow: '0 22px 60px rgba(40,36,20,0.15)',
-            opacity: appear(frame, 18, 16),
-            transform: `translateX(${(1 - appear(frame, 18, 16)) * 20}px)`,
+            boxShadow: '0 20px 54px rgba(40,36,20,0.15)',
+            opacity: appear(frame, 16, 16),
+            transform: `translateX(${(1 - appear(frame, 16, 16)) * 18}px)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <svg width="160" height="160" viewBox="0 0 200 200" style={{transform: 'rotate(-90deg)'}}>
-              <circle cx="100" cy="100" r={ringR} fill="none" stroke="rgba(212,149,22,0.14)" strokeWidth="14" />
-              <circle cx="100" cy="100" r={ringR} fill="none" stroke="#D49516" strokeWidth="14"
+            <svg width="148" height="148" viewBox="0 0 180 180" style={{transform: 'rotate(-90deg)'}}>
+              <circle cx="90" cy="90" r={ringR} fill="none" stroke="rgba(212,149,22,0.14)" strokeWidth="12" />
+              <circle cx="90" cy="90" r={ringR} fill="none" stroke="#D49516" strokeWidth="12"
                 strokeLinecap="round" strokeDasharray={ringC} strokeDashoffset={ringC * (1 - ringProgress)} />
             </svg>
             <div style={{position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-              <div style={{fontSize: 28, fontWeight: 900, color: '#D49516'}}>{Math.round(ringProgress * 100)}%</div>
-              <div style={{fontSize: 13, fontWeight: 700, color: '#8A7340'}}>1,260 XP</div>
+              <div style={{fontSize: 26, fontWeight: 900, color: '#D49516'}}>{Math.round(ringProgress * 100)}%</div>
+              <div style={{fontSize: 12, fontWeight: 700, color: '#8A7340'}}>1,260 XP</div>
             </div>
           </div>
 
-          {/* Streak chip */}
-          <FloatingChip label="🔥 7-day streak" accent="#E64A19" start={22} top={420} left={20} />
+          {/* Streak + reward chips */}
+          <FloatingChip label="🔥 7-day streak" accent="#E64A19" start={20} top={370} left={10} />
+          <FloatingChip label="☕ Redeemed!" accent="#D49516" start={24} top={370} right={30} />
 
-          {/* Reward chip */}
-          <FloatingChip label="☕ Redeemed!" accent="#D49516" start={26} top={490} right={20} />
+          {/* Reward shop mini card */}
+          <div style={{
+            position: 'absolute', right: 0, top: 420, width: 260, borderRadius: 22, padding: 16,
+            background: 'linear-gradient(155deg, rgba(255,255,249,0.97), rgba(249,245,234,0.95))',
+            border: '1px solid rgba(212,149,22,0.14)',
+            boxShadow: '0 18px 48px rgba(40,36,20,0.12)',
+            opacity: appear(frame, 26, 14),
+            transform: `translateX(${(1 - appear(frame, 26, 14)) * 16}px)`,
+          }}>
+            <div style={{fontSize: 16, fontWeight: 800, color: '#3A2F14', marginBottom: 10}}>🎁 Reward Shop</div>
+            {['30-min Break', 'Dessert Voucher'].map((item, i) => (
+              <div key={item} style={{
+                display: 'flex', gap: 8, alignItems: 'center',
+                padding: '8px 10px', marginBottom: 6, borderRadius: 14,
+                background: i === 0 ? '#D4951610' : 'rgba(255,255,255,0.7)',
+                border: '1px solid rgba(212,149,22,0.06)',
+              }}>
+                <span style={{fontSize: 16}}>{i === 0 ? '☕' : '🍰'}</span>
+                <div style={{flex: 1, fontSize: 14, fontWeight: 700, color: '#3A2F14'}}>{item}</div>
+                <div style={{fontSize: 12, fontWeight: 700, color: '#8A7340'}}>{i === 0 ? '80g' : '150g'}</div>
+              </div>
+            ))}
+          </div>
 
           {/* Guide bubble */}
           <div style={{
-            position: 'absolute', left: 30, bottom: 40, width: 380, borderRadius: 24,
-            padding: '16px 18px',
+            position: 'absolute', left: 0, bottom: 30, width: 340, borderRadius: 22,
+            padding: '14px 16px',
             background: 'rgba(255,255,255,0.94)',
             border: '1px solid rgba(47,138,67,0.12)',
-            boxShadow: '0 18px 44px rgba(32,51,35,0.12)',
+            boxShadow: '0 16px 40px rgba(32,51,35,0.12)',
             opacity: appear(frame, 28, 14),
-            transform: `translateY(${(1 - appear(frame, 28, 14)) * 16}px)`,
+            transform: `translateY(${(1 - appear(frame, 28, 14)) * 14}px)`,
           }}>
-            <div style={{display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8}}>
+            <div style={{display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6}}>
               <div style={{
-                width: 32, height: 32, borderRadius: 10,
+                width: 28, height: 28, borderRadius: 9,
                 background: '#2F7C39', color: '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 900,
-              }}>X</div>
-              <div style={{fontSize: 16, fontWeight: 800, color: '#254329'}}>Guide</div>
+                fontSize: 15, fontWeight: 900,
+              }}>🧠</div>
+              <div style={{fontSize: 15, fontWeight: 800, color: '#254329'}}>Guide</div>
               <div style={{
-                marginLeft: 'auto', padding: '4px 10px', borderRadius: 999,
-                background: '#EEF7E1', fontSize: 12, fontWeight: 800, color: '#4F6E4F',
+                marginLeft: 'auto', padding: '3px 8px', borderRadius: 999,
+                background: '#EEF7E1', fontSize: 11, fontWeight: 800, color: '#4F6E4F',
               }}>6 memory refs</div>
             </div>
-            <div style={{fontSize: 16, lineHeight: 1.45, color: '#2E4E33', fontWeight: 600}}>
-              Recovery looks smart right now. Try one light task to get back in rhythm.
+            <div style={{fontSize: 14, lineHeight: 1.5, color: '#2E4E33', fontWeight: 600}}>
+              {copy.guideBubble}
             </div>
           </div>
         </div>
