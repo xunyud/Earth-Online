@@ -5,7 +5,7 @@
 [![Earth Online poster](./output/earth-online-poster.png)](https://earth-online-wine.vercel.app)
 
 <p align="center">
-  <a href="https://earth-online-wine.vercel.app"><strong>Live Demo</strong></a> · <a href="./output/earth-online-intro.mp4"><strong>English Video</strong></a> · <a href="./output/earth-online-intro-zh.mp4"><strong>Chinese Video</strong></a> · <a href="https://github.com/xunyud/Earth-Online"><strong>GitHub</strong></a>
+  <a href="https://earth-online-wine.vercel.app"><strong>Live Demo</strong></a> · <a href="https://youtu.be/-YLz6EwWYkw"><strong>English Video</strong></a> · <a href="https://youtu.be/Dah5XAsEPNI"><strong>Chinese Video</strong></a> · <a href="https://github.com/xunyud/Earth-Online"><strong>GitHub</strong></a>
 </p>
 
 Earth Online is a memory-aware productivity game that turns everyday planning into an evolving quest log.
@@ -221,8 +221,8 @@ Current repository assets already available for preview:
 
 - [English poster](./output/earth-online-poster.png)
 - [Chinese poster](./output/earth-online-poster-zh.png)
-- [English intro video](./output/earth-online-intro.mp4)
-- [Chinese intro video](./output/earth-online-intro-zh.mp4)
+- [English intro video](https://youtu.be/-YLz6EwWYkw)
+- [Chinese intro video](https://youtu.be/Dah5XAsEPNI)
 
 Additional app screenshots can be expanded here as the live UI evolves.
 

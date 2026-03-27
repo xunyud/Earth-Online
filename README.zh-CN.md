@@ -5,7 +5,7 @@
 [![Earth Online 海报](./output/earth-online-poster-zh.png)](https://earth-online-wine.vercel.app)
 
 <p align="center">
-  <a href="https://earth-online-wine.vercel.app"><strong>在线体验</strong></a> · <a href="./output/earth-online-intro-zh.mp4"><strong>中文视频</strong></a> · <a href="./output/earth-online-intro.mp4"><strong>英文视频</strong></a> · <a href="https://github.com/xunyud/Earth-Online"><strong>GitHub</strong></a>
+  <a href="https://earth-online-wine.vercel.app"><strong>在线体验</strong></a> · <a href="https://youtu.be/Dah5XAsEPNI"><strong>中文视频</strong></a> · <a href="https://youtu.be/-YLz6EwWYkw"><strong>英文视频</strong></a> · <a href="https://github.com/xunyud/Earth-Online"><strong>GitHub</strong></a>
 </p>
 
 Earth Online 是一款具备记忆感知能力的效率游戏，把日常计划转化成持续演化的任务日志。
@@ -221,8 +221,8 @@ npm run still:zh
 
 - [英文海报](./output/earth-online-poster.png)
 - [中文海报](./output/earth-online-poster-zh.png)
-- [英文介绍视频](./output/earth-online-intro.mp4)
-- [中文介绍视频](./output/earth-online-intro-zh.mp4)
+- [英文介绍视频](https://youtu.be/-YLz6EwWYkw)
+- [中文介绍视频](https://youtu.be/Dah5XAsEPNI)
 
 后续随着线上界面继续演进，可以在这里补充更多应用截图或 GIF。
 
