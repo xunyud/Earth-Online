@@ -20,6 +20,10 @@
     "voice": "Daily events do not just suggest a task. They explain why it matters right now, surface the memory evidence, and let the user accept it directly into the board."
   },
   {
+    "id": "progression",
+    "voice": "Daily check-ins build streaks. Completed quests earn XP and gold. The growth dashboard tracks everything, and the reward shop turns your effort into something you can actually use."
+  },
+  {
     "id": "outro",
     "voice": "Life Diary and weekly summaries keep the story going. When the system remembers what just happened, people can restart faster, recover with less friction, and keep moving forward."
   }

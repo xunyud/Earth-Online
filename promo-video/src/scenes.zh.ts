@@ -76,9 +76,23 @@ export const promoScenesZh: PromoScene[] = [
     image: 'screens/event.png',
   },
   {
+    id: 'progression',
+    kind: 'progression',
+    kicker: '第五步：看见自己的成长轨迹',
+    title: '签到、升级，把努力兑换成看得见的奖励。',
+    body:
+      '每日签到积累连续天数，完成任务获得 XP 和金币。成长仪表盘追踪你的全部进展，奖励商店让付出变成实实在在的收获。',
+    caption:
+      '进步不只是一个数字，而是一段连续、一个等级、一份你自己选择的奖励。',
+    voice:
+      '每日签到积累连续天数，完成任务获得经验和金币。成长仪表盘追踪你的全部进展，奖励商店让你的付出变成实实在在的收获。',
+    durationInFrames: 285,
+    accent: '#D49516',
+  },
+  {
     id: 'outro',
     kind: 'diary',
-    kicker: '第五步：把连续性真正留下来',
+    kicker: '第六步：把连续性真正留下来',
     title: '记忆的用处，是帮助人重新启动、恢复节奏，并继续往前。',
     body:
       'Life Diary 和 weekly summary 会把零散动作整理成一段可回看的故事。系统记得你刚经历了什么，所以重新开始的时候，阻力会更小。',

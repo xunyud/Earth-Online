@@ -4,6 +4,7 @@ export type PromoSceneKind =
   | 'memory'
   | 'guide'
   | 'event'
+  | 'progression'
   | 'diary';
 
 export type PromoScene = {
@@ -99,9 +100,23 @@ export const promoScenes: PromoScene[] = [
     image: 'screens/event.png',
   },
   {
+    id: 'progression',
+    kind: 'progression',
+    kicker: 'Step 5 · Watch Progress Build Up',
+    title: 'Check in, level up, and spend rewards on what you earned.',
+    body:
+      'Daily check-ins build streaks. Completed quests earn XP and gold. The growth dashboard tracks it all, and the reward shop turns effort into something tangible.',
+    caption:
+      'Progress is not just a number. It is a streak, a level, and a reward you chose.',
+    voice:
+      'Daily check-ins build streaks. Completed quests earn XP and gold. The growth dashboard tracks everything, and the reward shop turns your effort into something you can actually use.',
+    durationInFrames: 285,
+    accent: '#D49516',
+  },
+  {
     id: 'outro',
     kind: 'diary',
-    kicker: 'Step 5 · Keep The Story Going',
+    kicker: 'Step 6 · Keep The Story Going',
     title: 'Memory helps people restart, recover, and keep moving forward.',
     body:
       'Life Diary and weekly summaries turn scattered work into a readable story. The benefit of memory is simple: when the system remembers what just happened, restarting feels lighter.',

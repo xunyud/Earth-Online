@@ -49,6 +49,14 @@ type PromoUiCopy = {
   eventAcceptLabel: string;
   eventAcceptedTag: string;
   eventAcceptedText: string;
+  progressionCheckinLabel: string;
+  progressionLevelLabel: string;
+  progressionXpLabel: string;
+  progressionStats: [string, string, string];
+  progressionShopTitle: string;
+  progressionShopItems: [string, string, string];
+  progressionShopPrices: [string, string, string];
+  progressionRedeemedLabel: string;
   diaryTitle: string;
   diaryEntries: Array<[string, string]>;
   diaryStoredLabel: string;
@@ -121,6 +129,14 @@ const uiCopyEn: PromoUiCopy = {
   eventAcceptLabel: 'Accept task',
   eventAcceptedTag: 'Inserted into board',
   eventAcceptedText: 'Gentle recovery quest is now live.',
+  progressionCheckinLabel: '7-day streak',
+  progressionLevelLabel: 'Lv.5 Apprentice Villager',
+  progressionXpLabel: '1,260 / 1,800 XP',
+  progressionStats: ['Weekly: 12 done', 'Streak: 7 days', 'Best day: 5'],
+  progressionShopTitle: 'Reward Shop',
+  progressionShopItems: ['30-min Break Pass', 'Dessert Voucher', 'Movie Night'],
+  progressionShopPrices: ['80 Gold', '150 Gold', '300 Gold'],
+  progressionRedeemedLabel: 'Redeemed!',
   diaryTitle: 'Life Diary',
   diaryEntries: [
     ['2026-03-18', 'Completed 3 quests · rhythm steady'],
@@ -179,6 +195,14 @@ const uiCopyZh: PromoUiCopy = {
   eventAcceptLabel: '接受任务',
   eventAcceptedTag: '已插入任务板',
   eventAcceptedText: '轻量恢复任务现在已经上线。',
+  progressionCheckinLabel: '连续 7 天',
+  progressionLevelLabel: 'Lv.5 见习村民',
+  progressionXpLabel: '1,260 / 1,800 XP',
+  progressionStats: ['本周完成 12 个', '最长连续 7 天', '最佳一天 5 个'],
+  progressionShopTitle: '奖励商店',
+  progressionShopItems: ['30分钟摸鱼券', '甜品兑换券', '电影之夜'],
+  progressionShopPrices: ['80 金币', '150 金币', '300 金币'],
+  progressionRedeemedLabel: '已兑换!',
   diaryTitle: '生活日记',
   diaryEntries: [
     ['2026-03-18', '完成 3 个任务 · 节奏稳定'],
@@ -1074,6 +1098,223 @@ const EventVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, c
   );
 };
 
+const ProgressionVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, copy}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const dashIn = springIn(frame, fps, 8);
+  const shopIn = appear(frame, 42, 18);
+  const redeemed = appear(frame, 92, 14);
+  const ringProgress = interpolate(frame, [14, 72], [0, 0.68], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+    easing: Easing.bezier(0.2, 0.8, 0.2, 1),
+  });
+  const ringRadius = 64;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+
+  return (
+    <div style={{position: 'relative', width: 860, height: 700}}>
+      {/* Left: Growth Dashboard */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: 400,
+          height: 680,
+          borderRadius: 32,
+          overflow: 'hidden',
+          background:
+            'linear-gradient(180deg, rgba(255,253,243,0.97), rgba(252,247,230,0.95))',
+          border: '1px solid rgba(212, 149, 22, 0.14)',
+          boxShadow: '0 24px 70px rgba(40, 36, 20, 0.14)',
+          opacity: dashIn,
+          transform: `translateY(${(1 - dashIn) * 22}px)`,
+        }}
+      >
+        <div style={{padding: '24px 24px 16px', display: 'flex', gap: 12, alignItems: 'center'}}>
+          <div
+            style={{
+              padding: '10px 16px',
+              borderRadius: 999,
+              background: 'rgba(255, 87, 34, 0.12)',
+              color: '#E64A19',
+              fontSize: 20,
+              fontWeight: 800,
+              display: 'flex',
+              gap: 6,
+              alignItems: 'center',
+            }}
+          >
+            <span style={{fontSize: 22}}>🔥</span>
+            {copy.progressionCheckinLabel}
+          </div>
+          <div
+            style={{
+              padding: '10px 16px',
+              borderRadius: 999,
+              background: `${scene.accent}18`,
+              color: scene.accent,
+              fontSize: 18,
+              fontWeight: 800,
+            }}
+          >
+            {copy.progressionLevelLabel}
+          </div>
+        </div>
+
+        {/* XP Ring */}
+        <div style={{display: 'flex', justifyContent: 'center', padding: '18px 0'}}>
+          <div style={{position: 'relative', width: 160, height: 160}}>
+            <svg width="160" height="160" viewBox="0 0 160 160" style={{transform: 'rotate(-90deg)'}}>
+              <circle
+                cx="80" cy="80" r={ringRadius}
+                fill="none"
+                stroke="rgba(212,149,22,0.14)"
+                strokeWidth="12"
+              />
+              <circle
+                cx="80" cy="80" r={ringRadius}
+                fill="none"
+                stroke={scene.accent}
+                strokeWidth="12"
+                strokeLinecap="round"
+                strokeDasharray={ringCircumference}
+                strokeDashoffset={ringCircumference * (1 - ringProgress)}
+              />
+            </svg>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <div style={{fontSize: 28, fontWeight: 900, color: scene.accent}}>
+                {Math.round(ringProgress * 100)}%
+              </div>
+              <div style={{fontSize: 14, color: '#8A7340', fontWeight: 700}}>
+                {copy.progressionXpLabel}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3-stat row */}
+        <div style={{padding: '0 18px', display: 'flex', gap: 8}}>
+          {copy.progressionStats.map((stat, i) => {
+            const statIn = appear(frame, 30 + i * 8, 14);
+            return (
+              <div
+                key={stat}
+                style={{
+                  flex: 1,
+                  padding: '14px 10px',
+                  borderRadius: 18,
+                  background: 'rgba(255,255,255,0.88)',
+                  border: '1px solid rgba(212, 149, 22, 0.1)',
+                  textAlign: 'center',
+                  opacity: statIn,
+                  transform: `translateY(${(1 - statIn) * 12}px)`,
+                }}
+              >
+                <div style={{fontSize: 17, fontWeight: 800, color: '#44381C', lineHeight: 1.4}}>
+                  {stat}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Right: Reward Shop */}
+      <div
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: 60,
+          width: 410,
+          borderRadius: 30,
+          padding: 24,
+          background:
+            'linear-gradient(155deg, rgba(255,255,249,0.98), rgba(249,245,234,0.96))',
+          border: `1px solid ${scene.accent}28`,
+          boxShadow: '0 26px 68px rgba(40, 36, 20, 0.15)',
+          opacity: shopIn,
+          transform: `translateX(${(1 - shopIn) * 24}px)`,
+        }}
+      >
+        <div style={{fontSize: 26, fontWeight: 900, color: '#3A2F14', marginBottom: 18}}>
+          {copy.progressionShopTitle}
+        </div>
+        {copy.progressionShopItems.map((item, i) => {
+          const rowIn = appear(frame, 48 + i * 10, 14);
+          const isRedeemed = i === 0 && redeemed > 0.3;
+          return (
+            <div
+              key={item}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                padding: '16px 14px',
+                marginBottom: 10,
+                borderRadius: 20,
+                background: isRedeemed ? `${scene.accent}14` : 'rgba(255,255,255,0.86)',
+                border: `1px solid ${isRedeemed ? `${scene.accent}40` : 'rgba(212,149,22,0.08)'}`,
+                opacity: rowIn,
+                transform: `translateX(${(1 - rowIn) * 16}px)`,
+              }}
+            >
+              <div
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 14,
+                  background: `${scene.accent}18`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 22,
+                }}
+              >
+                {i === 0 ? '☕' : i === 1 ? '🍰' : '🎬'}
+              </div>
+              <div style={{flex: 1}}>
+                <div style={{fontSize: 20, fontWeight: 800, color: '#3A2F14'}}>
+                  {isRedeemed ? <s>{item}</s> : item}
+                </div>
+                <div style={{fontSize: 16, fontWeight: 700, color: '#8A7340'}}>
+                  {copy.progressionShopPrices[i]}
+                </div>
+              </div>
+              {isRedeemed && (
+                <div
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 999,
+                    background: scene.accent,
+                    color: '#fff',
+                    fontSize: 16,
+                    fontWeight: 900,
+                  }}
+                >
+                  {copy.progressionRedeemedLabel}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <ClickPulse top={376} left={794} accent={scene.accent} start={88} />
+    </div>
+  );
+};
+
 const DiaryVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, copy}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -1213,6 +1454,8 @@ const SceneVisual: React.FC<{scene: PromoScene; copy: PromoUiCopy}> = ({scene, c
       return <GuideVisual scene={scene} copy={copy} />;
     case 'event':
       return <EventVisual scene={scene} copy={copy} />;
+    case 'progression':
+      return <ProgressionVisual scene={scene} copy={copy} />;
     case 'diary':
       return <DiaryVisual scene={scene} copy={copy} />;
     default:
