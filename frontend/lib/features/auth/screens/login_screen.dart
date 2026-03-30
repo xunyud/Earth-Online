@@ -218,34 +218,31 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  /// 浮动环境图标（蝴蝶、蜜蜂、落叶等），匹配 HTML 预览
+  /// 极少量浮动蝴蝶（2只，非常慢，很淡）
   List<Widget> _buildAmbientIcons() {
-    const icons = ['🦋', '🐝', '🍂', '🌻', '🪶', '✨', '🌾', '🦋', '🐝'];
-    const positions = <List<double>>[
-      [0.08, 0.15], [0.85, 0.25], [0.20, 0.70], [0.75, 0.60],
-      [0.50, 0.12], [0.35, 0.80], [0.90, 0.45], [0.12, 0.50], [0.65, 0.85],
+    const data = [
+      ['🦋', 0.12, 0.20, 14.0],
+      ['🦋', 0.82, 0.65, 12.0],
     ];
-    return List.generate(icons.length, (i) {
+    return data.asMap().entries.map((e) {
+      final d = e.value;
       return Positioned(
-        left: 0,
-        top: 0,
-        right: 0,
-        bottom: 0,
+        left: 0, top: 0, right: 0, bottom: 0,
         child: IgnorePointer(
           child: Align(
             alignment: Alignment(
-              positions[i][0] * 2 - 1,
-              positions[i][1] * 2 - 1,
+              (d[1] as double) * 2 - 1,
+              (d[2] as double) * 2 - 1,
             ),
             child: _FloatingIcon(
-              icon: icons[i],
-              size: 16.0 + (i % 3) * 6,
-              delay: Duration(milliseconds: i * 1300),
+              icon: d[0] as String,
+              size: d[3] as double,
+              delay: Duration(milliseconds: e.key * 4000),
             ),
           ),
         ),
       );
-    });
+    }).toList();
   }
 
   @override
@@ -332,7 +329,7 @@ class _LoginScreenState extends State<LoginScreen>
             child: Opacity(
               opacity: 0.92,
               child: ParallaxBackground(
-                scrollSpeed: 18,
+                scrollSpeed: 8, // 慢速滚动，宁静感
                 layers: const [
                   ParallaxLayer(
                     assetPath: 'assets/images/backgrounds/forest/sky.png',
@@ -1181,7 +1178,7 @@ class _FloatingIconState extends State<_FloatingIcon>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-      duration: const Duration(seconds: 8),
+      duration: const Duration(seconds: 20), // 非常慢
       vsync: this,
     );
     Future.delayed(widget.delay, () {
@@ -1201,11 +1198,11 @@ class _FloatingIconState extends State<_FloatingIcon>
       animation: _ctrl,
       builder: (context, child) {
         final t = _ctrl.value;
-        // 正弦浮动 + 淡入淡出
-        final dy = math.sin(t * math.pi * 2) * 18;
-        final dx = math.cos(t * math.pi * 2 * 0.7) * 8;
+        final dy = math.sin(t * math.pi * 2) * 10; // 更小幅度
+        final dx = math.cos(t * math.pi * 2 * 0.5) * 5;
+        // 非常淡：0.1 ~ 0.3
         final opacity = (math.sin(t * math.pi * 2) * 0.5 + 0.5)
-            .clamp(0.15, 0.55);
+            .clamp(0.08, 0.28);
         return Transform.translate(
           offset: Offset(dx, dy),
           child: Opacity(

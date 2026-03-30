@@ -37,77 +37,77 @@ class _ForestParticlesState extends State<ForestParticles>
       const Color(0xFF6BAA4A).withValues(alpha: 0.5),
     ];
 
-    // 10 片纤细树叶
-    for (int i = 0; i < 10; i++) {
+    // 8 片纤细树叶 — 非常缓慢飘落
+    for (int i = 0; i < 8; i++) {
       _particles.add(_Particle(
         type: _PType.leaf,
         x: _rng.nextDouble(),
         y: _rng.nextDouble() * 1.2 - 0.1,
-        size: 3 + _rng.nextDouble() * 5,
-        vy: 0.008 + _rng.nextDouble() * 0.015,
+        size: 3 + _rng.nextDouble() * 4,
+        vy: 0.003 + _rng.nextDouble() * 0.006, // 极慢
         vx: 0,
         rotation: _rng.nextDouble() * math.pi * 2,
-        rotationSpeed: (_rng.nextDouble() - 0.5) * 0.04,
+        rotationSpeed: (_rng.nextDouble() - 0.5) * 0.015, // 缓转
         color: leafColors[_rng.nextInt(leafColors.length)],
         phase: _rng.nextDouble() * math.pi * 2,
-        drift: 0.2 + _rng.nextDouble() * 0.4,
+        drift: 0.1 + _rng.nextDouble() * 0.2,
         blinkSpeed: 0,
       ));
     }
 
-    // 16 只萤火虫（集中在下半屏）
-    for (int i = 0; i < 16; i++) {
+    // 10 只萤火虫 — 轻柔游走，慢呼吸
+    for (int i = 0; i < 10; i++) {
       _particles.add(_Particle(
         type: _PType.firefly,
         x: _rng.nextDouble(),
-        y: 0.35 + _rng.nextDouble() * 0.6,
-        size: 2.5 + _rng.nextDouble() * 3,
-        vy: (_rng.nextDouble() - 0.5) * 0.003,
-        vx: (_rng.nextDouble() - 0.5) * 0.004,
+        y: 0.4 + _rng.nextDouble() * 0.55,
+        size: 2 + _rng.nextDouble() * 2.5,
+        vy: (_rng.nextDouble() - 0.5) * 0.001, // 极慢
+        vx: (_rng.nextDouble() - 0.5) * 0.0015,
         rotation: 0,
         rotationSpeed: 0,
         color: _rng.nextDouble() > 0.3
-            ? const Color(0xFFDCFF78).withValues(alpha: 0.85)
-            : const Color(0xFFFFF096).withValues(alpha: 0.85),
+            ? const Color(0xFFDCFF78).withValues(alpha: 0.7)
+            : const Color(0xFFFFF096).withValues(alpha: 0.7),
         phase: _rng.nextDouble() * math.pi * 2,
         drift: 0,
-        blinkSpeed: 1.5 + _rng.nextDouble() * 2.5,
+        blinkSpeed: 0.5 + _rng.nextDouble() * 1.0, // 很慢的呼吸
       ));
     }
 
-    // 18 颗阳光浮尘（偏左上角）
-    for (int i = 0; i < 18; i++) {
+    // 12 颗阳光浮尘 — 几乎静止的金色微粒
+    for (int i = 0; i < 12; i++) {
       _particles.add(_Particle(
         type: _PType.sunDust,
-        x: _rng.nextDouble() * 0.55,
-        y: _rng.nextDouble() * 0.6,
-        size: 1 + _rng.nextDouble() * 2,
-        vy: 0.002 + _rng.nextDouble() * 0.005,
-        vx: 0.001 + _rng.nextDouble() * 0.004,
+        x: _rng.nextDouble() * 0.5,
+        y: _rng.nextDouble() * 0.5,
+        size: 1 + _rng.nextDouble() * 1.5,
+        vy: 0.0008 + _rng.nextDouble() * 0.002, // 几乎不动
+        vx: 0.0005 + _rng.nextDouble() * 0.0015,
         rotation: 0,
         rotationSpeed: 0,
-        color: const Color(0xFFFFF8D0).withValues(alpha: 0.8),
+        color: const Color(0xFFFFF8D0).withValues(alpha: 0.6),
         phase: _rng.nextDouble() * math.pi * 2,
         drift: 0,
-        blinkSpeed: 2 + _rng.nextDouble() * 3,
+        blinkSpeed: 0.8 + _rng.nextDouble() * 1.5, // 慢闪
       ));
     }
 
-    // 5 个柔和大光斑
-    for (int i = 0; i < 5; i++) {
+    // 4 个柔和大光斑 — 缓慢飘动
+    for (int i = 0; i < 4; i++) {
       _particles.add(_Particle(
         type: _PType.glow,
         x: _rng.nextDouble(),
         y: _rng.nextDouble() * 0.7,
         size: 20 + _rng.nextDouble() * 25,
-        vy: 0.004 + _rng.nextDouble() * 0.005,
+        vy: 0.001 + _rng.nextDouble() * 0.002, // 极慢
         vx: 0,
         rotation: 0,
         rotationSpeed: 0,
-        color: const Color(0xFFFFFACD).withValues(alpha: 0.12),
+        color: const Color(0xFFFFFACD).withValues(alpha: 0.08),
         phase: _rng.nextDouble() * math.pi * 2,
         drift: 0,
-        blinkSpeed: 0.6 + _rng.nextDouble() * 0.6,
+        blinkSpeed: 0.3 + _rng.nextDouble() * 0.4,
       ));
     }
   }
@@ -237,18 +237,18 @@ class _ParticlePainter extends CustomPainter {
 
   // ── 萤火虫 ──
   void _updateFirefly(_Particle p, Size sz) {
-    // 随机游走
-    p.vx += (_rng.nextDouble() - 0.5) * 0.0003;
-    p.vy += (_rng.nextDouble() - 0.5) * 0.0002;
-    p.vx *= 0.995;
-    p.vy *= 0.995;
+    // 非常温柔的随机游走
+    p.vx += (_rng.nextDouble() - 0.5) * 0.00008;
+    p.vy += (_rng.nextDouble() - 0.5) * 0.00006;
+    p.vx *= 0.998;
+    p.vy *= 0.998;
     p.x += p.vx;
     p.y += p.vy;
     // 软边界
-    if (p.x < 0.02) p.vx += 0.0005;
-    if (p.x > 0.98) p.vx -= 0.0005;
-    if (p.y < 0.3) p.vy += 0.0003;
-    if (p.y > 0.95) p.vy -= 0.0003;
+    if (p.x < 0.03) p.vx += 0.0002;
+    if (p.x > 0.97) p.vx -= 0.0002;
+    if (p.y < 0.35) p.vy += 0.0001;
+    if (p.y > 0.93) p.vy -= 0.0001;
   }
 
   void _drawFirefly(Canvas canvas, _Particle p, Size sz) {
