@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -217,6 +218,36 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  /// 浮动环境图标（蝴蝶、蜜蜂、落叶等），匹配 HTML 预览
+  List<Widget> _buildAmbientIcons() {
+    const icons = ['🦋', '🐝', '🍂', '🌻', '🪶', '✨', '🌾', '🦋', '🐝'];
+    const positions = <List<double>>[
+      [0.08, 0.15], [0.85, 0.25], [0.20, 0.70], [0.75, 0.60],
+      [0.50, 0.12], [0.35, 0.80], [0.90, 0.45], [0.12, 0.50], [0.65, 0.85],
+    ];
+    return List.generate(icons.length, (i) {
+      return Positioned(
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        child: IgnorePointer(
+          child: Align(
+            alignment: Alignment(
+              positions[i][0] * 2 - 1,
+              positions[i][1] * 2 - 1,
+            ),
+            child: _FloatingIcon(
+              icon: icons[i],
+              size: 16.0 + (i % 3) * 6,
+              delay: Duration(milliseconds: i * 1300),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final questTheme = Theme.of(context).extension<QuestTheme>() ??
@@ -226,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // 森林视差背景
+          // ═══ 1. 天空渐变（更暖、底部更深绿）═══
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
@@ -235,19 +266,60 @@ class _LoginScreenState extends State<LoginScreen>
                   end: Alignment.bottomCenter,
                   colors: [
                     Color(0xFFF0EACC),
+                    Color(0xFFE2DDB5),
                     Color(0xFFC4D8A0),
                     Color(0xFF8ABF6E),
+                    Color(0xFF5A9E4A),
                     Color(0xFF3D7A3A),
+                    Color(0xFF2A5428),
                   ],
-                  stops: [0.0, 0.3, 0.6, 1.0],
+                  stops: [0.0, 0.12, 0.28, 0.48, 0.65, 0.80, 1.0],
                 ),
               ),
             ),
           ),
-          // 静态底图
+          // ═══ 2. 阳光核心（左上大面积白金色）═══
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(-0.7, -0.95),
+                    radius: 0.9,
+                    colors: [
+                      const Color(0xFFFFFCE0).withValues(alpha: 0.85),
+                      const Color(0xFFFFF5C0).withValues(alpha: 0.35),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.25, 0.65],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // ═══ 3. 阳光光晕扩散 ═══
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(-0.5, -0.7),
+                    radius: 1.2,
+                    colors: [
+                      const Color(0xFFFFF8D0).withValues(alpha: 0.35),
+                      const Color(0xFFFFEFA0).withValues(alpha: 0.1),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.35, 0.8],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // ═══ 4. 静态底图 ═══
           Positioned.fill(
             child: Opacity(
-              opacity: 0.5,
+              opacity: 0.55,
               child: Image.asset(
                 'assets/images/backgrounds/forest/login_backdrop.png',
                 fit: BoxFit.cover,
@@ -255,10 +327,10 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
           ),
-          // 视差滚动层
+          // ═══ 5. 视差滚动森林（更不透明）═══
           Positioned.fill(
             child: Opacity(
-              opacity: 0.78,
+              opacity: 0.92,
               child: ParallaxBackground(
                 scrollSpeed: 18,
                 layers: const [
@@ -268,63 +340,43 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   ParallaxLayer(
                     assetPath: 'assets/images/backgrounds/forest/far.png',
-                    speed: 0.16,
+                    speed: 0.14,
                   ),
                   ParallaxLayer(
                     assetPath: 'assets/images/backgrounds/forest/mid.png',
-                    speed: 0.32,
+                    speed: 0.30,
                   ),
                   ParallaxLayer(
                     assetPath: 'assets/images/backgrounds/forest/near.png',
-                    speed: 0.58,
+                    speed: 0.52,
                   ),
                 ],
               ),
             ),
           ),
-          // 阳光主光晕（大面积暖光）
+          // ═══ 6. 暖光洗（整体偏暖）═══
           Positioned.fill(
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(-0.65, -0.95),
-                    radius: 1.3,
+                  gradient: LinearGradient(
+                    begin: const Alignment(-0.8, -1.0),
+                    end: const Alignment(0.6, 0.4),
                     colors: [
-                      const Color(0xFFFFFCE0).withValues(alpha: 0.55),
-                      const Color(0xFFFFF0B0).withValues(alpha: 0.2),
+                      const Color(0xFFFFF8D0).withValues(alpha: 0.12),
                       Colors.transparent,
                     ],
-                    stops: const [0.0, 0.3, 1.0],
                   ),
                 ),
               ),
             ),
           ),
-          // 阳光副光晕（偏移暖色扩散）
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(-0.4, -0.6),
-                    radius: 0.8,
-                    colors: [
-                      const Color(0xFFFFF8C8).withValues(alpha: 0.2),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 1.0],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // 雾气层（底部偏上）
+          // ═══ 7. 雾气层（中部扩散）═══
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            height: 300,
+            height: 400,
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -334,30 +386,56 @@ class _LoginScreenState extends State<LoginScreen>
                     colors: [
                       Colors.transparent,
                       const Color(0xFFDDEBD2).withValues(alpha: 0.2),
-                      const Color(0xFFCCE0C0).withValues(alpha: 0.35),
+                      const Color(0xFFBBD8AA).withValues(alpha: 0.3),
+                      const Color(0xFF88B870).withValues(alpha: 0.25),
+                    ],
+                    stops: const [0.0, 0.3, 0.6, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // ═══ 8. 前景草丛渐变（底部深绿兜底）═══
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 80,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      const Color(0xFF3A7A2E).withValues(alpha: 0.5),
+                      const Color(0xFF2D6622).withValues(alpha: 0.7),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-          // 粒子系统（树叶 + 萤火虫 + 阳光浮尘 + 光斑）
+          // ═══ 9. 粒子系统 ═══
           const Positioned.fill(
             child: ForestParticles(),
           ),
-          // 暗角
+          // ═══ 10. 浮动环境图标（蝴蝶/蜜蜂等）═══
+          ..._buildAmbientIcons(),
+          // ═══ 11. 暗角 ═══
           Positioned.fill(
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
-                    center: Alignment.center,
+                    center: const Alignment(0.0, -0.1),
                     radius: 0.85,
                     colors: [
                       Colors.transparent,
-                      const Color(0xFF1E3214).withValues(alpha: 0.3),
+                      const Color(0xFF1E3214).withValues(alpha: 0.35),
                     ],
-                    stops: const [0.55, 1.0],
+                    stops: const [0.5, 1.0],
                   ),
                 ),
               ),
@@ -1075,6 +1153,70 @@ class _AnimatedPrimaryButton extends StatelessWidget {
         ),
         child: Text(label),
       ),
+    );
+  }
+}
+
+/// 浮动环境图标动画组件
+class _FloatingIcon extends StatefulWidget {
+  final String icon;
+  final double size;
+  final Duration delay;
+
+  const _FloatingIcon({
+    required this.icon,
+    required this.size,
+    this.delay = Duration.zero,
+  });
+
+  @override
+  State<_FloatingIcon> createState() => _FloatingIconState();
+}
+
+class _FloatingIconState extends State<_FloatingIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      duration: const Duration(seconds: 8),
+      vsync: this,
+    );
+    Future.delayed(widget.delay, () {
+      if (mounted) _ctrl.repeat();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, child) {
+        final t = _ctrl.value;
+        // 正弦浮动 + 淡入淡出
+        final dy = math.sin(t * math.pi * 2) * 18;
+        final dx = math.cos(t * math.pi * 2 * 0.7) * 8;
+        final opacity = (math.sin(t * math.pi * 2) * 0.5 + 0.5)
+            .clamp(0.15, 0.55);
+        return Transform.translate(
+          offset: Offset(dx, dy),
+          child: Opacity(
+            opacity: opacity,
+            child: Text(
+              widget.icon,
+              style: TextStyle(fontSize: widget.size),
+            ),
+          ),
+        );
+      },
     );
   }
 }
