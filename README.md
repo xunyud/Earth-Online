@@ -24,7 +24,7 @@ Earth Online was built around a different idea: productivity tools should not on
 
 ### The Role of EverMemOS
 
-The "memory-aware" capability of Earth Online is powered by [EverMemOS](https://github.com/nicekate/EverMemOS) — an open-source memory operating system for AI applications.
+The "memory-aware" capability of Earth Online is powered by [EverMemOS](https://github.com/EverMind-AI/EverMemOS) — an open-source memory operating system for AI applications.
 
 In this project, EverMemOS serves as the external long-term memory layer:
 
@@ -95,7 +95,7 @@ XP, levels, rewards, events, diary, and summaries make progress feel cumulative.
 - Supabase for database, auth, migrations, and Edge Functions
 - TypeScript + Deno for serverless guide, memory, and task-processing functions
 - Node.js + Express for the lightweight backend and webhook handling
-- [EverMemOS](https://github.com/nicekate/EverMemOS) for persistent AI memory layer
+- [EverMemOS](https://github.com/EverMind-AI/EverMemOS) for persistent AI memory layer
 - Redis for buffered message processing
 - Remotion for the promo video pipeline
 
