@@ -2,11 +2,22 @@
 .claude/
 .kiro/
 .playwright-cli/
+.playwright-mcp/
 .superpowers/
 .trae/
+.agent/
+.agents/
+.codeindex/
+everything-claude-code/
+skills/
 
 artifacts/
-output/
+dist/
+node_modules/
+output/*
+!output/
+!output/earth-online-poster.png
+!output/earth-online-poster-zh.png
 test-results/
 tmp/
 
@@ -18,6 +29,33 @@ Thumbs.db
 
 .env
 .env.*
+
+/AGENTS.md
+/AI_CONTEXT.md
+/CLAUDE.md
+/docs/superpowers/
+/memoized-swinging-teapot.md
+/skills-lock.json
+/frontend/skills-lock.json
+/verification.md
+/verification-ecc-install-*.md
+/执行文档
+
+/Presentation Template.pptx
+/docs/competition-demo-assets.md
+/generate_competition_decks.py
+/generate_pitch.js
+/generate_pitch.py
+/package.json
+/package-lock.json
+/supabase.ps1
+
+promo-video/public/audio/
+promo-video/public/audio-zh/
+promo-video/public/competition/
+promo-video/public/screens/board.png
+promo-video/public/screens/event.png
+promo-video/public/screens/guide.png
 
 frontend/.dart_tool/
 frontend/build/

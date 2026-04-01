@@ -137,7 +137,6 @@ This is the core system idea behind the product's "memory-aware" claim.
 - `backend/`: lightweight Node.js / Express service
 - `supabase/`: migrations and Edge Functions
 - `promo-video/`: Remotion-based demo video project
-- `output/`: rendered demo assets
 
 ### 1. Run the Flutter Client
 
@@ -217,14 +216,15 @@ npm run still:zh
 
 ## Screenshots / Preview Assets
 
-Current repository assets already available for preview:
+Preview links:
 
 - [English poster](./output/earth-online-poster.png)
 - [Chinese poster](./output/earth-online-poster-zh.png)
+- [Live demo](https://earth-online-wine.vercel.app)
 - [English intro video](https://youtu.be/-YLz6EwWYkw)
 - [Chinese intro video](https://youtu.be/Dah5XAsEPNI)
 
-Additional app screenshots can be expanded here as the live UI evolves.
+Only the poster images stay in version control for README preview. Other rendered video outputs can be regenerated from `promo-video/` when needed.
 
 ## Recent Updates (v1.2.0 - 2026-03-27)
 

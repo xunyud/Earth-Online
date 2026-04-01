@@ -4,6 +4,7 @@
 
 [![Earth Online 海报](./output/earth-online-poster-zh.png)](https://earth-online-wine.vercel.app)
 
+
 <p align="center">
   <a href="https://earth-online-wine.vercel.app"><strong>在线体验</strong></a> · <a href="https://youtu.be/Dah5XAsEPNI"><strong>中文视频</strong></a> · <a href="https://youtu.be/-YLz6EwWYkw"><strong>英文视频</strong></a> · <a href="https://github.com/xunyud/Earth-Online"><strong>GitHub</strong></a>
 </p>
@@ -137,7 +138,6 @@ Earth Online 把近期行为当作“证据”来使用：
 - `backend/`：轻量 Node.js / Express 服务
 - `supabase/`：数据库迁移与 Edge Functions
 - `promo-video/`：基于 Remotion 的演示视频项目
-- `output/`：已渲染的演示资源
 
 ### 1. 运行 Flutter 客户端
 
@@ -217,14 +217,15 @@ npm run still:zh
 
 ## 界面预览 / Preview Assets
 
-当前仓库中已经存在可直接预览的资源：
+当前可直接访问的预览入口：
 
 - [英文海报](./output/earth-online-poster.png)
 - [中文海报](./output/earth-online-poster-zh.png)
+- [在线体验](https://earth-online-wine.vercel.app)
 - [英文介绍视频](https://youtu.be/-YLz6EwWYkw)
 - [中文介绍视频](https://youtu.be/Dah5XAsEPNI)
 
-后续随着线上界面继续演进，可以在这里补充更多应用截图或 GIF。
+目前仅保留海报图片用于 README 预览，其余渲染生成的视频输出物不纳入版本控制，如有需要可在 `promo-video/` 中重新生成。
 
 ## 最近更新 (v1.2.0 - 2026-03-27)
 
