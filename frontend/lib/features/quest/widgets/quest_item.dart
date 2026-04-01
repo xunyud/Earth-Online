@@ -65,6 +65,12 @@ class _QuestItemState extends State<QuestItem>
     return '$m-$d';
   }
 
+  String _formatDailyDueMinutes(int minutes) {
+    final hour = (minutes ~/ 60).toString().padLeft(2, '0');
+    final minute = (minutes % 60).toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
   Future<void> _openEditSheet() async {
     if (widget.quest.isReward) {
       showForestSnackBar(context, '🎁 这是一个奖励任务，尽情享受吧，不可编辑。');
@@ -176,8 +182,9 @@ class _QuestItemState extends State<QuestItem>
               ),
               BoxShadow(
                 color: tierGlowColor.withValues(
-                  alpha:
-                  widget.quest.isCompleted ? 0.08 : (_isHovering ? 0.22 : 0.14),
+                  alpha: widget.quest.isCompleted
+                      ? 0.08
+                      : (_isHovering ? 0.22 : 0.14),
                 ),
                 blurRadius: _isHovering ? 14 : 9,
                 spreadRadius: _isHovering ? 1 : 0,
@@ -256,6 +263,12 @@ class _QuestItemState extends State<QuestItem>
                               final now = DateTime.now();
                               final today =
                                   DateTime(now.year, now.month, now.day);
+                              final currentMinutes = now.hour * 60 + now.minute;
+                              // Daily displays daily_due_minutes instead of due_date.
+                              final dailyDueMinutes =
+                                  widget.quest.questTier == 'Daily'
+                                      ? widget.quest.dailyDueMinutes
+                                      : null;
 
                               final dueLocal = widget.quest.dueDate?.toLocal();
                               final dueDay = dueLocal == null
@@ -269,10 +282,15 @@ class _QuestItemState extends State<QuestItem>
                               final isOverdueOrToday = dueDay == null
                                   ? false
                                   : !dueDay.isAfter(today);
+                              final isDailyDuePassed = dailyDueMinutes == null
+                                  ? false
+                                  : currentMinutes >= dailyDueMinutes;
 
                               final dueColor = widget.quest.isCompleted
                                   ? AppColors.textHint
-                                  : (isOverdueOrToday
+                                  : ((dailyDueMinutes != null
+                                          ? isDailyDuePassed
+                                          : isOverdueOrToday)
                                       ? AppColors.errorRed
                                       : AppColors.textHint);
 
@@ -305,7 +323,25 @@ class _QuestItemState extends State<QuestItem>
                                       ),
                                     ],
                                   ),
-                                  if (dueDay != null)
+                                  if (dailyDueMinutes != null)
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.schedule_rounded,
+                                          size: 14,
+                                          color: dueColor,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _formatDailyDueMinutes(
+                                              dailyDueMinutes),
+                                          style: metaStyle.copyWith(
+                                              color: dueColor),
+                                        ),
+                                      ],
+                                    ),
+                                  if (dailyDueMinutes == null && dueDay != null)
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [

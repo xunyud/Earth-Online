@@ -7,6 +7,7 @@ class QuestNode {
   final double sortOrder;
   final String? description;
   final DateTime? dueDate;
+  final int? dailyDueMinutes;
   final bool isCompleted;
   final DateTime? completedAt;
   final bool isExpanded;
@@ -18,11 +19,19 @@ class QuestNode {
   static const Object _parentIdUnset = Object();
   static const Object _descriptionUnset = Object();
   static const Object _dueDateUnset = Object();
+  static const Object _dailyDueMinutesUnset = Object();
   static const Object _completedAtUnset = Object();
   static double _toDouble(dynamic v) {
     if (v is num) return v.toDouble();
     if (v is String) return double.tryParse(v) ?? 0.0;
     return 0.0;
+  }
+
+  static int? _toInt(dynamic v) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v);
+    return null;
   }
 
   QuestNode({
@@ -34,6 +43,7 @@ class QuestNode {
     this.sortOrder = 0.0,
     this.description,
     this.dueDate,
+    this.dailyDueMinutes,
     required this.isCompleted,
     this.completedAt,
     this.isExpanded = true,
@@ -58,6 +68,7 @@ class QuestNode {
       dueDate: json['due_date'] == null
           ? null
           : DateTime.parse(json['due_date'] as String),
+      dailyDueMinutes: _toInt(json['daily_due_minutes']),
       isCompleted: json['is_completed'] ?? false,
       completedAt: json['completed_at'] == null
           ? null
@@ -80,6 +91,7 @@ class QuestNode {
       'sort_order': sortOrder,
       'description': description,
       'due_date': dueDate?.toUtc().toIso8601String(),
+      'daily_due_minutes': dailyDueMinutes,
       'is_completed': isCompleted,
       'completed_at': completedAt?.toUtc().toIso8601String(),
       'is_expanded': isExpanded,
@@ -99,6 +111,7 @@ class QuestNode {
     double? sortOrder,
     Object? description = _descriptionUnset,
     Object? dueDate = _dueDateUnset,
+    Object? dailyDueMinutes = _dailyDueMinutesUnset,
     bool? isCompleted,
     Object? completedAt = _completedAtUnset,
     bool? isExpanded,
@@ -120,6 +133,9 @@ class QuestNode {
           : description as String?,
       dueDate:
           dueDate == _dueDateUnset ? this.dueDate : dueDate as DateTime?,
+      dailyDueMinutes: dailyDueMinutes == _dailyDueMinutesUnset
+          ? this.dailyDueMinutes
+          : dailyDueMinutes as int?,
       isCompleted: isCompleted ?? this.isCompleted,
       completedAt: completedAt == _completedAtUnset
           ? this.completedAt

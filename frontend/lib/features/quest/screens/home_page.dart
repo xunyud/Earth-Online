@@ -254,8 +254,8 @@ class _HomePageState extends State<HomePage> {
     setState(() => _showCoachMarks = false);
     // 首次引导时插入教程任务，重播时不重复插入
     if (!alreadySeen) {
-      final inserted = await _controller.addOnboardingTutorialBundle(
-          guideName: _guideName);
+      final inserted =
+          await _controller.addOnboardingTutorialBundle(guideName: _guideName);
       if (mounted && inserted.isNotEmpty) {
         showForestSnackBar(context, context.tr('guide.onboarding.accepted'));
       }
@@ -2822,6 +2822,157 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // ignore: unused_element
+  void _showPlusMenu() {
+    final theme = Theme.of(context).extension<QuestTheme>()!;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.textHint.withAlpha(60),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _PlusMenuItem(
+                  icon: Icons.edit_note_rounded,
+                  color: theme.primaryAccentColor,
+                  title: context.tr('quick_add.menu.create'),
+                  subtitle: context.tr('quick_add.menu.create_desc'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showQuickCreateDialog();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _PlusMenuItem(
+                  icon: Icons.image_rounded,
+                  color: const Color(0xFFFFB74D),
+                  title: context.tr('quick_add.menu.image'),
+                  subtitle: context.tr('quick_add.menu.image_desc'),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.textHint.withAlpha(25),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      context.tr('quick_add.menu.coming_soon'),
+                      style: AppTextStyles.caption.copyWith(
+                        fontSize: 10,
+                        color: AppColors.textHint,
+                      ),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    showForestSnackBar(
+                      context,
+                      context.tr('quick_add.menu.coming_soon'),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showQuickCreateDialog() async {
+    final mainQuestOptions = _controller.activeQuests
+        .where(
+          (quest) =>
+              quest.questTier == 'Main_Quest' &&
+              quest.parentId == null &&
+              !quest.isDeleted &&
+              !quest.isReward,
+        )
+        .toList(growable: false);
+    final result = await showQuestDialog<_QuickCreateDialogResult>(
+      context: context,
+      barrierLabel: 'quick_create_dialog',
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext).extension<QuestTheme>()!;
+        return _QuickCreateDialogBody(
+          mainQuestOptions: mainQuestOptions,
+          theme: theme,
+          onConfirm: (result) => Navigator.of(dialogContext).pop(result),
+          onClose: () => Navigator.of(dialogContext).pop(),
+        );
+      },
+    );
+
+    if (result == null || !mounted) {
+      return;
+    }
+
+    var createdAny = false;
+    switch (result.mode) {
+      case _QuickCreateMode.newMainWithSides:
+        final mainQuest = await _controller.createManualQuest(
+          title: result.title,
+          description: '',
+          xpReward: 50,
+          questTier: 'Main_Quest',
+        );
+        if (mainQuest == null) {
+          break;
+        }
+        createdAny = true;
+        for (final sideTitle in result.sideTitles) {
+          final insertedSide = await _controller.createManualQuest(
+            title: sideTitle,
+            description: '',
+            xpReward: 30,
+            questTier: 'Side_Quest',
+            parentMainQuestId: mainQuest.id,
+          );
+          createdAny = createdAny || insertedSide != null;
+        }
+      case _QuickCreateMode.attachToExistingMain:
+        final insertedSide = await _controller.createManualQuest(
+          title: result.title,
+          description: '',
+          xpReward: 30,
+          questTier: 'Side_Quest',
+          parentMainQuestId: result.parentMainQuestId,
+        );
+        createdAny = insertedSide != null;
+      case _QuickCreateMode.daily:
+        final insertedDaily = await _controller.createManualQuest(
+          title: result.title,
+          description: '',
+          xpReward: 20,
+          questTier: 'Daily',
+          dailyDueMinutes: result.dailyDueMinutes,
+        );
+        createdAny = insertedDaily != null;
+    }
+
+    if (createdAny && mounted) {
+      HapticFeedback.lightImpact();
+      showForestSnackBar(context, context.tr('quick_add.create.success'));
+    }
+  }
+
   Future<void> _syncTodayMemories() async {
     if (_isSyncingMemory || !mounted) return;
     setState(() => _isSyncingMemory = true);
@@ -2830,18 +2981,30 @@ class _HomePageState extends State<HomePage> {
       final result = await _evermemosService
           .syncTodayCompletedQuests(_controller.activeQuests);
       if (!mounted) return;
+
+      // ???????????????????
+      HapticFeedback.lightImpact();
+      if (mounted) setState(() => _isSyncingMemory = false);
+
       if (result.isQueued && result.requestId != null) {
         showForestSnackBar(context, context.tr('night.upload_queued'));
-        await _startMemoryStatusPolling(result.requestId!);
+        // ?????????????????????????
+        unawaited(_startMemoryStatusPolling(result.requestId!));
+        await _triggerNightReflection(uploadRequestId: result.requestId);
       } else {
-        HapticFeedback.lightImpact();
         showForestSnackBar(context, context.tr('night.upload_success'));
         await _triggerNightReflection(uploadRequestId: result.requestId);
       }
-    } catch (_) {
-      if (mounted) showForestSnackBar(context, context.tr('night.upload_fail'));
-    } finally {
-      if (mounted) setState(() => _isSyncingMemory = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSyncingMemory = false);
+        showForestSnackBar(
+          context,
+          e is EvermemosSyncException
+              ? e.message
+              : context.tr('night.upload_fail'),
+        );
+      }
     }
   }
 
@@ -2849,18 +3012,18 @@ class _HomePageState extends State<HomePage> {
     try {
       final result = await _evermemosService.pollMemoryStatus(
         requestId,
-        maxAttempts: 10,
-        interval: const Duration(seconds: 3),
+        maxAttempts: 5,
+        interval: const Duration(seconds: 2),
       );
       if (!mounted) return;
       if (result.isSuccess) {
         showForestSnackBar(context, context.tr('night.poll_success'));
-        await _triggerNightReflection(uploadRequestId: requestId);
       } else {
         showForestSnackBar(context, context.tr('night.poll_pending'));
       }
     } catch (_) {
-      if (mounted) showForestSnackBar(context, context.tr('night.poll_fail'));
+      // 轮询失败不影响用户体验，静默处理
+      debugPrint('?? ??????????????');
     }
   }
 
@@ -2962,30 +3125,10 @@ class _HomePageState extends State<HomePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              context.tr('profile.analysis_title'),
-                              style: AppTextStyles.heading2.copyWith(
-                                fontSize: 18,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color:
-                                    localTheme.backgroundColor.withAlpha(170),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: localTheme.primaryAccentColor
-                                      .withAlpha(52),
-                                ),
-                              ),
-                              child: Text(
-                                insight.summary,
-                                style: AppTextStyles.body.copyWith(height: 1.6),
-                              ),
+                            _PortraitEvaluationSection(
+                              insight: insight,
+                              theme: localTheme,
+                              guideName: _guideName,
                             ),
                             const SizedBox(height: 16),
                             _PortraitInsightChart(
@@ -2996,12 +3139,6 @@ class _HomePageState extends State<HomePage> {
                             _PortraitReadableMetricGrid(
                               insight: insight,
                               theme: localTheme,
-                            ),
-                            const SizedBox(height: 16),
-                            _PortraitEvaluationSection(
-                              insight: insight,
-                              theme: localTheme,
-                              guideName: _guideName,
                             ),
                           ],
                         ),
@@ -3451,292 +3588,297 @@ class _HomePageState extends State<HomePage> {
     return Stack(
       children: [
         Scaffold(
-      backgroundColor: theme.backgroundColor,
-      onDrawerChanged: (isOpened) {
-        if (!isOpened) _loadProfileDisplayName();
-      },
-      drawer: AppDrawer(
-        questController: _controller,
-        onOpenSettings: _openUnifiedSettings,
-        onOpenGuide: _openGuidePanel,
-        onOpenTutorial: _replayCoachMarks,
-      ),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        centerTitle: false,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu_rounded),
-            color: AppColors.textSecondary,
-            onPressed: () => Scaffold.of(context).openDrawer(),
+          backgroundColor: theme.backgroundColor,
+          onDrawerChanged: (isOpened) {
+            if (!isOpened) _loadProfileDisplayName();
+          },
+          drawer: AppDrawer(
+            questController: _controller,
+            onOpenSettings: _openUnifiedSettings,
+            onOpenGuide: _openGuidePanel,
+            onOpenTutorial: _replayCoachMarks,
           ),
-        ),
-        title: Text(
-          (_profileDisplayName?.trim().isNotEmpty == true)
-              ? context.tr('app.title', params: {'name': _profileDisplayName!.trim()})
-              : context.tr('app.title.default'),
-          style:
-              AppTextStyles.heading1.copyWith(color: theme.primaryAccentColor),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(62),
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) {
-              final statsLevel = _controller.levelProgress;
-              return GestureDetector(
-                key: _coachKeyLevelBar,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => StatsPage(questController: _controller),
-                  ),
-                ),
-                child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
+          appBar: AppBar(
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            centerTitle: false,
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu_rounded),
+                color: AppColors.textSecondary,
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
+            title: Text(
+              (_profileDisplayName?.trim().isNotEmpty == true)
+                  ? context.tr('app.title',
+                      params: {'name': _profileDisplayName!.trim()})
+                  : context.tr('app.title.default'),
+              style: AppTextStyles.heading1
+                  .copyWith(color: theme.primaryAccentColor),
+            ),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(62),
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) {
+                  final statsLevel = _controller.levelProgress;
+                  return GestureDetector(
+                    key: _coachKeyLevelBar,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => StatsPage(questController: _controller),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
                             children: [
-                              Text(
-                                '${context.tr('home.level_label')} ${statsLevel.level}',
-                                style: AppTextStyles.caption.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${context.tr('home.level_label')} ${statsLevel.level}',
+                                      style: AppTextStyles.caption.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Lv.${statsLevel.level} ${context.tr(statsLevel.title)}',
+                                      style: AppTextStyles.caption,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Lv.${statsLevel.level} ${context.tr(statsLevel.title)}',
-                                style: AppTextStyles.caption,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              const SizedBox(width: 8),
+                              if (_controller.longestStreak > 0) ...[
+                                _buildTopStatChip(
+                                  icon: Icons.local_fire_department_rounded,
+                                  label: '${_controller.longestStreak}天',
+                                  color: Colors.deepOrange,
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              _buildTopStatChip(
+                                icon: Icons.auto_graph_rounded,
+                                label: '${_controller.totalXp} XP',
+                                color: theme.primaryAccentColor,
+                              ),
+                              const SizedBox(width: 6),
+                              _buildTopStatChip(
+                                icon: Icons.monetization_on_rounded,
+                                label: '${_controller.currentGold}',
+                                color: Colors.amber.shade800,
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (_controller.longestStreak > 0) ...[
-                          _buildTopStatChip(
-                            icon: Icons.local_fire_department_rounded,
-                            label: '${_controller.longestStreak}天',
-                            color: Colors.deepOrange,
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: LinearProgressIndicator(
+                              value: statsLevel.progress,
+                              minHeight: 6,
+                              backgroundColor:
+                                  theme.primaryAccentColor.withAlpha(36),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                theme.primaryAccentColor,
+                              ),
+                            ),
                           ),
-                          const SizedBox(width: 6),
                         ],
-                        _buildTopStatChip(
-                          icon: Icons.auto_graph_rounded,
-                          label: '${_controller.totalXp} XP',
-                          color: theme.primaryAccentColor,
-                        ),
-                        const SizedBox(width: 6),
-                        _buildTopStatChip(
-                          icon: Icons.monetization_on_rounded,
-                          label: '${_controller.currentGold}',
-                          color: Colors.amber.shade800,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        value: statsLevel.progress,
-                        minHeight: 6,
-                        backgroundColor: theme.primaryAccentColor.withAlpha(36),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          theme.primaryAccentColor,
-                        ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              );
-            },
-          ),
-        ),
-        actions: [
-          IconButton(
-            key: _coachKeyGuideBtn,
-            onPressed: _openGuidePanel,
-            icon: const Icon(Icons.smart_toy_rounded),
-            tooltip: context.tr('home.guide.tooltip'),
-          ),
-          IconButton(
-            onPressed: _isGeneratingProfile ? null : _generateUserProfile,
-            icon: _isGeneratingProfile
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.auto_awesome_rounded),
-            tooltip: context.tr('home.profile.tooltip'),
-          ),
-          IconButton(
-            onPressed: _isSyncingMemory ? null : _syncTodayMemories,
-            icon: _isSyncingMemory
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.cloud_upload_rounded),
-            tooltip: context.tr('home.sync.tooltip'),
-          ),
-          IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => StatsPage(questController: _controller)),
-            ),
-            icon: const Icon(Icons.bar_chart_rounded),
-          ),
-          IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => AchievementPage(
-                  achievementController: _controller.achievementController,
-                ),
+                  );
+                },
               ),
             ),
-            icon: const Icon(Icons.emoji_events_rounded),
-          ),
-          IconButton(
-            key: _coachKeyShopBtn,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => RewardShopPage(questController: _controller)),
-            ),
-            icon: const Icon(Icons.shopping_bag_rounded),
-          ),
-          IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => InventoryPage(questController: _controller)),
-            ),
-            icon: const Icon(Icons.backpack_rounded),
-          ),
-          IconButton(
-            onPressed: _confirmDeleteAll,
-            icon: const Icon(Icons.delete_sweep_rounded,
-                color: AppColors.errorRed),
-          ),
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) =>
-                WeChatSyncIndicator(isSyncing: _controller.isAnalyzing),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confetti,
-              blastDirectionality: BlastDirectionality.explosive,
-              numberOfParticles: 22,
-              emissionFrequency: 0.02,
-              gravity: 0.12,
-              shouldLoop: false,
-            ),
-          ),
-          Positioned.fill(
-            child: KeyedSubtree(
-              key: _coachKeyQuestBoard,
-              child: AnimatedBuilder(
-                animation: _controller,
-                builder: (context, _) => QuestBoard(
-                  entries: _controller.timelineEntries,
-                  quests: _controller.activeQuests,
-                  isAnalyzing: _controller.isAnalyzing,
-                  guideName: _guideName,
-                  onQuestCompleted: _controller.toggleQuestCompletion,
-                  onQuestDeleted: _deleteQuestWithGuideMemory,
-                  onQuestToggleExpanded: _controller.toggleQuestExpanded,
-                  onQuestMove: (questId, dropIndex, targetDepth) =>
-                      _controller.moveQuestByDrop(
-                    questId: questId,
-                    dropIndex: dropIndex,
-                    targetDepth: targetDepth,
+            actions: [
+              IconButton(
+                key: _coachKeyGuideBtn,
+                onPressed: _openGuidePanel,
+                icon: const Icon(Icons.smart_toy_rounded),
+                tooltip: context.tr('home.guide.tooltip'),
+              ),
+              IconButton(
+                onPressed: _isGeneratingProfile ? null : _generateUserProfile,
+                icon: _isGeneratingProfile
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome_rounded),
+                tooltip: context.tr('home.profile.tooltip'),
+              ),
+              IconButton(
+                onPressed: _isSyncingMemory ? null : _syncTodayMemories,
+                icon: _isSyncingMemory
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.cloud_upload_rounded),
+                tooltip: context.tr('home.sync.tooltip'),
+              ),
+              IconButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => StatsPage(questController: _controller)),
+                ),
+                icon: const Icon(Icons.bar_chart_rounded),
+              ),
+              IconButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AchievementPage(
+                      achievementController: _controller.achievementController,
+                    ),
                   ),
-                  onQuestUpdateDetails: _controller.updateQuestDetails,
                 ),
+                icon: const Icon(Icons.emoji_events_rounded),
               ),
-            ),
-          ),
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, _) =>
-                  CelebrationOverlay(triggerSeq: _controller.confettiSeq),
-            ),
-          ),
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _controller.achievementController,
-              builder: (context, _) => AchievementUnlockOverlay(
-                triggerSeq: _controller.achievementController.unlockSeq,
-                consumeNext:
-                    _controller.achievementController.consumeNextUnlock,
+              IconButton(
+                key: _coachKeyShopBtn,
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          RewardShopPage(questController: _controller)),
+                ),
+                icon: const Icon(Icons.shopping_bag_rounded),
               ),
-            ),
-          ),
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) {
-              final shouldExpand =
-                  _controller.activeQuests.any((q) => !q.isExpanded);
-              return QuestBoardFab(
-                isExpanded: !shouldExpand,
-                onToggle: _controller.toggleExpandAll,
-              );
-            },
-          ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: KeyedSubtree(
-              key: _coachKeyQuickAdd,
-              child: AnimatedBuilder(
+              IconButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          InventoryPage(questController: _controller)),
+                ),
+                icon: const Icon(Icons.backpack_rounded),
+              ),
+              IconButton(
+                onPressed: _confirmDeleteAll,
+                icon: const Icon(Icons.delete_sweep_rounded,
+                    color: AppColors.errorRed),
+              ),
+              AnimatedBuilder(
                 animation: _controller,
-                builder: (context, _) => QuickAddBar(
-                  isLoading: _controller.isAnalyzing,
-                  onSubmitted: _controller.simulateAIParsing,
+                builder: (context, _) =>
+                    WeChatSyncIndicator(isSyncing: _controller.isAnalyzing),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          body: Stack(
+            children: [
+              Align(
+                alignment: Alignment.topCenter,
+                child: ConfettiWidget(
+                  confettiController: _confetti,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  numberOfParticles: 22,
+                  emissionFrequency: 0.02,
+                  gravity: 0.12,
+                  shouldLoop: false,
                 ),
               ),
-            ),
+              Positioned.fill(
+                child: KeyedSubtree(
+                  key: _coachKeyQuestBoard,
+                  child: AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, _) => QuestBoard(
+                      entries: _controller.timelineEntries,
+                      quests: _controller.activeQuests,
+                      isAnalyzing: _controller.isAnalyzing,
+                      guideName: _guideName,
+                      onQuestCompleted: _controller.toggleQuestCompletion,
+                      onQuestDeleted: _deleteQuestWithGuideMemory,
+                      onQuestToggleExpanded: _controller.toggleQuestExpanded,
+                      onQuestMove: (questId, dropIndex, targetDepth) =>
+                          _controller.moveQuestByDrop(
+                        questId: questId,
+                        dropIndex: dropIndex,
+                        targetDepth: targetDepth,
+                      ),
+                      onQuestUpdateDetails: _controller.updateQuestDetails,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, _) =>
+                      CelebrationOverlay(triggerSeq: _controller.confettiSeq),
+                ),
+              ),
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _controller.achievementController,
+                  builder: (context, _) => AchievementUnlockOverlay(
+                    triggerSeq: _controller.achievementController.unlockSeq,
+                    consumeNext:
+                        _controller.achievementController.consumeNextUnlock,
+                  ),
+                ),
+              ),
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) {
+                  final shouldExpand =
+                      _controller.activeQuests.any((q) => !q.isExpanded);
+                  return QuestBoardFab(
+                    isExpanded: !shouldExpand,
+                    onToggle: _controller.toggleExpandAll,
+                  );
+                },
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: KeyedSubtree(
+                  key: _coachKeyQuickAdd,
+                  child: AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, _) => QuickAddBar(
+                      isLoading: _controller.isAnalyzing,
+                      onSubmitted: _controller.simulateAIParsing,
+                      onPlusTap: _showPlusMenu,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      floatingActionButton: _latestDailyEvent == null
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => _showDailyEventDialog(_latestDailyEvent!),
-              icon: _isGuideEventHandling
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.flash_on_rounded),
-              label: Text(_eventBadgeLabel(_latestDailyEvent!)),
-            ),
-    ),
+          floatingActionButton: _latestDailyEvent == null
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () => _showDailyEventDialog(_latestDailyEvent!),
+                  icon: _isGuideEventHandling
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.flash_on_rounded),
+                  label: Text(_eventBadgeLabel(_latestDailyEvent!)),
+                ),
+        ),
         // Coach Marks 新手引导遮罩（全屏覆盖，包括 AppBar）
         if (_showCoachMarks)
           CoachMarksOverlay(
@@ -3752,8 +3894,7 @@ class _HomePageState extends State<HomePage> {
                 titleKey: 'coach.step2.title',
                 descriptionKey: 'coach.step2.description',
                 icon: Icons.task_alt_rounded,
-                highlightPadding:
-                    const EdgeInsets.fromLTRB(12, 12, 12, 80),
+                highlightPadding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
               ),
               CoachMarkStep(
                 targetKey: _coachKeyLevelBar,
@@ -4265,6 +4406,75 @@ class _PortraitMetricDatum {
   });
 }
 
+class _PlusMenuItem extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  const _PlusMenuItem({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withAlpha(12),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(30),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.body.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing!,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SettingsSectionCard extends StatelessWidget {
   final IconData icon;
   final Color accentColor;
@@ -4338,6 +4548,884 @@ class _SettingsSectionCard extends StatelessWidget {
           child,
         ],
       ),
+    );
+  }
+}
+
+enum _QuickCreateMode {
+  newMainWithSides,
+  attachToExistingMain,
+  daily,
+}
+
+class _QuickCreateDialogResult {
+  final _QuickCreateMode mode;
+  final String title;
+  final List<String> sideTitles;
+  final String? parentMainQuestId;
+  final int? dailyDueMinutes;
+
+  const _QuickCreateDialogResult({
+    required this.mode,
+    required this.title,
+    this.sideTitles = const <String>[],
+    this.parentMainQuestId,
+    this.dailyDueMinutes,
+  });
+}
+
+class _QuickCreateDialogBody extends StatefulWidget {
+  final List<QuestNode> mainQuestOptions;
+  final QuestTheme theme;
+  final ValueChanged<_QuickCreateDialogResult> onConfirm;
+  final VoidCallback onClose;
+
+  const _QuickCreateDialogBody({
+    required this.mainQuestOptions,
+    required this.theme,
+    required this.onConfirm,
+    required this.onClose,
+  });
+
+  @override
+  State<_QuickCreateDialogBody> createState() => _QuickCreateDialogBodyState();
+}
+
+class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
+  _QuickCreateMode _selectedMode = _QuickCreateMode.newMainWithSides;
+  final TextEditingController _mainTitleController = TextEditingController();
+  final TextEditingController _attachSideTitleController =
+      TextEditingController();
+  final TextEditingController _dailyTitleController = TextEditingController();
+  final List<TextEditingController> _sideDraftControllers =
+      <TextEditingController>[];
+  String? _selectedParentMainQuestId;
+  int? _dailyDueMinutes;
+
+  @override
+  void initState() {
+    super.initState();
+    _mainTitleController.addListener(_onFormChanged);
+    _attachSideTitleController.addListener(_onFormChanged);
+    _dailyTitleController.addListener(_onFormChanged);
+  }
+
+  @override
+  void dispose() {
+    _mainTitleController
+      ..removeListener(_onFormChanged)
+      ..dispose();
+    _attachSideTitleController
+      ..removeListener(_onFormChanged)
+      ..dispose();
+    _dailyTitleController
+      ..removeListener(_onFormChanged)
+      ..dispose();
+    for (final controller in _sideDraftControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _onFormChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _setMode(_QuickCreateMode mode) {
+    if (_selectedMode == mode) {
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() => _selectedMode = mode);
+  }
+
+  void _addSideDraft([String initialValue = '']) {
+    final controller = TextEditingController(text: initialValue)
+      ..addListener(_onFormChanged);
+    setState(() => _sideDraftControllers.add(controller));
+  }
+
+  void _removeSideDraft(int index) {
+    final controller = _sideDraftControllers.removeAt(index);
+    controller
+      ..removeListener(_onFormChanged)
+      ..dispose();
+    setState(() {});
+  }
+
+  String _formatDailyDueMinutes(int minutes) {
+    final hour = (minutes ~/ 60).toString().padLeft(2, '0');
+    final minute = (minutes % 60).toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  TimeOfDay _timeOfDayFromMinutes(int minutes) {
+    final safeMinutes = minutes.clamp(0, 1439);
+    return TimeOfDay(hour: safeMinutes ~/ 60, minute: safeMinutes % 60);
+  }
+
+  Future<void> _pickDailyDueTime() async {
+    final initialTime = _dailyDueMinutes == null
+        ? const TimeOfDay(hour: 21, minute: 0)
+        : _timeOfDayFromMinutes(_dailyDueMinutes!);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            timePickerTheme: TimePickerThemeData(
+              dialHandColor: widget.theme.primaryAccentColor,
+              hourMinuteTextColor: widget.theme.primaryAccentColor,
+              dayPeriodTextColor: widget.theme.primaryAccentColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (!mounted || picked == null) {
+      return;
+    }
+    setState(() => _dailyDueMinutes = picked.hour * 60 + picked.minute);
+  }
+
+  List<String> get _normalizedSideTitles => _sideDraftControllers
+      .map((controller) => controller.text.trim())
+      .where((title) => title.isNotEmpty)
+      .toList(growable: false);
+
+  bool get _canSubmit {
+    switch (_selectedMode) {
+      case _QuickCreateMode.newMainWithSides:
+        return _mainTitleController.text.trim().isNotEmpty;
+      case _QuickCreateMode.attachToExistingMain:
+        return _attachSideTitleController.text.trim().isNotEmpty &&
+            _selectedParentMainQuestId != null &&
+            widget.mainQuestOptions.isNotEmpty;
+      case _QuickCreateMode.daily:
+        return _dailyTitleController.text.trim().isNotEmpty;
+    }
+  }
+
+  String get _confirmLabel {
+    switch (_selectedMode) {
+      case _QuickCreateMode.newMainWithSides:
+        return _normalizedSideTitles.isEmpty ? '创建主线' : '创建主线和支线';
+      case _QuickCreateMode.attachToExistingMain:
+        return '创建支线';
+      case _QuickCreateMode.daily:
+        return '创建日常任务';
+    }
+  }
+
+  IconData get _confirmIcon {
+    switch (_selectedMode) {
+      case _QuickCreateMode.newMainWithSides:
+        return Icons.account_tree_rounded;
+      case _QuickCreateMode.attachToExistingMain:
+        return Icons.call_split_rounded;
+      case _QuickCreateMode.daily:
+        return Icons.schedule_rounded;
+    }
+  }
+
+  void _submit() {
+    if (!_canSubmit) {
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    switch (_selectedMode) {
+      case _QuickCreateMode.newMainWithSides:
+        widget.onConfirm(
+          _QuickCreateDialogResult(
+            mode: _QuickCreateMode.newMainWithSides,
+            title: _mainTitleController.text.trim(),
+            sideTitles: _normalizedSideTitles,
+          ),
+        );
+      case _QuickCreateMode.attachToExistingMain:
+        widget.onConfirm(
+          _QuickCreateDialogResult(
+            mode: _QuickCreateMode.attachToExistingMain,
+            title: _attachSideTitleController.text.trim(),
+            parentMainQuestId: _selectedParentMainQuestId,
+          ),
+        );
+      case _QuickCreateMode.daily:
+        widget.onConfirm(
+          _QuickCreateDialogResult(
+            mode: _QuickCreateMode.daily,
+            title: _dailyTitleController.text.trim(),
+            dailyDueMinutes: _dailyDueMinutes,
+          ),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final modeCards = <({
+      _QuickCreateMode mode,
+      String title,
+      String description,
+      IconData icon,
+      Color color,
+    })>[
+      (
+        mode: _QuickCreateMode.newMainWithSides,
+        title: '新建主线并添加支线',
+        description: '一次把当前主线和后续分支搭好，适合完整起步。',
+        icon: Icons.account_tree_rounded,
+        color: widget.theme.mainQuestColor,
+      ),
+      (
+        mode: _QuickCreateMode.attachToExistingMain,
+        title: '挂到已有主线',
+        description: '保留原有能力，直接把新支线挂到已有主线上。',
+        icon: Icons.call_split_rounded,
+        color: widget.theme.sideQuestColor,
+      ),
+      (
+        mode: _QuickCreateMode.daily,
+        title: '日常任务',
+        description: '维持每天重复执行的节奏，并设置每日截止时刻。',
+        icon: Icons.wb_sunny_rounded,
+        color: widget.theme.dailyQuestColor,
+      ),
+    ];
+    final activeColor = switch (_selectedMode) {
+      _QuickCreateMode.newMainWithSides => widget.theme.mainQuestColor,
+      _QuickCreateMode.attachToExistingMain => widget.theme.sideQuestColor,
+      _QuickCreateMode.daily => widget.theme.dailyQuestColor,
+    };
+
+    return QuestDialogShell(
+      title: context.tr('quick_add.create.title'),
+      subtitle: '在一张卡里安排主线结构、挂接已有主线，或设置每日节奏。',
+      maxWidth: 680,
+      maxHeight: 760,
+      scrollable: true,
+      accentColor: widget.theme.primaryAccentColor,
+      leading: QuestDialogBadge(
+        icon: Icons.edit_note_rounded,
+        accentColor: widget.theme.primaryAccentColor,
+        size: 56,
+      ),
+      onClose: widget.onClose,
+      actions: [
+        QuestDialogSecondaryButton(
+          label: '取消',
+          icon: Icons.close_rounded,
+          onPressed: widget.onClose,
+        ),
+        QuestDialogPrimaryButton(
+          label: _confirmLabel,
+          icon: _confirmIcon,
+          onPressed: _canSubmit ? _submit : null,
+        ),
+      ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = constraints.maxWidth >= 560;
+              final cardWidth =
+                  wide ? (constraints.maxWidth - 24) / 3 : constraints.maxWidth;
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: modeCards.map((config) {
+                  final selected = _selectedMode == config.mode;
+                  final foreground =
+                      selected ? Colors.white : const Color(0xFF243427);
+                  final background = selected
+                      ? Color.lerp(config.color, Colors.black, 0.08)!
+                      : Color.lerp(
+                          widget.theme.surfaceColor,
+                          config.color,
+                          0.12,
+                        )!;
+                  return SizedBox(
+                    width: cardWidth,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _setMode(config.mode),
+                        borderRadius: BorderRadius.circular(22),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(22),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                background,
+                                selected
+                                    ? Color.lerp(
+                                        config.color, Colors.white, 0.18)!
+                                    : Color.lerp(
+                                        widget.theme.backgroundColor,
+                                        config.color,
+                                        0.08,
+                                      )!,
+                              ],
+                            ),
+                            border: Border.all(
+                              color: selected
+                                  ? config.color.withAlpha(210)
+                                  : config.color.withAlpha(58),
+                              width: selected ? 1.4 : 1,
+                            ),
+                            boxShadow: selected
+                                ? [
+                                    BoxShadow(
+                                      color: config.color.withAlpha(42),
+                                      blurRadius: 18,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ]
+                                : const <BoxShadow>[],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? Colors.white.withAlpha(36)
+                                      : config.color.withAlpha(24),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Icon(
+                                  config.icon,
+                                  color: selected ? Colors.white : config.color,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Text(
+                                config.title,
+                                style: AppTextStyles.body.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                  color: foreground,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                config.description,
+                                style: AppTextStyles.caption.copyWith(
+                                  fontSize: 12,
+                                  height: 1.45,
+                                  color: selected
+                                      ? Colors.white.withAlpha(230)
+                                      : AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(growable: false),
+              );
+            },
+          ),
+          const SizedBox(height: 18),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: switch (_selectedMode) {
+              _QuickCreateMode.newMainWithSides =>
+                _buildNewMainWithSidesPanel(activeColor),
+              _QuickCreateMode.attachToExistingMain =>
+                _buildAttachToExistingMainPanel(activeColor),
+              _QuickCreateMode.daily => _buildDailyPanel(activeColor),
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewMainWithSidesPanel(Color accentColor) {
+    return QuestDialogInfoCard(
+      key: const ValueKey<String>('quick_create_new_main_panel'),
+      accentColor: accentColor,
+      label: '当前任务',
+      icon: Icons.account_tree_rounded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle(
+            title: '主线标题',
+            description: '主线只创建一次，适合承载当前阶段的核心目标。',
+          ),
+          const SizedBox(height: 10),
+          _buildTitleField(
+            controller: _mainTitleController,
+            hint: '例如：四月作品集冲刺',
+            icon: Icons.flag_rounded,
+            autofocus: true,
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSectionTitle(
+                  title: '支线草稿',
+                  description: '可以先留空，只创建主线；也可以顺手把分支一并搭好。',
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _addSideDraft,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('添加一条支线'),
+                style: TextButton.styleFrom(
+                  foregroundColor: widget.theme.sideQuestColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_sideDraftControllers.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                color: widget.theme.sideQuestColor.withAlpha(12),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: widget.theme.sideQuestColor.withAlpha(32),
+                ),
+              ),
+              child: Text(
+                '暂时没有支线草稿。你可以先创建主线，之后再回来继续拆分。',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+            )
+          else
+            Column(
+              children: List.generate(_sideDraftControllers.length, (index) {
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: index == _sideDraftControllers.length - 1 ? 0 : 10,
+                  ),
+                  child: _buildSideDraftCard(index),
+                );
+              }),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttachToExistingMainPanel(Color accentColor) {
+    return QuestDialogInfoCard(
+      key: const ValueKey<String>('quick_create_attach_existing_panel'),
+      accentColor: accentColor,
+      label: '挂到已有主线',
+      icon: Icons.call_split_rounded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle(
+            title: '支线标题',
+            description: '只创建一条支线，并挂到选中的主线上。',
+          ),
+          const SizedBox(height: 10),
+          _buildTitleField(
+            controller: _attachSideTitleController,
+            hint: '例如：整理参考案例',
+            icon: Icons.explore_rounded,
+            autofocus: true,
+          ),
+          const SizedBox(height: 18),
+          _buildSectionTitle(
+            title: '选择所属主线',
+            description: widget.mainQuestOptions.isEmpty
+                ? '当前还没有可挂载的主线任务，请先创建主线任务。'
+                : '选择这条支线要归属的主线。',
+          ),
+          const SizedBox(height: 12),
+          if (widget.mainQuestOptions.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                color: widget.theme.sideQuestColor.withAlpha(10),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: widget.theme.sideQuestColor.withAlpha(28),
+                ),
+              ),
+              child: Text(
+                '当前还没有可挂载的主线任务，请先创建主线任务。',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+            )
+          else
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: widget.mainQuestOptions.map((quest) {
+                    final selected = quest.id == _selectedParentMainQuestId;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => setState(
+                            () => _selectedParentMainQuestId = quest.id,
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? widget.theme.sideQuestColor.withAlpha(26)
+                                  : Colors.white.withAlpha(148),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: selected
+                                    ? widget.theme.sideQuestColor
+                                    : widget.theme.sideQuestColor.withAlpha(28),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        widget.theme.mainQuestColor.withAlpha(
+                                      selected ? 52 : 24,
+                                    ),
+                                    borderRadius: BorderRadius.circular(13),
+                                  ),
+                                  child: Icon(
+                                    Icons.flag_rounded,
+                                    color: widget.theme.mainQuestColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        quest.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTextStyles.body.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF203322),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        selected
+                                            ? '新的支线会直接挂到这里。'
+                                            : '点一下，把当前支线归到这条主线。',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.textSecondary,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Icon(
+                                  selected
+                                      ? Icons.check_circle_rounded
+                                      : Icons.radio_button_unchecked_rounded,
+                                  color: selected
+                                      ? widget.theme.sideQuestColor
+                                      : widget.theme.sideQuestColor.withAlpha(
+                                          120,
+                                        ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(growable: false),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDailyPanel(Color accentColor) {
+    return QuestDialogInfoCard(
+      key: const ValueKey<String>('quick_create_daily_panel'),
+      accentColor: accentColor,
+      label: '日常节奏',
+      icon: Icons.wb_sunny_rounded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle(
+            title: '日常任务标题',
+            description: '日常任务会在第二天重新变为未完成，可按每天固定时刻提醒自己。',
+          ),
+          const SizedBox(height: 10),
+          _buildTitleField(
+            controller: _dailyTitleController,
+            hint: '例如：晚间复盘 15 分钟',
+            icon: Icons.wb_sunny_rounded,
+            autofocus: true,
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  widget.theme.dailyQuestColor.withAlpha(18),
+                  widget.theme.surfaceColor,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: widget.theme.dailyQuestColor.withAlpha(34),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: widget.theme.dailyQuestColor.withAlpha(24),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        Icons.schedule_rounded,
+                        color: widget.theme.dailyQuestColor,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '每日截止时间',
+                            style: AppTextStyles.body.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF203322),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _dailyDueMinutes == null
+                                ? '未设置具体时刻，任务会按每日任务逻辑循环。'
+                                : '当前设置为每天 ${_formatDailyDueMinutes(_dailyDueMinutes!)}。',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textSecondary,
+                              height: 1.45,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _pickDailyDueTime,
+                      icon: const Icon(Icons.schedule_rounded, size: 18),
+                      label: Text(
+                        _dailyDueMinutes == null ? '设置每日截止时间' : '重新选择时间',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: widget.theme.dailyQuestColor,
+                        side: BorderSide(
+                          color: widget.theme.dailyQuestColor.withAlpha(54),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                    if (_dailyDueMinutes != null)
+                      TextButton.icon(
+                        onPressed: () =>
+                            setState(() => _dailyDueMinutes = null),
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        label: const Text('清除时间'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSideDraftCard(int index) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: widget.theme.sideQuestColor.withAlpha(12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: widget.theme.sideQuestColor.withAlpha(32),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                '支线 ${index + 1}',
+                style: AppTextStyles.caption.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: widget.theme.sideQuestColor,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () => _removeSideDraft(index),
+                icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                tooltip: '删除这条支线',
+                splashRadius: 18,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+          _buildTitleField(
+            controller: _sideDraftControllers[index],
+            hint: '例如：整理素材 / 打磨文案 / 联调页面',
+            icon: Icons.alt_route_rounded,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle({
+    required String title,
+    required String description,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: AppTextStyles.body.copyWith(
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+            color: const Color(0xFF203322),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          description,
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.textSecondary,
+            height: 1.45,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTitleField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool autofocus = false,
+  }) {
+    return TextField(
+      controller: controller,
+      autofocus: autofocus,
+      style: AppTextStyles.body.copyWith(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: const Color(0xFF203322),
+      ),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: AppTextStyles.body.copyWith(
+          color: AppColors.textHint,
+          fontSize: 15,
+        ),
+        prefixIcon: Icon(icon, color: widget.theme.primaryAccentColor),
+        filled: true,
+        fillColor: Colors.white.withAlpha(188),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: widget.theme.primaryAccentColor.withAlpha(32),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: widget.theme.primaryAccentColor.withAlpha(32),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: widget.theme.primaryAccentColor.withAlpha(180),
+            width: 1.4,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
+      ),
+      onSubmitted: (_) => _submit(),
     );
   }
 }

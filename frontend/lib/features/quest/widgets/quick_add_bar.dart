@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -7,11 +10,13 @@ import '../../../core/theme/quest_theme.dart';
 
 class QuickAddBar extends StatefulWidget {
   final Function(String) onSubmitted;
+  final VoidCallback? onPlusTap;
   final bool isLoading;
 
   const QuickAddBar({
     Key? key,
     required this.onSubmitted,
+    this.onPlusTap,
     this.isLoading = false,
   }) : super(key: key);
 
@@ -26,6 +31,10 @@ class _QuickAddBarState extends State<QuickAddBar>
   bool _isFocused = false;
   late final AnimationController _glowController;
   late final Animation<double> _glowAnimation;
+
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+  bool _speechAvailable = false;
 
   @override
   void initState() {
@@ -48,10 +57,25 @@ class _QuickAddBarState extends State<QuickAddBar>
       setState(() => _isFocused = hasFocus);
     });
     _controller.addListener(() => setState(() {}));
+    _initSpeech();
+  }
+
+  Future<void> _initSpeech() async {
+    _speechAvailable = await _speech.initialize(
+      onError: (_) {
+        if (mounted) setState(() => _isListening = false);
+      },
+      onStatus: (status) {
+        if (status == 'notListening' || status == 'done') {
+          if (mounted) setState(() => _isListening = false);
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
+    if (_isListening) _speech.stop();
     _glowController.dispose();
     _controller.dispose();
     _focusNode.dispose();
@@ -67,6 +91,37 @@ class _QuickAddBarState extends State<QuickAddBar>
     }
   }
 
+  Future<void> _toggleListening() async {
+    if (_isListening) {
+      await _speech.stop();
+      setState(() => _isListening = false);
+      return;
+    }
+    if (!_speechAvailable) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('quick_add.voice.unavailable'))),
+        );
+      }
+      return;
+    }
+    setState(() => _isListening = true);
+    await _speech.listen(
+      onResult: (result) {
+        if (mounted) {
+          _controller.text = result.recognizedWords;
+          _controller.selection = TextSelection.fromPosition(
+            TextPosition(offset: _controller.text.length),
+          );
+        }
+      },
+      localeId: 'zh_CN',
+      listenOptions: stt.SpeechListenOptions(
+        listenMode: stt.ListenMode.dictation,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).extension<QuestTheme>()!;
@@ -75,98 +130,286 @@ class _QuickAddBarState extends State<QuickAddBar>
       builder: (context, _) {
         final glow = _isFocused ? _glowAnimation.value : 0.0;
         return Container(
-          margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
-          decoration: BoxDecoration(
-            color: theme.surfaceColor,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(
-              color: _isFocused
-                  ? Color.lerp(
-                      theme.primaryAccentColor.withAlpha(80),
-                      theme.primaryAccentColor,
-                      glow,
-                    )!
-                  : AppColors.textHint.withAlpha(45),
-              width: _isFocused ? 1.6 : 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadowColor,
-                offset: const Offset(0, 8),
-                blurRadius: _isFocused ? 26 : 20,
-                spreadRadius: 0,
-              ),
-              if (_isFocused)
-                BoxShadow(
-                  color: theme.primaryAccentColor.withValues(
-                    alpha: 0.18 + 0.14 * glow,
-                  ),
-                  blurRadius: 14.0 + 10.0 * glow,
-                  spreadRadius: 1.0 + 1.2 * glow,
-                ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    enabled: !widget.isLoading,
-                    style: AppTextStyles.body,
-                    decoration: InputDecoration(
-                      hintText: context.tr('quick_add.hint'),
-                      hintStyle: AppTextStyles.caption.copyWith(
-                        color: AppColors.textHint,
-                      ),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      filled: false,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 14,
-                      ),
-                    ),
-                    onSubmitted: (_) => _handleSubmit(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.only(bottom: 24, left: 24, right: 16),
+          child: Row(
+            children: [
+              // 输入框
+              Expanded(
+                child: Container(
                   decoration: BoxDecoration(
-                    color: widget.isLoading || _controller.text.isEmpty
-                        ? Colors.transparent
-                        : theme.primaryAccentColor,
-                    shape: BoxShape.circle,
+                    color: theme.surfaceColor,
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(
+                      color: _isFocused
+                          ? Color.lerp(
+                              theme.primaryAccentColor.withAlpha(80),
+                              theme.primaryAccentColor,
+                              glow,
+                            )!
+                          : AppColors.textHint.withAlpha(45),
+                      width: _isFocused ? 1.6 : 1.0,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.shadowColor,
+                        offset: const Offset(0, 8),
+                        blurRadius: _isFocused ? 26 : 20,
+                        spreadRadius: 0,
+                      ),
+                      if (_isFocused)
+                        BoxShadow(
+                          color: theme.primaryAccentColor.withValues(
+                            alpha: 0.18 + 0.14 * glow,
+                          ),
+                          blurRadius: 14.0 + 10.0 * glow,
+                          spreadRadius: 1.0 + 1.2 * glow,
+                        ),
+                    ],
                   ),
-                  child: IconButton(
-                    onPressed: widget.isLoading ? null : _handleSubmit,
-                    icon: widget.isLoading
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                theme.primaryAccentColor,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                    child: Row(
+                      children: [
+                        // 语音按钮
+                        _VoiceButton(
+                          isListening: _isListening,
+                          onTap: widget.isLoading ? null : _toggleListening,
+                          accentColor: theme.primaryAccentColor,
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            focusNode: _focusNode,
+                            enabled: !widget.isLoading,
+                            style: AppTextStyles.body,
+                            decoration: InputDecoration(
+                              hintText: _isListening
+                                  ? context.tr('quick_add.voice.listening')
+                                  : context.tr('quick_add.hint'),
+                              hintStyle: AppTextStyles.caption.copyWith(
+                                color: _isListening
+                                    ? const Color(0xFFE53935)
+                                    : AppColors.textHint,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 14,
                               ),
                             ),
-                          )
-                        : const Icon(Icons.arrow_upward_rounded),
-                    color: widget.isLoading || _controller.text.isEmpty
-                        ? AppColors.textHint
-                        : AppColors.pureWhite,
-                    tooltip: context.tr('common.send'),
+                            onSubmitted: (_) => _handleSubmit(),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        // 发送按钮
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          decoration: BoxDecoration(
+                            color: widget.isLoading || _controller.text.isEmpty
+                                ? Colors.transparent
+                                : theme.primaryAccentColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            onPressed:
+                                widget.isLoading ? null : _handleSubmit,
+                            icon: widget.isLoading
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor:
+                                          AlwaysStoppedAnimation<Color>(
+                                        theme.primaryAccentColor,
+                                      ),
+                                    ),
+                                  )
+                                : const Icon(Icons.arrow_upward_rounded),
+                            color:
+                                widget.isLoading || _controller.text.isEmpty
+                                    ? AppColors.textHint
+                                    : AppColors.pureWhite,
+                            tooltip: context.tr('common.send'),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 10),
+              // "+" 玻璃鹅卵石按钮
+              _GlassPlusButton(onTap: widget.onPlusTap),
+            ],
           ),
         );
       },
+    );
+  }
+}
+
+/// 玻璃鹅卵石风格的 "+" 按钮，与 QuestBoardFab 一致
+class _GlassPlusButton extends StatelessWidget {
+  final VoidCallback? onTap;
+
+  const _GlassPlusButton({this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final questTheme = Theme.of(context).extension<QuestTheme>()!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = questTheme.surfaceColor;
+    final glassTint = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : surface.withValues(alpha: 0.55);
+
+    const double size = 46;
+    const double radius = 15;
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: 12,
+            spreadRadius: 1,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: GestureDetector(
+            onTap: onTap,
+            behavior: HitTestBehavior.opaque,
+            child: CustomPaint(
+              painter: _GlassPainter(glassTint: glassTint, isDark: isDark),
+              child: SizedBox(
+                width: size,
+                height: size,
+                child: Center(
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: Colors.black.withValues(alpha: 0.72),
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassPainter extends CustomPainter {
+  final Color glassTint;
+  final bool isDark;
+
+  _GlassPainter({required this.glassTint, required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(15));
+
+    canvas.drawRRect(rrect, Paint()..color = glassTint);
+
+    final highlightRect = Rect.fromLTWH(0, 0, size.width, size.height * 0.52);
+    canvas.save();
+    canvas.clipRRect(rrect);
+    canvas.drawRect(
+      highlightRect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: isDark ? 0.12 : 0.45),
+            Colors.white.withValues(alpha: 0),
+          ],
+        ).createShader(highlightRect),
+    );
+    canvas.restore();
+
+    canvas.drawRRect(
+      rrect.deflate(0.5),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: isDark ? 0.28 : 0.65),
+            Colors.white.withValues(alpha: isDark ? 0.05 : 0.12),
+          ],
+        ).createShader(rect),
+    );
+
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.5
+        ..color = (isDark ? Colors.white : Colors.black)
+            .withValues(alpha: isDark ? 0.10 : 0.06),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GlassPainter oldDelegate) =>
+      glassTint != oldDelegate.glassTint || isDark != oldDelegate.isDark;
+}
+
+class _VoiceButton extends StatelessWidget {
+  final bool isListening;
+  final VoidCallback? onTap;
+  final Color accentColor;
+
+  const _VoiceButton({
+    required this.isListening,
+    this.onTap,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        width: 36,
+        height: 36,
+        margin: const EdgeInsets.only(left: 4),
+        decoration: BoxDecoration(
+          color: isListening
+              ? const Color(0xFFE53935).withAlpha(20)
+              : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+          size: 20,
+          color: isListening ? const Color(0xFFE53935) : AppColors.textHint,
+        ),
+      ),
     );
   }
 }

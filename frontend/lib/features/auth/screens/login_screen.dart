@@ -9,6 +9,7 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../core/i18n/app_locale_controller.dart';
 import '../../../core/services/supabase_auth_service.dart';
 import '../../../core/theme/quest_theme.dart';
+import '../widgets/forest_atmosphere.dart';
 import '../widgets/forest_particles.dart';
 import '../widgets/parallax_background.dart';
 
@@ -218,31 +219,32 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  /// 极少量浮动蝴蝶（2只，非常慢，很淡）
+  /// 浮动环境图标（HTML: 9 个 amb-icon）
   List<Widget> _buildAmbientIcons() {
-    const data = [
-      ['🦋', 0.12, 0.20, 14.0],
-      ['🦋', 0.82, 0.65, 12.0],
-    ];
-    return data.asMap().entries.map((e) {
-      final d = e.value;
+    const icons = ['🦋', '🐝', '🍂', '🌻', '🪶', '✨', '🌾', '🦋', '🐝'];
+    final rng = math.Random(77);
+    return List.generate(9, (i) {
       return Positioned(
-        left: 0, top: 0, right: 0, bottom: 0,
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
         child: IgnorePointer(
           child: Align(
             alignment: Alignment(
-              (d[1] as double) * 2 - 1,
-              (d[2] as double) * 2 - 1,
+              (0.08 + rng.nextDouble() * 0.84) * 2 - 1,
+              (0.10 + rng.nextDouble() * 0.70) * 2 - 1,
             ),
             child: _FloatingIcon(
-              icon: d[0] as String,
-              size: d[3] as double,
-              delay: Duration(milliseconds: e.key * 4000),
+              icon: icons[i % icons.length],
+              size: 14.0 + rng.nextDouble() * 14.0,
+              delay: Duration(milliseconds: (rng.nextDouble() * 12000).toInt()),
+              durationSeconds: 8 + (rng.nextDouble() * 10).toInt(),
             ),
           ),
         ),
       );
-    }).toList();
+    });
   }
 
   @override
@@ -254,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // ═══ 1. 天空渐变（更暖、底部更深绿）═══
+          // ═══ 1. 天空渐变（HTML .sky）═══
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
@@ -262,165 +264,103 @@ class _LoginScreenState extends State<LoginScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color(0xFFF0EACC),
-                    Color(0xFFE2DDB5),
-                    Color(0xFFC4D8A0),
-                    Color(0xFF8ABF6E),
-                    Color(0xFF5A9E4A),
-                    Color(0xFF3D7A3A),
-                    Color(0xFF2A5428),
+                    Color(0xFFF0EACC), // #f0eacc
+                    Color(0xFFE2DDB5), // #e2ddb5
+                    Color(0xFFC4D8A0), // #c4d8a0
+                    Color(0xFF8ABF6E), // #8abf6e
+                    Color(0xFF5A9E4A), // #5a9e4a
+                    Color(0xFF3D7A3A), // #3d7a3a
+                    Color(0xFF2A5428), // #2a5428
                   ],
                   stops: [0.0, 0.12, 0.28, 0.48, 0.65, 0.80, 1.0],
                 ),
               ),
             ),
           ),
-          // ═══ 2. 阳光核心（左上大面积白金色）═══
+          // ═══ 1b. 天空 radial 叠加（HTML .sky radial-gradient at 20% 8%）═══
           Positioned.fill(
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
-                    center: const Alignment(-0.7, -0.95),
+                    center: const Alignment(-0.6, -0.84),
                     radius: 0.9,
                     colors: [
-                      const Color(0xFFFFFCE0).withValues(alpha: 0.85),
-                      const Color(0xFFFFF5C0).withValues(alpha: 0.35),
+                      const Color(0xFFFFFCE1).withValues(alpha: 0.85),
                       Colors.transparent,
                     ],
-                    stops: const [0.0, 0.25, 0.65],
+                    stops: const [0.0, 0.45],
                   ),
                 ),
               ),
             ),
           ),
-          // ═══ 3. 阳光光晕扩散 ═══
+          // ═══ 1c. 天空 radial 叠加（HTML .sky radial at 75% 20%）═══
           Positioned.fill(
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
-                    center: const Alignment(-0.5, -0.7),
-                    radius: 1.2,
+                    center: const Alignment(0.5, -0.6),
+                    radius: 0.9,
                     colors: [
-                      const Color(0xFFFFF8D0).withValues(alpha: 0.35),
-                      const Color(0xFFFFEFA0).withValues(alpha: 0.1),
+                      const Color(0xFFDCF0BE).withValues(alpha: 0.4),
                       Colors.transparent,
                     ],
-                    stops: const [0.0, 0.35, 0.8],
+                    stops: const [0.0, 0.45],
                   ),
                 ),
               ),
             ),
           ),
-          // ═══ 4. 静态底图 ═══
+          // ═══ 2. 视差滚动森林（HTML .parallax-wrap）═══
+          // 图层带各自的透明度和高度比
           Positioned.fill(
-            child: Opacity(
-              opacity: 0.55,
-              child: Image.asset(
-                'assets/images/backgrounds/forest/login_backdrop.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              ),
-            ),
-          ),
-          // ═══ 5. 视差滚动森林（更不透明）═══
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.92,
-              child: ParallaxBackground(
-                scrollSpeed: 8, // 慢速滚动，宁静感
-                layers: const [
-                  ParallaxLayer(
-                    assetPath: 'assets/images/backgrounds/forest/sky.png',
-                    speed: 0.08,
-                  ),
-                  ParallaxLayer(
-                    assetPath: 'assets/images/backgrounds/forest/far.png',
-                    speed: 0.14,
-                  ),
-                  ParallaxLayer(
-                    assetPath: 'assets/images/backgrounds/forest/mid.png',
-                    speed: 0.30,
-                  ),
-                  ParallaxLayer(
-                    assetPath: 'assets/images/backgrounds/forest/near.png',
-                    speed: 0.52,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // ═══ 6. 暖光洗（整体偏暖）═══
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: const Alignment(-0.8, -1.0),
-                    end: const Alignment(0.6, 0.4),
-                    colors: [
-                      const Color(0xFFFFF8D0).withValues(alpha: 0.12),
-                      Colors.transparent,
-                    ],
-                  ),
+            child: ParallaxBackground(
+              scrollSpeed: 20, // HTML: BASE_SPEED = 20
+              layers: const [
+                ParallaxLayer(
+                  assetPath: 'assets/images/backgrounds/forest/sky.png',
+                  speed: 0.08,
+                  widthMultiplier: 1.0,
+                  heightFraction: 1.0,
+                  opacity: 0.55,
                 ),
-              ),
-            ),
-          ),
-          // ═══ 7. 雾气层（中部扩散）═══
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 400,
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      const Color(0xFFDDEBD2).withValues(alpha: 0.2),
-                      const Color(0xFFBBD8AA).withValues(alpha: 0.3),
-                      const Color(0xFF88B870).withValues(alpha: 0.25),
-                    ],
-                    stops: const [0.0, 0.3, 0.6, 1.0],
-                  ),
+                ParallaxLayer(
+                  assetPath: 'assets/images/backgrounds/forest/far.png',
+                  speed: 0.14,
+                  widthMultiplier: 1.0,
+                  heightFraction: 0.58,
+                  opacity: 0.65,
                 ),
-              ),
-            ),
-          ),
-          // ═══ 8. 前景草丛渐变（底部深绿兜底）═══
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 80,
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      const Color(0xFF3A7A2E).withValues(alpha: 0.5),
-                      const Color(0xFF2D6622).withValues(alpha: 0.7),
-                    ],
-                  ),
+                ParallaxLayer(
+                  assetPath: 'assets/images/backgrounds/forest/mid.png',
+                  speed: 0.30,
+                  widthMultiplier: 1.25,
+                  heightFraction: 0.52,
+                  opacity: 0.78,
                 ),
-              ),
+                ParallaxLayer(
+                  assetPath: 'assets/images/backgrounds/forest/near.png',
+                  speed: 0.52,
+                  widthMultiplier: 1.5625,
+                  heightFraction: 0.50,
+                  opacity: 0.88,
+                ),
+              ],
             ),
           ),
-          // ═══ 9. 粒子系统 ═══
+          // ═══ 3. 森林氛围层（太阳/光线/雾气/草丛/光球）═══
+          const Positioned.fill(
+            child: IgnorePointer(child: ForestAtmosphere()),
+          ),
+          // ═══ 4. 粒子引擎（5 类粒子）═══
           const Positioned.fill(
             child: ForestParticles(),
           ),
-          // ═══ 10. 浮动环境图标（蝴蝶/蜜蜂等）═══
+          // ═══ 5. 浮动环境图标 ═══
           ..._buildAmbientIcons(),
-          // ═══ 11. 暗角 ═══
+          // ═══ 6. 暗角（HTML .vignette）═══
           Positioned.fill(
             child: IgnorePointer(
               child: DecoratedBox(
@@ -432,7 +372,7 @@ class _LoginScreenState extends State<LoginScreen>
                       Colors.transparent,
                       const Color(0xFF1E3214).withValues(alpha: 0.35),
                     ],
-                    stops: const [0.5, 1.0],
+                    stops: const [0.55, 1.0],
                   ),
                 ),
               ),
@@ -1154,16 +1094,23 @@ class _AnimatedPrimaryButton extends StatelessWidget {
   }
 }
 
-/// 浮动环境图标动画组件
+/// 浮动环境图标动画组件（HTML: ambFloat 动画 1:1 还原）
+/// 0%→opacity:0, translateY(20px), rotate(-5deg)
+/// 15%→opacity:0.5
+/// 50%→opacity:0.35, translateY(-40px), rotate(5deg)
+/// 85%→opacity:0.5
+/// 100%→opacity:0, translateY(20px), rotate(-5deg)
 class _FloatingIcon extends StatefulWidget {
   final String icon;
   final double size;
   final Duration delay;
+  final int durationSeconds;
 
   const _FloatingIcon({
     required this.icon,
     required this.size,
     this.delay = Duration.zero,
+    this.durationSeconds = 12,
   });
 
   @override
@@ -1178,7 +1125,7 @@ class _FloatingIconState extends State<_FloatingIcon>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-      duration: const Duration(seconds: 20), // 非常慢
+      duration: Duration(seconds: widget.durationSeconds),
       vsync: this,
     );
     Future.delayed(widget.delay, () {
@@ -1198,18 +1145,45 @@ class _FloatingIconState extends State<_FloatingIcon>
       animation: _ctrl,
       builder: (context, child) {
         final t = _ctrl.value;
-        final dy = math.sin(t * math.pi * 2) * 10; // 更小幅度
-        final dx = math.cos(t * math.pi * 2 * 0.5) * 5;
-        // 非常淡：0.1 ~ 0.3
-        final opacity = (math.sin(t * math.pi * 2) * 0.5 + 0.5)
-            .clamp(0.08, 0.28);
+        // HTML ambFloat 关键帧插值
+        double opacity;
+        double dy;
+        double rotate;
+        if (t < 0.15) {
+          // 0% → 15%: opacity 0→0.5, dy 20→~0
+          final f = t / 0.15;
+          opacity = f * 0.5;
+          dy = 20 - f * 20;
+          rotate = -5 + f * 5;
+        } else if (t < 0.50) {
+          // 15% → 50%: opacity 0.5→0.35, dy 0→-40
+          final f = (t - 0.15) / 0.35;
+          opacity = 0.5 - f * 0.15;
+          dy = -f * 40;
+          rotate = f * 10 - 5;
+        } else if (t < 0.85) {
+          // 50% → 85%: opacity 0.35→0.5, dy -40→~0
+          final f = (t - 0.5) / 0.35;
+          opacity = 0.35 + f * 0.15;
+          dy = -40 + f * 40;
+          rotate = 5 - f * 10;
+        } else {
+          // 85% → 100%: opacity 0.5→0, dy 0→20
+          final f = (t - 0.85) / 0.15;
+          opacity = 0.5 * (1 - f);
+          dy = f * 20;
+          rotate = -5 * f;
+        }
         return Transform.translate(
-          offset: Offset(dx, dy),
-          child: Opacity(
-            opacity: opacity,
-            child: Text(
-              widget.icon,
-              style: TextStyle(fontSize: widget.size),
+          offset: Offset(0, dy),
+          child: Transform.rotate(
+            angle: rotate * math.pi / 180,
+            child: Opacity(
+              opacity: opacity.clamp(0.0, 1.0),
+              child: Text(
+                widget.icon,
+                style: TextStyle(fontSize: widget.size),
+              ),
             ),
           ),
         );

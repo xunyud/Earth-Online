@@ -20,6 +20,8 @@ dependencies:
   flutter_markdown: ^0.7.6
   fl_chart: ^0.70.0
   http: ^1.2.2
+  webview_windows: ^0.4.0
+  speech_to_text: ^7.0.0
 
 dev_dependencies:
   flutter_test:
@@ -30,3 +32,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/backgrounds/forest/
+    - assets/web/

@@ -9,7 +9,7 @@ import 'core/i18n/app_locale_controller.dart';
 import 'core/services/preferences_service.dart';
 import 'core/services/supabase_auth_service.dart';
 import 'core/theme/quest_theme.dart';
-import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/forest_login_page.dart';
 import 'features/quest/screens/home_page.dart';
 import 'features/quest/screens/life_diary_page.dart';
 import 'features/quest/services/weekly_summary_job_service.dart';
@@ -228,7 +228,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               if (shouldShowHomeForSession(hasSession: hasSession)) {
                 return home;
               }
-              return LoginScreen(
+              return ForestLoginPage(
                 homeBuilder: (_) => home,
               );
             },

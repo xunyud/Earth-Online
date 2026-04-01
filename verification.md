@@ -1,4 +1,52 @@
 # Verification
+## 2026-04-01 Supabase migration remote apply verification
+
+- 执行者：Codex
+- 目标项目：`ndbhxjvrgxeuyykrlyxl`
+- 执行命令：
+  - `.\supabase.ps1 db push`
+  - `.\supabase.ps1 db push`（二次验证）
+- 执行结果：
+  - 首次 `db push` 成功，远端实际应用了以下待推 migration：
+    - `20260326100000_fix_checkin_rpc_date_cast.sql`
+    - `20260326200000_makeup_checkin.sql`
+    - `20260331174000_add_daily_due_minutes_to_quest_nodes.sql`
+  - 二次 `db push` 返回 `Remote database is up to date.`，说明远端 migration 状态已与本地对齐。
+- 补充观察：
+  - `.\supabase.ps1 migration list` 曾因数据库直连 TLS timeout 失败，但不影响通过 pooler workaround 执行的 `db push` 成功，也不影响二次 `db push` 的对齐验证。
+
+## 2026-04-01 Windows NuGet availability verification
+
+- 执行者：Codex
+- 执行步骤：
+  - 将现有构建目录中的 `nuget.exe` 复制到 `C:\Users\pclou\.local\bin\nuget.exe`
+  - 执行 `where.exe nuget`
+  - 执行 `flutter build windows --debug`
+- 验证结果：
+  - `where.exe nuget` 返回 `C:\Users\pclou\.local\bin\nuget.exe`
+  - `flutter build windows --debug` 成功，输出 `✓ Built build\windows\x64\runner\Debug\frontend.exe`
+  - 重新验证过程中已不再出现 `Nuget is not installed.` 提示
+- 补充观察：
+  - `webview_windows` 仍会输出一个 CMake 开发告警（`CMP0175`），但不影响构建成功。
+  - 如果重复执行 `flutter run -d windows`，仍需先关闭已打开的应用窗口，否则可能再次遇到 DLL/EXE 文件锁定问题。
+
+
+## 2026-03-31 手动创建任务语义修正验证
+
+- 执行者：Codex
+- 变更结论：
+  - 手动创建默认任务类型改为主线任务，支线任务必须明确选择所属主线。
+  - 日常任务改为使用 `daily_due_minutes` 表达“每天几点截止”，不再复用日期型 `due_date`。
+  - 每日任务重置逻辑已真正接入任务加载流程，跨天后会自动恢复为未完成。
+- 验证命令：
+  - `flutter test test/quest_manual_creation_source_test.dart test/quest_controller_daily_reset_source_test.dart test/quest_node_test.dart`
+  - `dart analyze lib/features/quest/controllers/quest_controller.dart lib/features/quest/screens/home_page.dart lib/features/quest/widgets/quest_edit_sheet.dart lib/features/quest/widgets/quest_item.dart`
+- 验证结果：
+  - 上述测试全部通过。
+  - 上述静态分析全部通过，无新增问题。
+- 风险说明：
+  - 本轮尚未执行全量 Flutter 测试，仅覆盖任务语义与相关文件。
+  - 数据库侧新增了 `supabase/migrations/20260331174000_add_daily_due_minutes_to_quest_nodes.sql`，需要在目标 Supabase 环境执行后，日常截止时间字段才能完整落库。
 
 - 日期：2026-03-15
 - 执行者：Codex
@@ -189,3 +237,58 @@
 ### 风险说明
 
 - 这次补的是首次回填路径，前提仍然是用户已经登录且 `HomePage` 正常触发 `resolveDisplayName`。
+
+## 2026-04-01 快速创建弹窗重设计
+
+### 已验证内容
+- 快速创建弹窗已改为三模式卡片面板：
+  - 新建主线并添加支线
+  - 挂到已有主线
+  - 日常任务
+- “挂到已有主线创建支线”能力仍保留在同一弹窗内。
+- 新建主线模式支持在同一弹窗内补充多条支线草稿，并在提交时先建主线、再顺序建支线。
+- 日常任务仍使用每日 HH:mm 截止时间逻辑。
+
+### 命令结果摘要
+- `dart analyze frontend/lib/features/quest/screens/home_page.dart frontend/test/quest_manual_creation_source_test.dart`
+  - 通过，`No issues found!`
+- `flutter test test/quest_manual_creation_source_test.dart test/quest_controller_daily_reset_source_test.dart test/quest_node_test.dart`
+  - 通过，`All tests passed!`
+
+### 风险说明
+- 本轮主要做快速创建弹窗结构与样式重设计，尚未做桌面端实际截图回归；如需继续细抠视觉，可下一步直接运行 `flutter run -d windows` 做实机微调。
+
+
+# 2026-04-01 Codex
+
+## 快速创建加号入口修复
+
+- 修改点：`frontend/lib/features/quest/screens/home_page.dart` 中 `QuickAddBar` 新增 `onPlusTap: _showPlusMenu`。
+- 验证命令：
+  - `dart analyze lib/features/quest/screens/home_page.dart test/quest_manual_creation_source_test.dart`
+  - `flutter test test/quest_manual_creation_source_test.dart test/quest_controller_daily_reset_source_test.dart test/quest_node_test.dart`
+- 验证结果：全部通过。
+- 结论：快速创建条左侧加号已重新接回现有菜单入口；原有“新建主线并添加支线 / 挂到已有主线 / 日常任务”弹窗逻辑保持不变。
+
+# 2026-04-01 Codex
+
+## 快速创建弹窗文案去重
+
+- 修改点：删除 `frontend/lib/features/quest/screens/home_page.dart` 中快速创建弹窗顶部的 `创建策略` 总说明卡片，保留三张选择卡自身的说明文案。
+- 验证命令：
+  - `dart analyze lib/features/quest/screens/home_page.dart test/quest_manual_creation_source_test.dart`
+  - `flutter test test/quest_manual_creation_source_test.dart test/quest_controller_daily_reset_source_test.dart test/quest_node_test.dart`
+- 验证结果：全部通过。
+- 结论：弹窗首屏只保留模式选择必要信息，不再重复解释同一件事。
+
+# 2026-04-01 Codex
+
+## 快速创建按钮文案与挂载说明修复
+
+- 修改点：`frontend/lib/features/quest/screens/home_page.dart` 中 `_confirmLabel` 改为明确按钮文案，同时把“挂到已有主线”面板文案改成用户可理解的话术。
+- 行为约束：`attachToExistingMain` 仍然只提交单个 `title` + 单个 `parentMainQuestId`，不支持一次挂载多个支线。
+- 验证命令：
+  - `dart analyze lib/features/quest/screens/home_page.dart test/quest_manual_creation_source_test.dart`
+  - `flutter test test/quest_manual_creation_source_test.dart test/quest_controller_daily_reset_source_test.dart test/quest_node_test.dart`
+- 验证结果：全部通过。
+- 结论：右下角创建按钮已不再显示问号；挂载面板已去除面向版本/实现的碎碎念文案；已有主线挂载模式维持单条支线创建。

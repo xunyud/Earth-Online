@@ -38,6 +38,7 @@ class NightReflectionDialog extends StatelessWidget {
       title: title,
       subtitle: '把今天的完成感收回来一点，再决定要不要给明天留一个起步动作。',
       maxWidth: 980,
+      scrollable: true,
       accentColor: accent,
       leading: const QuestDialogBadge(
         icon: Icons.nights_stay_rounded,

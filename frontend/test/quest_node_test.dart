@@ -79,4 +79,43 @@ void main() {
     final updated = node.copyWith(completedAt: null);
     expect(updated.completedAt, isNull);
   });
+
+  test('QuestNode json mapping should preserve daily_due_minutes', () {
+    final node = QuestNode.fromJson({
+      'id': 'id1',
+      'user_id': 'u1',
+      'parent_id': null,
+      'title': 'daily quest',
+      'quest_tier': 'Daily',
+      'sort_order': 1000,
+      'daily_due_minutes': 540,
+      'is_completed': false,
+      'xp_reward': 15,
+      'created_at': DateTime.utc(2026, 1, 1).toIso8601String(),
+    });
+
+    expect(
+      node.toJson()['daily_due_minutes'],
+      540,
+      reason: 'Daily quests need a dedicated daily deadline field instead of reusing due_date.',
+    );
+  });
+
+  test('QuestNode copyWith should allow updating dailyDueMinutes', () {
+    final node = QuestNode(
+      id: 'id1',
+      userId: 'u1',
+      parentId: null,
+      title: 'daily quest',
+      questTier: 'Daily',
+      dailyDueMinutes: 480,
+      isCompleted: false,
+      xpReward: 10,
+      createdAt: DateTime.utc(2026, 1, 1),
+    );
+
+    final updated = node.copyWith(dailyDueMinutes: 600);
+    expect(updated.dailyDueMinutes, 600);
+    expect(updated.toJson()['daily_due_minutes'], 600);
+  });
 }

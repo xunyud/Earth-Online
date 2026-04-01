@@ -568,6 +568,29 @@ const Map<String, Map<String, String>> _localizedTexts =
     'en':
         "Enter quest details (for example: \"Prepare next week's meeting...\")"
   },
+  'quick_add.menu.create': {'zh': '快速创建任务', 'en': 'Quick Create Task'},
+  'quick_add.menu.create_desc': {
+    'zh': '直接输入标题，不经过AI解析',
+    'en': 'Enter title directly, no AI parsing'
+  },
+  'quick_add.menu.image': {'zh': '图片解析', 'en': 'Image Parsing'},
+  'quick_add.menu.image_desc': {
+    'zh': '拍照或选图识别任务',
+    'en': 'Take photo or select image to recognize tasks'
+  },
+  'quick_add.menu.coming_soon': {'zh': '即将推出', 'en': 'Coming Soon'},
+  'quick_add.create.title': {'zh': '快速创建', 'en': 'Quick Create'},
+  'quick_add.create.hint': {'zh': '任务标题', 'en': 'Task title'},
+  'quick_add.create.confirm': {'zh': '创建', 'en': 'Create'},
+  'quick_add.create.success': {'zh': '任务已创建', 'en': 'Task created'},
+  'quick_add.create.tier_main': {'zh': '主线任务', 'en': 'Main Quest'},
+  'quick_add.create.tier_side': {'zh': '支线任务', 'en': 'Side Quest'},
+  'quick_add.create.tier_daily': {'zh': '日常任务', 'en': 'Daily'},
+  'quick_add.voice.listening': {'zh': '正在听...', 'en': 'Listening...'},
+  'quick_add.voice.unavailable': {
+    'zh': '语音识别不可用',
+    'en': 'Speech recognition unavailable'
+  },
   'achievement.page_title': {'zh': '成就殿堂', 'en': 'Achievements'},
   'achievement.category.quest': {'zh': '任务成就', 'en': 'Quest Achievements'},
   'achievement.category.streak': {'zh': '签到成就', 'en': 'Streak Achievements'},

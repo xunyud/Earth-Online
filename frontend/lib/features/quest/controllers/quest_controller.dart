@@ -15,6 +15,7 @@ typedef QuestDetailsUpdater = Future<void> Function(
   String? title,
   Object? description,
   Object? dueDate,
+  Object? dailyDueMinutes,
   int? xpReward,
 });
 
@@ -163,11 +164,77 @@ class QuestController extends ChangeNotifier {
     return '$y-$m-$d';
   }
 
+  DateTime _localDay(DateTime value) {
+    final local = value.toLocal();
+    return DateTime(local.year, local.month, local.day);
+  }
+
   bool _isSameLocalDay(DateTime aUtc, DateTime bLocalDay) {
-    final a = aUtc.toLocal();
-    return a.year == bLocalDay.year &&
-        a.month == bLocalDay.month &&
-        a.day == bLocalDay.day;
+    final a = _localDay(aUtc);
+    final b = DateTime(bLocalDay.year, bLocalDay.month, bLocalDay.day);
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  int? _sanitizeDailyDueMinutes(int? minutes) {
+    if (minutes == null) return null;
+    if (minutes < 0) return 0;
+    if (minutes > 1439) return 1439;
+    return minutes;
+  }
+
+  @visibleForTesting
+  bool shouldResetDailyQuest(QuestNode quest, DateTime nowLocal) {
+    if (quest.questTier == 'Daily' && quest.isCompleted) {
+      final completedAt = quest.completedAt;
+      if (completedAt == null) {
+        return true;
+      }
+      return !_isSameLocalDay(completedAt, nowLocal);
+    }
+    return false;
+  }
+
+  double _nextSortOrderForParent(String? parentId) {
+    final siblings = _quests
+        .where((quest) => quest.parentId == parentId && !quest.isDeleted)
+        .toList();
+    if (siblings.isEmpty) {
+      return parentId == null
+          ? -DateTime.now().millisecondsSinceEpoch.toDouble()
+          : 1000.0;
+    }
+    siblings.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return siblings.last.sortOrder + 1000.0;
+  }
+
+  Future<void> _resetCompletedDailyQuestsIfNeeded() async {
+    final nowLocal = DateTime.now().toLocal();
+    final toReset = _quests
+        .where((quest) => shouldResetDailyQuest(quest, nowLocal))
+        .toList(growable: false);
+    if (toReset.isEmpty) return;
+
+    final resetIds = toReset.map((quest) => quest.id).toSet();
+    _quests = _quests
+        .map((quest) => resetIds.contains(quest.id)
+            ? quest.copyWith(isCompleted: false, completedAt: null)
+            : quest)
+        .toList();
+    notifyListeners();
+
+    try {
+      await _supabase
+          .from('quest_nodes')
+          .update({
+            'is_completed': false,
+            'completed_at': null,
+          })
+          .inFilter('id', resetIds.toList())
+          .eq('quest_tier', 'Daily');
+      _scheduleProfileStatsReconcile();
+    } catch (e) {
+      debugPrint('Daily quest reset failed: $e');
+    }
   }
 
   Future<void> _upsertDailyLogForToday({required bool justClearedBoard}) async {
@@ -589,6 +656,7 @@ class QuestController extends ChangeNotifier {
           .order('sort_order', ascending: true)
           .order('created_at', ascending: true);
       _quests = (response as List).map((e) => QuestNode.fromJson(e)).toList();
+      await _resetCompletedDailyQuestsIfNeeded();
       notifyListeners();
     } catch (e) {
       debugPrint('Error fetching quests: $e');
@@ -880,6 +948,96 @@ class QuestController extends ChangeNotifier {
       return inserted;
     } catch (e) {
       debugPrint('Guide task insert failed: $e');
+      _showError(_t('quest.error.guide_insert_failed'));
+      return null;
+    }
+  }
+
+  Future<QuestNode?> createManualQuest({
+    required String title,
+    required String description,
+    required String questTier,
+    String? parentMainQuestId,
+    int? dailyDueMinutes,
+    int xpReward = 20,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) {
+      _showError(_t('quest.error.no_session'));
+      return null;
+    }
+
+    final normalizedTitle = title.trim();
+    if (normalizedTitle.isEmpty) {
+      _showError(_t('quest.error.title_required'));
+      return null;
+    }
+
+    final normalizedDescription = description.trim();
+    final normalizedTier = switch (questTier) {
+      'Main_Quest' => 'Main_Quest',
+      'Side_Quest' => 'Side_Quest',
+      _ => 'Daily',
+    };
+    final normalizedXp = xpReward.clamp(5, 200);
+    String? normalizedParentId;
+    int? normalizedDailyDueMinutes;
+
+    if (normalizedTier == 'Side_Quest') {
+      final requestedParentId = parentMainQuestId?.trim();
+      if (requestedParentId == null || requestedParentId.isEmpty) {
+        _showError('支线任务必须选择所属主线任务');
+        return null;
+      }
+      final parentIndex = _quests.indexWhere(
+        (quest) =>
+            quest.id == requestedParentId &&
+            quest.questTier == 'Main_Quest' &&
+            quest.parentId == null &&
+            !quest.isDeleted,
+      );
+      if (parentIndex == -1) {
+        _showError('未找到可用的主线任务，暂时无法创建支线任务');
+        return null;
+      }
+      normalizedParentId = _quests[parentIndex].id;
+    } else if (normalizedTier == 'Daily') {
+      normalizedDailyDueMinutes = _sanitizeDailyDueMinutes(dailyDueMinutes);
+    }
+
+    final insertPayload = <String, dynamic>{
+      'user_id': userId,
+      'parent_id': normalizedParentId,
+      'title': normalizedTitle,
+      'quest_tier': normalizedTier,
+      'xp_reward': normalizedXp,
+      'is_completed': false,
+      'is_deleted': false,
+      'sort_order': _nextSortOrderForParent(normalizedParentId),
+      'due_date': normalizedTier == 'Daily' ? null : null,
+      'daily_due_minutes':
+          normalizedTier == 'Daily' ? normalizedDailyDueMinutes : null,
+      if (normalizedDescription.isNotEmpty)
+        'description': normalizedDescription,
+    };
+
+    try {
+      final row = await _supabase
+          .from('quest_nodes')
+          .insert(insertPayload)
+          .select()
+          .single();
+      final inserted = QuestNode.fromJson(row);
+      final existingIndex = _quests.indexWhere((q) => q.id == inserted.id);
+      if (existingIndex == -1) {
+        _quests.add(inserted);
+      } else {
+        _quests[existingIndex] = inserted;
+      }
+      notifyListeners();
+      return inserted;
+    } catch (e) {
+      debugPrint('Manual task insert failed: $e');
       _showError(_t('quest.error.guide_insert_failed'));
       return null;
     }
@@ -1245,17 +1403,20 @@ class QuestController extends ChangeNotifier {
 
   static const Object _descriptionUnset = Object();
   static const Object _dueDateUnset = Object();
+  static const Object _dailyDueMinutesUnset = Object();
 
   Future<void> updateQuestDetails(
     String id, {
     String? title,
     Object? description = _descriptionUnset,
     Object? dueDate = _dueDateUnset,
+    Object? dailyDueMinutes = _dailyDueMinutesUnset,
     int? xpReward,
   }) async {
     final index = _quests.indexWhere((q) => q.id == id);
     if (index == -1) return;
-    if (_quests[index].isCompleted || _quests[index].isReward) {
+    final target = _quests[index];
+    if (target.isCompleted || target.isReward) {
       final msg = _t('quest.error.quest_locked');
       showToast(msg);
       throw StateError(msg);
@@ -1266,9 +1427,18 @@ class QuestController extends ChangeNotifier {
     if (description != _descriptionUnset) {
       updates['description'] = description as String?;
     }
-    if (dueDate != _dueDateUnset) {
+    if (target.questTier == 'Daily') {
+      if (dailyDueMinutes != _dailyDueMinutesUnset) {
+        updates['daily_due_minutes'] =
+            _sanitizeDailyDueMinutes(dailyDueMinutes as int?);
+      }
+      updates['due_date'] = null;
+    } else if (dueDate != _dueDateUnset) {
       final d = dueDate as DateTime?;
       updates['due_date'] = d?.toUtc().toIso8601String();
+      updates['daily_due_minutes'] = null;
+    } else if (dailyDueMinutes != _dailyDueMinutesUnset) {
+      updates['daily_due_minutes'] = null;
     }
     if (xpReward != null) updates['xp_reward'] = xpReward;
     if (updates.isEmpty) return;
@@ -1291,7 +1461,14 @@ class QuestController extends ChangeNotifier {
         description: description == _descriptionUnset
             ? old.description
             : description as String?,
-        dueDate: dueDate == _dueDateUnset ? old.dueDate : dueDate as DateTime?,
+        dueDate: target.questTier == 'Daily'
+            ? null
+            : (dueDate == _dueDateUnset ? old.dueDate : dueDate as DateTime?),
+        dailyDueMinutes: target.questTier == 'Daily'
+            ? (dailyDueMinutes == _dailyDueMinutesUnset
+                ? old.dailyDueMinutes
+                : _sanitizeDailyDueMinutes(dailyDueMinutes as int?))
+            : null,
         xpReward: xpReward ?? old.xpReward,
       );
       notifyListeners();

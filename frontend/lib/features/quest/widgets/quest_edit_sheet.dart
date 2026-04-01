@@ -24,8 +24,11 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   DateTime? _dueDate;
+  int? _dailyDueMinutes;
   double _xp = 5;
   bool _saving = false;
+
+  bool get _isDailyQuest => widget.quest.questTier == 'Daily';
 
   @override
   void initState() {
@@ -34,6 +37,7 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
     _descriptionController =
         TextEditingController(text: widget.quest.description ?? '');
     _dueDate = widget.quest.dueDate?.toLocal();
+    _dailyDueMinutes = widget.quest.dailyDueMinutes;
     final initialXp = widget.quest.xpReward.clamp(5, 100);
     _xp = initialXp.toDouble();
   }
@@ -50,6 +54,17 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
     final m = date.month.toString().padLeft(2, '0');
     final d = date.day.toString().padLeft(2, '0');
     return '$y-$m-$d';
+  }
+
+  String _formatDailyDueMinutes(int minutes) {
+    final hour = (minutes ~/ 60).toString().padLeft(2, '0');
+    final minute = (minutes % 60).toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  TimeOfDay _timeOfDayFromMinutes(int minutes) {
+    final safeMinutes = minutes.clamp(0, 1439);
+    return TimeOfDay(hour: safeMinutes ~/ 60, minute: safeMinutes % 60);
   }
 
   Future<void> _pickDueDate() async {
@@ -85,6 +100,21 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
     });
   }
 
+  Future<void> _pickDailyDueTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _dailyDueMinutes == null
+          ? const TimeOfDay(hour: 21, minute: 0)
+          : _timeOfDayFromMinutes(_dailyDueMinutes!),
+    );
+    if (!mounted || picked == null) return;
+    setState(() {
+      // Daily uses daily_due_minutes instead of due_date.
+      _dailyDueMinutes = picked.hour * 60 + picked.minute;
+      _dueDate = null;
+    });
+  }
+
   Future<void> _save() async {
     if (widget.quest.isCompleted || widget.quest.isReward) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -106,7 +136,8 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
         widget.quest.id,
         title: title.isEmpty ? widget.quest.title : title,
         description: finalDescription,
-        dueDate: _dueDate?.toUtc(),
+        dueDate: _isDailyQuest ? null : _dueDate?.toUtc(),
+        dailyDueMinutes: _isDailyQuest ? _dailyDueMinutes : null,
         xpReward: xp,
       );
       if (!mounted) return;
@@ -196,7 +227,8 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
                 ),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: theme.backgroundColor,
                     borderRadius: BorderRadius.circular(14),
@@ -215,39 +247,90 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: locked || _saving ? null : _pickDueDate,
-                        icon: const Icon(Icons.calendar_today_rounded, size: 18),
-                        label: Text(
-                          _dueDate == null ? '设置截止日期' : _formatDate(_dueDate!),
-                          style: AppTextStyles.body.copyWith(fontSize: 14),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: theme.primaryAccentColor,
-                          side: const BorderSide(color: AppColors.shadowColor),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                if (_isDailyQuest)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed:
+                              locked || _saving ? null : _pickDailyDueTime,
+                          icon: const Icon(Icons.schedule_rounded, size: 18),
+                          label: Text(
+                            _dailyDueMinutes == null
+                                ? '设置每日截止时间'
+                                : '每日截止 ${_formatDailyDueMinutes(_dailyDueMinutes!)}',
+                            style: AppTextStyles.body.copyWith(fontSize: 14),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.primaryAccentColor,
+                            side:
+                                const BorderSide(color: AppColors.shadowColor),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    if (_dueDate != null) ...[
-                      const SizedBox(width: 10),
-                      IconButton(
-                        onPressed: locked || _saving
-                            ? null
-                            : () => setState(() => _dueDate = null),
-                        icon: const Icon(Icons.close_rounded),
-                        color: AppColors.textSecondary,
-                        tooltip: '清除日期',
-                      ),
+                      if (_dailyDueMinutes != null) ...[
+                        const SizedBox(width: 10),
+                        IconButton(
+                          onPressed: locked || _saving
+                              ? null
+                              : () => setState(() => _dailyDueMinutes = null),
+                          icon: const Icon(Icons.close_rounded),
+                          color: AppColors.textSecondary,
+                          tooltip: '清除每日截止时间',
+                        ),
+                      ],
                     ],
-                  ],
-                ),
+                  ),
+                if (!_isDailyQuest)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: locked || _saving
+                              ? null
+                              : (_isDailyQuest
+                                  ? _pickDailyDueTime
+                                  : _pickDueDate),
+                          icon: Icon(
+                            _isDailyQuest
+                                ? Icons.schedule_rounded
+                                : Icons.calendar_today_rounded,
+                            size: 18,
+                          ),
+                          label: Text(
+                            _dueDate == null
+                                ? '设置截止日期'
+                                : _formatDate(_dueDate!),
+                            style: AppTextStyles.body.copyWith(fontSize: 14),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.primaryAccentColor,
+                            side:
+                                const BorderSide(color: AppColors.shadowColor),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (_dueDate != null) ...[
+                        const SizedBox(width: 10),
+                        IconButton(
+                          onPressed: locked || _saving
+                              ? null
+                              : () => setState(() => _dueDate = null),
+                          icon: const Icon(Icons.close_rounded),
+                          color: AppColors.textSecondary,
+                          tooltip: '清除日期',
+                        ),
+                      ],
+                    ],
+                  ),
                 const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
