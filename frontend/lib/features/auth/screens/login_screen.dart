@@ -1120,6 +1120,7 @@ class _FloatingIcon extends StatefulWidget {
 class _FloatingIconState extends State<_FloatingIcon>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
+  Timer? _startTimer;
 
   @override
   void initState() {
@@ -1128,13 +1129,14 @@ class _FloatingIconState extends State<_FloatingIcon>
       duration: Duration(seconds: widget.durationSeconds),
       vsync: this,
     );
-    Future.delayed(widget.delay, () {
+    _startTimer = Timer(widget.delay, () {
       if (mounted) _ctrl.repeat();
     });
   }
 
   @override
   void dispose() {
+    _startTimer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }

@@ -59,6 +59,8 @@ class _ForestLoginPageState extends State<ForestLoginPage> {
       // 加载 HTML 模板，替换图片占位符为虚拟主机 URL
       String html = await rootBundle.loadString('assets/web/login.html');
       html = html
+          .replaceAll('{{IMG_LOGO}}',
+              'https://local.assets/assets/images/branding/earth_online_logo.png')
           .replaceAll('{{IMG_SKY}}',
               'https://local.assets/assets/images/backgrounds/forest/sky.png')
           .replaceAll('{{IMG_FAR}}',

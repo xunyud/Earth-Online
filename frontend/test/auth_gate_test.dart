@@ -1,12 +1,43 @@
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
 
 void main() {
-  test('有会话时应进入主页', () {
+  test('shows home when a session exists', () {
     expect(shouldShowHomeForSession(hasSession: true), isTrue);
   });
 
-  test('无会话时应停留登录页', () {
+  test('stays on login when no session exists', () {
     expect(shouldShowHomeForSession(hasSession: false), isFalse);
+  });
+
+  test('web builds use the latest forest login experience', () {
+    expect(
+      shouldUseForestLoginExperience(
+        isWeb: true,
+        platform: TargetPlatform.windows,
+      ),
+      isTrue,
+    );
+  });
+
+  test('Windows desktop keeps the forest webview login experience', () {
+    expect(
+      shouldUseForestLoginExperience(
+        isWeb: false,
+        platform: TargetPlatform.windows,
+      ),
+      isTrue,
+    );
+  });
+
+  test('non-Windows native platforms fall back to the Flutter login screen', () {
+    expect(
+      shouldUseForestLoginExperience(
+        isWeb: false,
+        platform: TargetPlatform.android,
+      ),
+      isFalse,
+    );
   });
 }

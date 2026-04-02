@@ -215,18 +215,10 @@
   .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .brand-row { display: flex; align-items: center; gap: 12px; }
   .brand-icon {
-    width: 48px; height: 48px; border-radius: 15px; position: relative;
-    background: linear-gradient(145deg, #2F8A43, #4BA556);
-    box-shadow: 0 6px 20px rgba(47,138,67,0.3);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px; line-height: 1;
-  }
-  .brand-icon .check {
-    position: absolute; right: -3px; bottom: -3px;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: #fff; border: 2px solid #2F8A43;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 900; color: #2F8A43;
+    width: 56px; height: 56px;
+    display: block; flex-shrink: 0;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 20px rgba(47,138,67,0.24));
   }
   .brand-title { font-size: 20px; font-weight: 900; color: #1A331F; letter-spacing: -0.5px; }
 
@@ -408,7 +400,7 @@
   <div class="card-header">
     <div class="header-top">
       <div class="brand-row">
-        <div class="brand-icon">🌍<div class="check">✓</div></div>
+        <img class="brand-icon" src="{{IMG_LOGO}}" alt="Earth Online logo">
         <div class="brand-title">Earth Online</div>
       </div>
       <div class="lang-toggle">
@@ -747,6 +739,10 @@ requestAnimationFrame(draw);
   function sendToFlutter(data) {
     if (window.chrome && window.chrome.webview) {
       window.chrome.webview.postMessage(JSON.stringify(data));
+      return;
+    }
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(JSON.stringify(data), '*');
     }
   }
 
@@ -887,6 +883,27 @@ requestAnimationFrame(draw);
   window._showError = function(msg) {
     showToast(msg, 'error');
   };
+
+  window.addEventListener('message', function(event) {
+    var payload = event && event.data;
+    if (typeof payload === 'string') {
+      try {
+        payload = JSON.parse(payload);
+      } catch (_) {
+        payload = null;
+      }
+    }
+    if (!payload || typeof payload !== 'object') {
+      return;
+    }
+    if (payload.type === 'otpSent') {
+      window._onOtpSent(payload.email || '');
+      return;
+    }
+    if (payload.type === 'error') {
+      window._showError(payload.message || '');
+    }
+  });
 })();
 </script>
 </body>

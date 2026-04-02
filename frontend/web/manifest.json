@@ -1,11 +1,11 @@
 {
-    "name": "frontend",
-    "short_name": "frontend",
+    "name": "Earth Online",
+    "short_name": "Earth Online",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Earth Online forest adventure login experience.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -10,6 +11,9 @@ import 'core/services/preferences_service.dart';
 import 'core/services/supabase_auth_service.dart';
 import 'core/theme/quest_theme.dart';
 import 'features/auth/screens/forest_login_page.dart';
+import 'features/auth/screens/forest_login_web_page_stub.dart'
+    if (dart.library.html) 'features/auth/screens/forest_login_web_page_web.dart';
+import 'features/auth/screens/login_screen.dart';
 import 'features/quest/screens/home_page.dart';
 import 'features/quest/screens/life_diary_page.dart';
 import 'features/quest/services/weekly_summary_job_service.dart';
@@ -32,6 +36,14 @@ Future<void> main() async {
 
 @visibleForTesting
 bool shouldShowHomeForSession({required bool hasSession}) => hasSession;
+
+@visibleForTesting
+bool shouldUseForestLoginExperience({
+  required bool isWeb,
+  required TargetPlatform platform,
+}) {
+  return isWeb || platform == TargetPlatform.windows;
+}
 
 const Set<String> _supportedThemeIds = <String>{
   'forest_adventure',
@@ -195,7 +207,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         );
 
         return MaterialApp(
-          title: 'Gamified Quest Log',
+          title: 'Earth Online',
           debugShowCheckedModeBanner: false,
           scrollBehavior: _AppScrollBehavior(),
           navigatorKey: rootNavigatorKey,
@@ -228,7 +240,20 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               if (shouldShowHomeForSession(hasSession: hasSession)) {
                 return home;
               }
-              return ForestLoginPage(
+              if (shouldUseForestLoginExperience(
+                isWeb: kIsWeb,
+                platform: defaultTargetPlatform,
+              )) {
+                if (kIsWeb) {
+                  return ForestLoginWebPage(
+                    homeBuilder: (_) => home,
+                  );
+                }
+                return ForestLoginPage(
+                  homeBuilder: (_) => home,
+                );
+              }
+              return LoginScreen(
                 homeBuilder: (_) => home,
               );
             },

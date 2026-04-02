@@ -1,44 +1,45 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('登录页保留柔和背景与入场动画', () async {
+  test('login screen keeps the forest scene layers and intro transitions', () async {
     final content = await File('lib/features/auth/screens/login_screen.dart')
         .readAsString();
 
     expect(
-      content.contains('SoftAuthBackground') &&
+      content.contains('ParallaxBackground(') &&
+          content.contains('ForestAtmosphere()') &&
+          content.contains('ForestParticles()') &&
           content.contains('FadeTransition(') &&
           content.contains('SlideTransition(') &&
           content.contains('ScaleTransition('),
       isTrue,
-      reason: '登录页需要使用 SoftAuthBackground 背景，并保留现有动效层次。',
+      reason: 'The anonymous web login must render the forest scene with the existing intro transitions.',
     );
   });
 
-  test('登录页不再展示轻微动态氛围入口', () async {
+  test('login screen keeps sign-in and sign-up labels in the auth copy', () async {
     final content = await File('lib/features/auth/screens/login_screen.dart')
         .readAsString();
 
     expect(
-      !content.contains('轻微动态氛围'),
+      content.contains("String get signInLabel =>") &&
+          content.contains("String get signUpLabel =>") &&
+          content.contains("Welcome to Earth Online"),
       isTrue,
-      reason: '登录页顶部入口应该聚焦认证主流程，不再保留无关入口。',
+      reason: 'The login screen copy should keep explicit sign-in and sign-up labels plus the welcome title.',
     );
   });
 
-  test('登录页提供注册入口与注册模式文案', () async {
+  test('login screen keeps account creation and continue actions', () async {
     final content = await File('lib/features/auth/screens/login_screen.dart')
         .readAsString();
 
     expect(
-      content.contains("'登录'") &&
-          content.contains("'注册'") &&
-          content.contains('欢迎来到地球Online') &&
-          content.contains('创建账号'),
+      content.contains('Create account') && content.contains('Continue'),
       isTrue,
-      reason: '登录页需要明确提供注册模式，并显示独立的注册引导文案。',
+      reason: 'The auth flow should continue to expose account creation and continue actions.',
     );
   });
 }
