@@ -347,7 +347,7 @@ export async function gatherGuideMemoryBundle(
   ] = await Promise.all([
     supabase
       .from("quest_nodes")
-      .select("id,title,is_deleted,is_reward")
+      .select("id,title,is_deleted,is_reward,is_completed")
       .eq("user_id", userId)
       .limit(400),
     supabase
@@ -407,7 +407,8 @@ export async function gatherGuideMemoryBundle(
       continue;
     }
     if (id) taskState.activeTaskIds.add(id);
-    if (title) serverActiveTaskTitles.push(title);
+    // 只把未完成的任务列为"仍在任务板上的任务"，避免 LLM 误判已完成任务为未完成
+    if (title && row.is_completed !== true) serverActiveTaskTitles.push(title);
   }
 
   const activeTaskTitles = compactLines(
@@ -464,12 +465,8 @@ export async function gatherGuideMemoryBundle(
     const c = Math.round(toNum(row.completed_count, 0));
     const perfect = row.is_perfect === true ? "清盘日" : "普通日";
     const streak = Math.round(toNum(row.streak_day, 0));
-    const encouragement = toText(row.encouragement);
-    const line = encouragement
-      ? `${d}：完成 ${c} 项，${perfect}，连续 ${streak} 天；记录：${
-        capText(encouragement, 38)
-      }`
-      : `${d}：完成 ${c} 项，${perfect}，连续 ${streak} 天`;
+    // encouragement 是系统自动生成的鼓励语，不传入 LLM 上下文，避免被误认为用户原话
+    const line = `${d}：完成 ${c} 项，${perfect}，连续 ${streak} 天`;
     memoryRefs.push(`daily_log:${d}:${idx}`);
     return line;
   });
