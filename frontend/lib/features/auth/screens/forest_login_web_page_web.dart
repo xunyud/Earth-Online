@@ -65,9 +65,6 @@ class _ForestLoginWebPageState extends State<ForestLoginWebPage> {
   }
 
   void _handleBridgeMessage(html.MessageEvent event) {
-    if (event.source != _iframe.contentWindow) {
-      return;
-    }
     final data = event.data;
     Map<String, dynamic>? payload;
     if (data is String) {
