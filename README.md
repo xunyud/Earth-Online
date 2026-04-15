@@ -156,7 +156,7 @@ Create a `.env` file in `backend/` with the variables referenced by the current 
 - `SUPABASE_KEY`
 - `REDIS_URL`
 - `OPENAI_API_KEY`
-- `OPENAI_BASE_URL`
+- `OPENAI_BASE_URL` (`https://api.86gamestore.com`)
 - `PORT`
 
 Then start the server:
@@ -186,7 +186,10 @@ The current repo contains Edge Functions for parsing quests, guide chat, event g
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `OPENAI_API_KEY` or `DEEPSEEK_API_KEY`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL` (`https://api.86gamestore.com`)
+- `DEEPSEEK_API_KEY` (optional compatibility fallback)
+- `DEEPSEEK_BASE_URL` (optional compatibility fallback)
 - `EVERMEMOS_API_URL`
 - `EVERMEMOS_API_KEY`
 - `EVERMEMOS_SYNC_TIMEOUT_MS`
@@ -194,6 +197,27 @@ The current repo contains Edge Functions for parsing quests, guide chat, event g
 - `POLLINATIONS_API_KEY`
 - `WECHAT_APP_ID`
 - `WECHAT_APP_SECRET`
+
+### 3.5. Project-Local Codex Multi-Agent Roles
+
+This repo now includes a project-local Codex multi-agent setup in `.codex/`.
+
+- `.codex/config.toml` enables `features.multi_agent = true`
+- `.codex/agents/explorer.toml` is for read-only codebase exploration and evidence gathering
+- `.codex/agents/reviewer.toml` is for correctness, regression, and test-focused review
+- `.codex/agents/docs-researcher.toml` is for documentation and release-note verification
+
+The root config points to these project-local role files directly instead of relying only on the vendored ECC examples under `everything-claude-code/`.
+
+Keep secrets in environment variables or Supabase Secrets. Do not commit real keys into repo files. For the current OpenAI-compatible flows in this project, the expected names are:
+
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL` (`https://api.86gamestore.com`)
+
+If you still need compatibility with older DeepSeek-oriented local setups, the Supabase functions also accept:
+
+- `DEEPSEEK_API_KEY`
+- `DEEPSEEK_BASE_URL`
 
 ### 4. Render Promo Assets
 

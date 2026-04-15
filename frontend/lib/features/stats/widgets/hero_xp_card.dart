@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_text_styles.dart';
 import '../../../core/utils/level_engine.dart';
 import '../../../core/i18n/app_locale_controller.dart';
 import '../theme/stats_colors.dart';
@@ -71,7 +72,7 @@ class HeroXpCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '累计经验',
+          AppLocaleController.instance.t('stats.hero.total_xp'),
           style: StatsTextStyles.metricLabel.copyWith(
             color: StatsColors.goldDark.withAlpha(160),
           ),
@@ -242,11 +243,11 @@ class _LevelRingPainter extends CustomPainter {
     final textPainter = TextPainter(
       text: TextSpan(
         text: '$level',
-        style: const TextStyle(
+        style: AppTextStyles.withFontFallback(const TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.w800,
           color: StatsColors.bodyText,
-        ),
+        )),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -261,14 +262,14 @@ class _LevelRingPainter extends CustomPainter {
 
     // "LEVEL" 小字
     final labelPainter = TextPainter(
-      text: const TextSpan(
+      text: TextSpan(
         text: 'LEVEL',
-        style: TextStyle(
+        style: AppTextStyles.withFontFallback(const TextStyle(
           fontSize: 9,
           fontWeight: FontWeight.w600,
           letterSpacing: 1.5,
           color: StatsColors.subtitleText,
-        ),
+        )),
       ),
       textDirection: TextDirection.ltr,
     );

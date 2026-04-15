@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../theme/stats_colors.dart';
 import '../theme/stats_text_styles.dart';
 import '../theme/stats_decorations.dart';
@@ -24,21 +25,24 @@ class SummaryMetricsRow extends StatelessWidget {
       _MetricInfo(
         icon: Icons.check_circle_outline_rounded,
         value: '${data.weeklyCompleted}',
-        label: '本周完成',
+        label: context.tr('stats.highlight.weekly_completed'),
         accent: StatsColors.softSage,
         tint: StatsColors.sageTint,
       ),
       _MetricInfo(
         icon: Icons.local_fire_department_rounded,
-        value: '${data.longestStreak}天',
-        label: '连续天数',
+        value: context.tr(
+          'stats.highlight.longest_streak_value',
+          params: {'count': '${data.longestStreak}'},
+        ),
+        label: context.tr('stats.highlight.longest_streak'),
         accent: StatsColors.warmCoral,
         tint: StatsColors.coralTint,
       ),
       _MetricInfo(
         icon: Icons.emoji_events_rounded,
         value: data.bestDayCount > 0 ? '${data.bestDayCount}' : '--',
-        label: '最佳一天',
+        label: context.tr('stats.highlight.best_day'),
         accent: StatsColors.goldPrimary,
         tint: StatsColors.goldLight,
       ),

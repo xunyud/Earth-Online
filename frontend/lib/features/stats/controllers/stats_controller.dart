@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../../quest/controllers/quest_controller.dart';
 import '../models/stats_data.dart';
 
@@ -61,50 +62,57 @@ class StatsController extends ChangeNotifier {
   /// 数据驱动的激励文案
   String get motivationalInsight {
     final h = _highlights;
+    final locale = AppLocaleController.instance;
 
-    // 连续 7 天以上
     if (h.longestStreak >= 7) {
-      return '已经连续 ${h.longestStreak} 天保持行动，这种节奏正在悄悄改变你的生活。';
+      return locale.t(
+        'stats.insight.streak',
+        params: {'count': '${h.longestStreak}'},
+      );
     }
 
-    // 本周完成量可观
     if (h.weeklyCompleted >= 5) {
-      return '这周完成了 ${h.weeklyCompleted} 个任务，每一步都在积累力量。';
+      return locale.t(
+        'stats.insight.weekly_completed',
+        params: {'count': '${h.weeklyCompleted}'},
+      );
     }
 
-    // XP 破千
     if (h.totalXp >= 1000 && h.totalXp < 1500) {
-      return '经验值突破了 1000！冒险才刚刚开始。';
+      return locale.t('stats.insight.xp_1000');
     }
 
-    // 有最佳日
     if (h.bestDayCount >= 3) {
-      return '最佳一天完成了 ${h.bestDayCount} 个任务。那天的你，真的很棒。';
+      return locale.t(
+        'stats.insight.best_day',
+        params: {'count': '${h.bestDayCount}'},
+      );
     }
 
-    return '每一步成长都值得被记住。继续前进吧。';
+    return locale.t('stats.insight.default');
   }
 
   /// 里程碑列表
   List<MilestoneData> get milestones {
     final h = _highlights;
     final total = totalCompleted;
+    final locale = AppLocaleController.instance;
     return [
       MilestoneData(
         id: 'first_quest',
-        label: '首次任务',
+        label: locale.t('stats.milestone.first_quest'),
         icon: Icons.flag_rounded,
         isEarned: total > 0,
       ),
       MilestoneData(
         id: 'streak_7',
-        label: '连续7天',
+        label: locale.t('stats.milestone.streak_7'),
         icon: Icons.local_fire_department_rounded,
         isEarned: h.longestStreak >= 7,
       ),
       MilestoneData(
         id: 'xp_1000',
-        label: 'XP破千',
+        label: locale.t('stats.milestone.xp_1000'),
         icon: Icons.star_rounded,
         isEarned: h.totalXp >= 1000,
       ),
@@ -117,7 +125,10 @@ class StatsController extends ChangeNotifier {
       if (perfectDayCount > 0)
         MilestoneData(
           id: 'perfect_day',
-          label: '完美日 x$perfectDayCount',
+          label: locale.t(
+            'stats.milestone.perfect_day',
+            params: {'count': '$perfectDayCount'},
+          ),
           icon: Icons.auto_awesome_rounded,
           isEarned: true,
         ),
@@ -357,10 +368,19 @@ class StatsController extends ChangeNotifier {
         }
         return MakeupResult(success: success, message: message, newStreak: newStreak);
       }
-      return const MakeupResult(success: false, message: '返回数据异常');
+      return MakeupResult(
+        success: false,
+        message: AppLocaleController.instance.t('stats.makeup.invalid_response'),
+      );
     } catch (e) {
       debugPrint('补签失败: $e');
-      return MakeupResult(success: false, message: '补签失败: $e');
+      return MakeupResult(
+        success: false,
+        message: AppLocaleController.instance.t(
+          'stats.makeup.failed',
+          params: {'error': '$e'},
+        ),
+      );
     }
   }
 

@@ -9,6 +9,11 @@ function toText(v: unknown) {
   return String(v).trim()
 }
 
+function toRecord(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
+  return value as Record<string, unknown>
+}
+
 function dayIdNowUtc() {
   const d = new Date()
   const y = d.getUTCFullYear().toString().padStart(4, "0")
@@ -51,9 +56,15 @@ Deno.serve(async (req) => {
       body = {}
     }
     const dayId = toText(body.day_id) || dayIdNowUtc()
+    const clientContext = toRecord(body.client_context)
 
     const supabase = createClient(supabaseUrl, serviceRole)
-    const payload = await buildNightReflectionPayload(supabase, authData.user.id, dayId)
+    const payload = await buildNightReflectionPayload(
+      supabase,
+      authData.user.id,
+      dayId,
+      clientContext,
+    )
     return json(200, { success: true, ...payload })
   } catch (error) {
     return json(500, { success: false, error: error instanceof Error ? error.message : String(error) })

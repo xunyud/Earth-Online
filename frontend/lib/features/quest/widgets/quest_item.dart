@@ -4,6 +4,7 @@ import '../controllers/quest_controller.dart';
 import '../../../core/theme/quest_theme.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import 'quest_edit_sheet.dart';
 
@@ -73,11 +74,11 @@ class _QuestItemState extends State<QuestItem>
 
   Future<void> _openEditSheet() async {
     if (widget.quest.isReward) {
-      showForestSnackBar(context, '🎁 这是一个奖励任务，尽情享受吧，不可编辑。');
+      showForestSnackBar(context, context.tr('quest.edit.locked_reward'));
       return;
     }
     if (widget.quest.isCompleted) {
-      showForestSnackBar(context, '已完成的任务无法修改，请先撤销完成状态。');
+      showForestSnackBar(context, context.tr('quest.edit.locked_completed'));
       return;
     }
     await showModalBottomSheet(

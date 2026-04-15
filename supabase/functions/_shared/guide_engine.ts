@@ -13,7 +13,7 @@ export type GuideDialogExtraPayload = {
   suggested_task?: GuideSuggestedTask | null;
 };
 
-const DEFAULT_GUIDE_DISPLAY_NAME = "小忆";
+const DEFAULT_GUIDE_DISPLAY_NAME = "Xiaoyi";
 
 function toText(v: unknown) {
   if (typeof v === "string") return v.trim();
@@ -59,7 +59,11 @@ export async function resolveGuideDisplayName(
   const settings = await ensureGuideSettings(supabase, userId);
   const settingsName = toText(settings?.display_name);
   const clientName = toText(toRecord(clientContext).guide_name);
-  return settingsName || clientName || DEFAULT_GUIDE_DISPLAY_NAME;
+  return settingsName || clientName ||
+    localizedGuideText(clientContext, {
+      zh: "小忆",
+      en: DEFAULT_GUIDE_DISPLAY_NAME,
+    });
 }
 
 function normalizeDailyEvent(row: Record<string, unknown>) {
@@ -79,6 +83,7 @@ export async function getOrCreateDailyEvent(
   supabase: any,
   userId: string,
   scene: string,
+  clientContext?: Record<string, unknown>,
 ) {
   const dateId = todayDateId();
   const existing = await supabase
@@ -88,20 +93,27 @@ export async function getOrCreateDailyEvent(
     .eq("event_date", dateId)
     .maybeSingle();
   if (existing.data) {
-    return normalizeDailyEvent(existing.data as Record<string, unknown>);
+    const normalized = normalizeDailyEvent(
+      existing.data as Record<string, unknown>,
+    );
+    if (!shouldRefreshDailyEventForLanguage(normalized, clientContext)) {
+      return normalized;
+    }
   }
 
   const memory = await gatherGuideMemoryBundle(supabase, userId, {
     scene,
+    clientContext,
     maxRawItems: 60,
     maxPackedChars: 14000,
   });
-  const draft = await generateDailyEvent(memory);
+  const draft = await generateDailyEvent(memory, clientContext);
   const payload = {
     user_id: userId,
     event_date: dateId,
     title: draft.title,
     description: draft.description,
+    reason: draft.reason,
     reward_xp: draft.reward_xp,
     reward_gold: draft.reward_gold,
     status: "generated",
@@ -170,6 +182,7 @@ export async function acceptOrDismissDailyEvent(
   userId: string,
   eventId: string,
   accept: boolean,
+  clientContext?: Record<string, unknown>,
 ) {
   const { data, error } = await supabase
     .from("guide_daily_events")
@@ -205,9 +218,15 @@ export async function acceptOrDismissDailyEvent(
     };
   }
 
-  const questTitle = toText(event.title) || "地球突发事件";
+  const questTitle = toText(event.title) || localizedGuideText(clientContext, {
+    zh: "地球突发事件",
+    en: "Earth Dynamic Event",
+  });
   const questDescription = toText(event.description) ||
-    "完成后可获得额外奖励。";
+    localizedGuideText(clientContext, {
+      zh: "完成后可获得额外奖励。",
+      en: "Complete it to earn extra rewards.",
+    });
   const sortOrder = -Date.now();
   const insertedQuestId = await insertQuestNodeWithFallbacks(supabase, {
     user_id: userId,
@@ -276,13 +295,22 @@ export async function buildGuideBootstrapPayload(
   supabase: any,
   userId: string,
   scene: string,
+  clientContext?: Record<string, unknown>,
 ) {
   const settings = await ensureGuideSettings(supabase, userId);
-  const guideDisplayName = toText(settings?.display_name) ||
-    DEFAULT_GUIDE_DISPLAY_NAME;
+  const guideDisplayName = await resolveGuideDisplayName(
+    supabase,
+    userId,
+    clientContext,
+  );
+  const nextClientContext = {
+    ...toRecord(clientContext),
+    guide_name: guideDisplayName,
+  };
   const enabled = settings?.guide_enabled !== false;
   const memory = await gatherGuideMemoryBundle(supabase, userId, {
     scene,
+    clientContext: nextClientContext,
     maxRawItems: 60,
     maxPackedChars: 14000,
   });
@@ -299,8 +327,16 @@ export async function buildGuideBootstrapPayload(
     };
   }
 
-  const proactiveMessage = await generateProactiveMessage(memory);
-  const dailyEvent = await getOrCreateDailyEvent(supabase, userId, scene);
+  const proactiveMessage = await generateProactiveMessage(
+    memory,
+    nextClientContext,
+  );
+  const dailyEvent = await getOrCreateDailyEvent(
+    supabase,
+    userId,
+    scene,
+    nextClientContext,
+  );
   await writeGuideDialogLog(supabase, {
     userId,
     scene,
@@ -318,6 +354,48 @@ export async function buildGuideBootstrapPayload(
     behavior_signals: memory.behavior_signals.slice(0, 8),
     guide_display_name: guideDisplayName,
   };
+}
+
+function inferRequestedLanguage(clientContext?: Record<string, unknown>) {
+  const context = toRecord(clientContext);
+  const rawCode = toText(context.language_code) || toText(context.locale) ||
+    toText(context.lang);
+  const normalizedCode = rawCode.toLowerCase();
+  if (normalizedCode.startsWith("en")) return "en" as const;
+  if (normalizedCode.startsWith("zh")) return "zh" as const;
+  if (context.is_english === true) return "en" as const;
+  if (context.is_english === false) return "zh" as const;
+  return null;
+}
+
+function localizedGuideText(
+  clientContext: Record<string, unknown> | undefined,
+  values: { zh: string; en: string },
+) {
+  return inferRequestedLanguage(clientContext) === "en" ? values.en : values.zh;
+}
+
+function containsCjk(text: string) {
+  return /[\u3400-\u9fff]/.test(text);
+}
+
+function shouldRefreshDailyEventForLanguage(
+  event: ReturnType<typeof normalizeDailyEvent>,
+  clientContext?: Record<string, unknown>,
+) {
+  if (event.status && event.status !== "generated") return false;
+  const requestedLanguage = inferRequestedLanguage(clientContext);
+  if (!requestedLanguage) return false;
+  const sample = [
+    toText(event.title),
+    toText(event.description),
+    toText(event.reason),
+  ].join(" ");
+  if (!sample) return false;
+  if (requestedLanguage === "en") {
+    return containsCjk(sample);
+  }
+  return /[A-Za-z]/.test(sample) && !containsCjk(sample);
 }
 
 export function buildGuideAssistantExtraPayload(input: {
@@ -359,7 +437,7 @@ export async function buildGuideChatPayload(
     maxRawItems: 60,
     maxPackedChars: 14000,
   });
-  const draft = await generateChat(memory, scene, message);
+  const draft = await generateChat(memory, scene, message, nextClientContext);
 
   await Promise.all([
     writeGuideDialogLog(supabase, {
@@ -456,14 +534,16 @@ export async function buildNightReflectionPayload(
   supabase: any,
   userId: string,
   dayId: string,
+  clientContext?: Record<string, unknown>,
 ) {
   const memory = await gatherGuideMemoryBundle(supabase, userId, {
     scene: "night_reflection",
     userMessage: `day:${dayId}`,
+    clientContext,
     maxRawItems: 60,
     maxPackedChars: 14000,
   });
-  const draft = await generateNightReflection(memory, dayId);
+  const draft = await generateNightReflection(memory, dayId, clientContext);
   await writeGuideDialogLog(supabase, {
     userId,
     scene: "night_reflection",
@@ -483,9 +563,13 @@ export function normalizeSuggestedTask(raw: unknown): GuideSuggestedTask {
   const map = (raw && typeof raw === "object")
     ? raw as Record<string, unknown>
     : {};
-  const title = toText(map.title) || "恢复支线：轻量整理";
+  const language = inferRequestedLanguage(map);
+  const title = toText(map.title) ||
+    (language === "en" ? "Recovery Quest: Light Reset" : "恢复支线：轻量整理");
   const description = toText(map.description) ||
-    "用 10 分钟完成一个轻恢复动作。";
+    (language === "en"
+      ? "Take 10 minutes for one small recovery action."
+      : "用 10 分钟完成一个轻恢复动作。");
   const xp = Number(map.xp_reward ?? 20);
   const xpReward = Number.isFinite(xp)
     ? Math.max(5, Math.min(120, Math.round(xp)))

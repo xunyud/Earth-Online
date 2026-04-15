@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../theme/stats_colors.dart';
 import '../theme/stats_text_styles.dart';
 import '../models/stats_data.dart';
@@ -34,7 +35,7 @@ class MilestoneHighlights extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '成长里程碑',
+                context.tr('stats.milestones_title'),
                 style: StatsTextStyles.sectionTitle,
               ),
               const SizedBox(height: 12),

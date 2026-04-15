@@ -50,6 +50,8 @@ async function runWeeklySummaryJob(
   serviceRole: string,
   jobId: string,
   userId: string,
+  languageCode?: string,
+  isEnglish?: boolean,
 ) {
   const supabase = createClient(supabaseUrl, serviceRole);
   const startedAt = new Date().toISOString();
@@ -69,7 +71,7 @@ async function runWeeklySummaryJob(
         Authorization: `Bearer ${serviceRole}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ user_id: userId }),
+      body: JSON.stringify({ user_id: userId, language_code: languageCode, is_english: isEnglish }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data?.success !== true) {
@@ -124,6 +126,8 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRole);
     const body = await req.json().catch(() => ({}));
     const userId = toText(body?.user_id);
+    const languageCode = toText(body?.language_code);
+    const isEnglish = body?.is_english === true;
     if (!userId) throw new Error("Missing user_id");
 
     const existingJob = await findActiveJob(supabase, userId);
@@ -145,7 +149,14 @@ Deno.serve(async (req) => {
     }
 
     runFireAndForget(
-      runWeeklySummaryJob(supabaseUrl, serviceRole, queuedJob.id, userId),
+      runWeeklySummaryJob(
+        supabaseUrl,
+        serviceRole,
+        queuedJob.id,
+        userId,
+        languageCode,
+        isEnglish,
+      ),
     );
 
     return new Response(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../theme/stats_colors.dart';
 import '../theme/stats_text_styles.dart';
 import '../theme/stats_decorations.dart';
@@ -55,10 +56,16 @@ class _CompletionChartState extends State<CompletionChart> {
                 // 标题行
                 Row(
                   children: [
-                    Text('任务完成趋势', style: StatsTextStyles.sectionTitle),
+                    Text(
+                      context.tr('stats.chart.completion_title'),
+                      style: StatsTextStyles.sectionTitle,
+                    ),
                     const Spacer(),
                     SegmentedToggle(
-                      labels: const ['7天', '30天'],
+                      labels: [
+                        context.tr('stats.range.7_days'),
+                        context.tr('stats.range.30_days'),
+                      ],
                       selectedIndex: _selectedIndex,
                       onChanged: (i) => setState(() => _selectedIndex = i),
                     ),
@@ -80,13 +87,13 @@ class _CompletionChartState extends State<CompletionChart> {
                 Row(
                   children: [
                     _MicroStat(
-                      label: '日均',
+                      label: context.tr('stats.metric.daily_average'),
                       value: avg.toStringAsFixed(1),
                       color: StatsColors.softSage,
                     ),
                     const SizedBox(width: 20),
                     _MicroStat(
-                      label: '完美天',
+                      label: context.tr('stats.metric.perfect_days'),
                       value: '$perfectCount',
                       color: StatsColors.goldPrimary,
                     ),
@@ -139,7 +146,10 @@ class _CompletionChartState extends State<CompletionChart> {
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               final s = data[group.x.toInt()];
               return BarTooltipItem(
-                '${s.completedCount} 个任务',
+                context.tr(
+                  'stats.task_count',
+                  params: {'count': '${s.completedCount}'},
+                ),
                 StatsTextStyles.chartLabel.copyWith(
                   color: StatsColors.bodyText,
                   fontWeight: FontWeight.w600,

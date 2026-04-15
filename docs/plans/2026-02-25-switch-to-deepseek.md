@@ -2,47 +2,56 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 将 `parse-quest` Edge Function 的 LLM 提供商从 OpenAI 切换为 DeepSeek，并设置正确的 API Key。
+**Goal:** Switch `parse-quest` from OpenAI to DeepSeek, and standardize both the API key and base URL configuration.
 
 **Architecture:**
-- **Endpoint:** `https://api.deepseek.com/chat/completions` (OpenAI-compatible)
+- **Base URL:** `https://api.deepseek.com`
+- **Endpoint:** `https://api.deepseek.com/chat/completions`
 - **Model:** `deepseek-chat`
-- **Key:** Set via Supabase Secrets.
+- **Secrets:** `DEEPSEEK_API_KEY` and `DEEPSEEK_BASE_URL`
 
 **Tech Stack:** Deno, Supabase Edge Functions.
 
 ---
 
-### Task 1: 修改代码逻辑
+### Task 1: Update LLM Call
 
 **Files:**
 - Modify: `supabase/functions/parse-quest/index.ts`
 
-**Step 1: 更新 Fetch URL**
-- 将 `https://api.openai.com/v1/chat/completions` 替换为 `https://api.deepseek.com/chat/completions`。
+**Steps:**
+1. Replace the OpenAI endpoint with `https://api.deepseek.com/chat/completions`.
+2. Replace the model with `deepseek-chat`.
+3. Read the API key from `Deno.env.get("DEEPSEEK_API_KEY")`.
+4. Read the base URL from `Deno.env.get("DEEPSEEK_BASE_URL") ?? "https://api.deepseek.com"`.
 
-**Step 2: 更新 Model**
-- 将 `gpt-4o-mini` 替换为 `deepseek-chat`。
-
-**Step 3: 移除硬编码的 Key 引用 (最佳实践)**
-- 代码中依然通过 `Deno.env.get('OPENAI_API_KEY')` 获取 Key。
-- **注意**: 我们可以保持环境变量名为 `OPENAI_API_KEY` 以减少代码改动，或者改名为 `DEEPSEEK_API_KEY`。为了代码清晰，建议改名为 `DEEPSEEK_API_KEY`，并在部署时设置该 Secret。
-
-### Task 2: 重新部署与配置 Secret
+### Task 2: Configure Secrets
 
 **Files:**
-- None (Command line operations)
+- None (CLI / deployment configuration)
 
-**Step 1: 设置 Secret**
-- 运行 `supabase secrets set DEEPSEEK_API_KEY=sk-xxxx`。
+**Steps:**
+1. Run:
 
-**Step 2: 部署**
-- 运行 `supabase functions deploy parse-quest`.
+```bash
+supabase secrets set DEEPSEEK_API_KEY=<your-deepseek-key> DEEPSEEK_BASE_URL=https://api.deepseek.com
+```
+
+2. Redeploy:
+
+```bash
+supabase functions deploy parse-quest
+```
+
+### Task 3: Security Rule
+
+**Rule:** Never write the real DeepSeek key into tracked docs, source code, or committed `.env` files. The real key must only be injected through local environment variables or Supabase Secrets.
 
 ---
 
 ### Execution Steps
 
-1.  **Code**: Update `index.ts`.
-2.  **Secret**: Set the provided DeepSeek Key.
-3.  **Deploy**: Redeploy function.
+1. Update `parse-quest` to use DeepSeek.
+2. Set `DEEPSEEK_API_KEY`.
+3. Set `DEEPSEEK_BASE_URL=https://api.deepseek.com`.
+4. Redeploy and verify the function.

@@ -115,7 +115,7 @@ class _QuickAddBarState extends State<QuickAddBar>
           );
         }
       },
-      localeId: 'zh_CN',
+      localeId: context.isEnglish ? 'en_US' : 'zh_CN',
       listenOptions: stt.SpeechListenOptions(
         listenMode: stt.ListenMode.dictation,
       ),
@@ -215,25 +215,22 @@ class _QuickAddBarState extends State<QuickAddBar>
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
-                            onPressed:
-                                widget.isLoading ? null : _handleSubmit,
+                            onPressed: widget.isLoading ? null : _handleSubmit,
                             icon: widget.isLoading
                                 ? SizedBox(
                                     width: 20,
                                     height: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor:
-                                          AlwaysStoppedAnimation<Color>(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
                                         theme.primaryAccentColor,
                                       ),
                                     ),
                                   )
                                 : const Icon(Icons.arrow_upward_rounded),
-                            color:
-                                widget.isLoading || _controller.text.isEmpty
-                                    ? AppColors.textHint
-                                    : AppColors.pureWhite,
+                            color: widget.isLoading || _controller.text.isEmpty
+                                ? AppColors.textHint
+                                : AppColors.pureWhite,
                             tooltip: context.tr('common.send'),
                           ),
                         ),

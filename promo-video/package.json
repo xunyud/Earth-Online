@@ -8,6 +8,8 @@
     "voice:zh": "powershell -ExecutionPolicy Bypass -File scripts\\generate_voice.ps1 -SceneFile src\\voice-lines.zh.json -AudioDir public\\audio-zh -VoicePattern \"Microsoft Huihui Desktop*\"",
     "render": "remotion render src/index.ts EarthOnlinePromo ../output/earth-online-intro.mp4",
     "render:zh": "remotion render src/index.ts EarthOnlinePromoZh ../output/earth-online-intro-zh.mp4",
+    "render:competition": "remotion render src/index.ts EarthOnlineCompetition ../output/earth-online-competition-demo-en.mp4",
+    "render:competition:zh": "remotion render src/index.ts EarthOnlineCompetitionZh ../output/earth-online-competition-demo-zh.mp4",
     "still": "remotion still src/index.ts EarthOnlinePoster ../output/earth-online-poster.png --frame=30",
     "still:zh": "remotion still src/index.ts EarthOnlinePosterZh ../output/earth-online-poster-zh.png --frame=30"
   },

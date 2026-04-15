@@ -3,6 +3,7 @@ import '../controllers/quest_controller.dart';
 import '../../../core/theme/quest_theme.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 
 class RecycleBinPage extends StatelessWidget {
@@ -23,22 +24,22 @@ class RecycleBinPage extends StatelessWidget {
         elevation: 0,
         backgroundColor: Colors.transparent,
         title: Text(
-          '回收站',
+          context.tr('recycle.title'),
           style: AppTextStyles.heading1.copyWith(
             color: theme.primaryAccentColor,
           ),
         ),
         actions: [
           IconButton(
-            tooltip: '恢复全部',
+            tooltip: context.tr('recycle.restore_all.tooltip'),
             icon: const Icon(Icons.restore_page_rounded),
             color: AppColors.textSecondary,
             onPressed: () async {
               final ok = await showConfirmDialog(
                 context,
-                title: '恢复全部',
-                message: '将把回收站内的所有任务恢复到主界面。是否继续？',
-                confirmText: '确认恢复',
+                title: context.tr('recycle.restore_all.title'),
+                message: context.tr('recycle.restore_all.message'),
+                confirmText: context.tr('recycle.restore_all.confirm'),
               );
               if (ok) {
                 controller.restoreAllQuests();
@@ -46,15 +47,15 @@ class RecycleBinPage extends StatelessWidget {
             },
           ),
           IconButton(
-            tooltip: '清空回收站',
+            tooltip: context.tr('recycle.empty_bin.tooltip'),
             icon: const Icon(Icons.delete_forever_rounded),
             color: Colors.redAccent,
             onPressed: () async {
               final ok = await showConfirmDialog(
                 context,
-                title: '清空回收站',
-                message: '回收站内的任务将被永久删除，无法找回。是否继续？',
-                confirmText: '确认清空',
+                title: context.tr('recycle.empty_bin.title'),
+                message: context.tr('recycle.empty_bin.message'),
+                confirmText: context.tr('recycle.empty_bin.confirm'),
                 danger: true,
               );
               if (ok) {
@@ -72,7 +73,7 @@ class RecycleBinPage extends StatelessWidget {
           if (items.isEmpty) {
             return Center(
               child: Text(
-                '回收站为空',
+                context.tr('recycle.empty'),
                 style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
               ),
             );
@@ -106,13 +107,13 @@ class RecycleBinPage extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        tooltip: '恢复',
+                        tooltip: context.tr('recycle.restore.tooltip'),
                         icon: const Icon(Icons.restore_rounded),
                         color: AppColors.textSecondary,
                         onPressed: () => controller.restoreQuest(q.id),
                       ),
                       IconButton(
-                        tooltip: '彻底删除',
+                        tooltip: context.tr('recycle.delete.tooltip'),
                         icon: const Icon(Icons.delete_forever_rounded),
                         color: Colors.redAccent,
                         onPressed: () => controller.permanentlyDeleteQuest(q.id),

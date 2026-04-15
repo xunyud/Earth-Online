@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../theme/stats_colors.dart';
 import '../theme/stats_text_styles.dart';
 import '../theme/stats_decorations.dart';
@@ -49,7 +51,10 @@ class StreakCalendar extends StatelessWidget {
                 // 标题行
                 Row(
                   children: [
-                    Text('签到日历', style: StatsTextStyles.sectionTitle),
+                    Text(
+                      context.tr('stats.checkin_calendar_title'),
+                      style: StatsTextStyles.sectionTitle,
+                    ),
                     const Spacer(),
                     // 补签价格提示
                     Container(
@@ -66,7 +71,7 @@ class StreakCalendar extends StatelessWidget {
                               size: 13, color: StatsColors.goldPrimary),
                           const SizedBox(width: 3),
                           Text(
-                            '补签 50/天',
+                            context.tr('stats.makeup.cost_per_day'),
                             style: StatsTextStyles.badgeText.copyWith(
                               fontSize: 11,
                             ),
@@ -79,7 +84,15 @@ class StreakCalendar extends StatelessWidget {
                 const SizedBox(height: 4),
                 // 月份标签
                 Text(
-                  '${days.first.month}月${days.first.day}日 - ${days.last.month}月${days.last.day}日',
+                  context.tr(
+                    'stats.date_range',
+                    params: {
+                      'startMonth': '${days.first.month}',
+                      'startDay': '${days.first.day}',
+                      'endMonth': '${days.last.month}',
+                      'endDay': '${days.last.day}',
+                    },
+                  ),
                   style: StatsTextStyles.chartLabel,
                 ),
                 const SizedBox(height: 14),
@@ -97,7 +110,15 @@ class StreakCalendar extends StatelessWidget {
   }
 
   Widget _buildWeekdayHeader() {
-    const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+    final weekdays = <String>[
+      AppLocaleController.instance.t('stats.weekday.mon'),
+      AppLocaleController.instance.t('stats.weekday.tue'),
+      AppLocaleController.instance.t('stats.weekday.wed'),
+      AppLocaleController.instance.t('stats.weekday.thu'),
+      AppLocaleController.instance.t('stats.weekday.fri'),
+      AppLocaleController.instance.t('stats.weekday.sat'),
+      AppLocaleController.instance.t('stats.weekday.sun'),
+    ];
     return Row(
       children: weekdays.map((d) {
         return Expanded(
@@ -167,13 +188,19 @@ class StreakCalendar extends StatelessWidget {
       builder: (context) => AlertDialog(
         backgroundColor: StatsColors.cardSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('补签确认', style: StatsTextStyles.sectionTitle),
+        title: Text(
+          context.tr('stats.makeup.confirm_title'),
+          style: StatsTextStyles.sectionTitle,
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '补签 ${date.month}月${date.day}日',
+              context.tr(
+                'stats.makeup.date',
+                params: {'month': '${date.month}', 'day': '${date.day}'},
+              ),
               style: StatsTextStyles.insightBody,
             ),
             const SizedBox(height: 8),
@@ -183,7 +210,7 @@ class StreakCalendar extends StatelessWidget {
                     size: 16, color: StatsColors.goldPrimary),
                 const SizedBox(width: 4),
                 Text(
-                  '花费 50 金币',
+                  context.tr('stats.makeup.cost'),
                   style: StatsTextStyles.insightBody.copyWith(
                     color: StatsColors.goldPrimary,
                     fontWeight: FontWeight.w600,
@@ -191,7 +218,10 @@ class StreakCalendar extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '余额 $gold',
+                  context.tr(
+                    'stats.makeup.balance',
+                    params: {'gold': '$gold'},
+                  ),
                   style: StatsTextStyles.chartLabel,
                 ),
               ],
@@ -199,7 +229,7 @@ class StreakCalendar extends StatelessWidget {
             if (gold < 50) ...[
               const SizedBox(height: 8),
               Text(
-                '金币不足',
+                context.tr('stats.makeup.insufficient_gold'),
                 style: StatsTextStyles.chartLabel.copyWith(
                   color: Colors.redAccent,
                 ),
@@ -211,8 +241,10 @@ class StreakCalendar extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              '取消',
-              style: TextStyle(color: StatsColors.subtitleText),
+              context.tr('common.cancel'),
+              style: AppTextStyles.withFontFallback(
+                const TextStyle(color: StatsColors.subtitleText),
+              ),
             ),
           ),
           TextButton(
@@ -223,13 +255,13 @@ class StreakCalendar extends StatelessWidget {
                   }
                 : null,
             child: Text(
-              '确认补签',
-              style: TextStyle(
+              context.tr('stats.makeup.confirm_action'),
+              style: AppTextStyles.withFontFallback(TextStyle(
                 color: gold >= 50
                     ? StatsColors.goldPrimary
                     : StatsColors.subtitleText,
                 fontWeight: FontWeight.w600,
-              ),
+              )),
             ),
           ),
         ],
@@ -291,7 +323,7 @@ class _CalendarCell extends StatelessWidget {
           // 日期数字
           Text(
             '$day',
-            style: TextStyle(
+            style: AppTextStyles.withFontFallback(TextStyle(
               fontSize: 12,
               fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
               color: isChecked
@@ -299,7 +331,7 @@ class _CalendarCell extends StatelessWidget {
                   : isToday
                       ? StatsColors.goldPrimary
                       : StatsColors.bodyText,
-            ),
+            )),
           ),
           // 已签到指示点
           if (isChecked)

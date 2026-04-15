@@ -361,8 +361,9 @@ class _RewardShopPageState extends State<RewardShopPage> {
       final res = await showConfirmWithDontAskDialog(
         context,
         title: context.tr('shop.delete_title'),
-        message:
-            context.tr('shop.delete_message', params: {'title': reward.title}),
+        message: context.tr('shop.delete_message', params: {
+          'title': reward.localizedTitle(context.isEnglish),
+        }),
       );
       if (!mounted) return;
       confirmed = res.confirmed;
@@ -742,7 +743,7 @@ class _RewardShopPageState extends State<RewardShopPage> {
 
   String _buildRewardSubtitle(Reward reward) {
     final price = '${reward.cost} ${context.tr('shop.gold_unit')}';
-    final description = reward.description?.trim();
+    final description = reward.localizedDescription(context.isEnglish)?.trim();
     if (description == null || description.isEmpty) {
       return price;
     }
@@ -786,7 +787,9 @@ class _RewardShopPageState extends State<RewardShopPage> {
       child: ListTile(
         leading: const Icon(Icons.card_giftcard_rounded, color: Colors.amber),
         title: Text(
-          reward.title.isEmpty ? context.tr('shop.unnamed') : reward.title,
+          reward.title.isEmpty
+              ? context.tr('shop.unnamed')
+              : reward.localizedTitle(context.isEnglish),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: AppTextStyles.heading2.copyWith(

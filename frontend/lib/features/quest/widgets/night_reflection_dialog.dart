@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../../../core/theme/quest_theme.dart';
 import '../../../shared/widgets/quest_dialog_shell.dart';
 
@@ -36,7 +37,7 @@ class NightReflectionDialog extends StatelessWidget {
 
     return QuestDialogShell(
       title: title,
-      subtitle: '把今天的完成感收回来一点，再决定要不要给明天留一个起步动作。',
+      subtitle: context.tr('night.dialog.subtitle'),
       maxWidth: 980,
       scrollable: true,
       accentColor: accent,
@@ -62,7 +63,7 @@ class NightReflectionDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           QuestDialogInfoCard(
-            label: '今晚复盘',
+            label: context.tr('night.dialog.review_label'),
             icon: Icons.local_fire_department_rounded,
             accentColor: accent,
             child: Text(
@@ -101,7 +102,7 @@ class NightReflectionDialog extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           QuestDialogInfoCard(
-            label: '如果你想顺手留给明天',
+            label: context.tr('night.dialog.tomorrow_label'),
             icon: Icons.wb_twilight_rounded,
             accentColor: accent,
             child: Column(

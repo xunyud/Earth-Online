@@ -71,4 +71,56 @@ void main() {
     expect(RewardController.isSupportedSystemReward(effectReward), isFalse);
     expect(RewardController.isSupportedSystemReward(cosmeticReward), isFalse);
   });
+  test('localizedSystemRewardTitle returns English copy for known system reward',
+      () {
+    const reward = Reward(
+      id: 'daily-1',
+      title: '鍚竴棣栨瓕',
+      cost: 1,
+      description: '瀹夐潤鍚畬涓€棣栧枩娆㈢殑姝?,
+      category: 'custom',
+      isSystem: true,
+    );
+
+    expect(
+      RewardController.localizedSystemRewardTitle(
+        reward,
+        languageCode: 'en',
+      ),
+      'Listen to One Song',
+    );
+    expect(
+      RewardController.localizedSystemRewardDescription(
+        reward,
+        languageCode: 'en',
+      ),
+      'Give yourself a few quiet minutes to listen through one favorite song.',
+    );
+  });
+
+  test('localizedSystemRewardTitle keeps custom rewards unchanged', () {
+    const reward = Reward(
+      id: 'custom-1',
+      title: 'Buy fresh flowers',
+      cost: 30,
+      description: 'Pick something bright for the desk.',
+      category: 'custom',
+      isSystem: false,
+    );
+
+    expect(
+      RewardController.localizedSystemRewardTitle(
+        reward,
+        languageCode: 'en',
+      ),
+      reward.title,
+    );
+    expect(
+      RewardController.localizedSystemRewardDescription(
+        reward,
+        languageCode: 'en',
+      ),
+      reward.description,
+    );
+  });
 }

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/i18n/app_locale_controller.dart';
+
 enum WeeklySummaryJobStatus {
   queued,
   running,
@@ -104,7 +106,11 @@ class SupabaseWeeklySummaryJobGateway implements WeeklySummaryJobGateway {
         (key, value) => MapEntry(key.toString(), value),
       );
     }
-    throw StateError('函数 $functionName 返回了无法识别的数据格式');
+    throw StateError(
+      AppLocaleController.instance.isEnglish
+          ? 'Function $functionName returned an unsupported payload format.'
+          : '函数 $functionName 返回了无法识别的数据格式',
+    );
   }
 }
 
@@ -164,7 +170,11 @@ class WeeklySummaryJobService extends ChangeNotifier {
     if (userId == null || userId.isEmpty) return null;
     final data = await _gateway.invoke(
       'weekly-summary-enqueue',
-      <String, dynamic>{'user_id': userId},
+      <String, dynamic>{
+        'user_id': userId,
+        'language_code': AppLocaleController.instance.locale.languageCode,
+        'is_english': AppLocaleController.instance.isEnglish,
+      },
     );
     final job = _extractJob(data);
     _applyJob(job);
@@ -231,7 +241,13 @@ class WeeklySummaryJobService extends ChangeNotifier {
     final success = data['success'];
     if (success == false) {
       final error = data['error']?.toString().trim();
-      throw StateError(error?.isNotEmpty == true ? error! : '周报任务接口返回失败');
+      throw StateError(
+        error?.isNotEmpty == true
+            ? error!
+            : AppLocaleController.instance.isEnglish
+                ? 'Weekly report job request failed.'
+                : '周报任务接口返回失败',
+      );
     }
     final rawJob = data['job'];
     if (rawJob is Map<String, dynamic>) {

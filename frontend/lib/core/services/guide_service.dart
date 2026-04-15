@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../i18n/app_locale_controller.dart';
 import 'supabase_auth_service.dart';
 
 enum GuideErrorType {
@@ -22,6 +23,13 @@ class GuideServiceException implements Exception {
 
   @override
   String toString() => message;
+}
+
+String _guideLocalizedText({
+  required String zh,
+  required String en,
+}) {
+  return AppLocaleController.instance.isEnglish ? en : zh;
 }
 
 class GuideSuggestedTask {
@@ -47,7 +55,8 @@ class GuideSuggestedTask {
       _ => 'Daily',
     };
     return GuideSuggestedTask(
-      title: (map['title'] as String?)?.trim() ?? '鎭㈠浠诲姟',
+      title: (map['title'] as String?)?.trim() ??
+          _guideLocalizedText(zh: '恢复任务', en: 'Recovery Task'),
       description: (map['description'] as String?)?.trim() ?? '',
       xpReward: xp.clamp(5, 200),
       questTier: tier,
@@ -92,7 +101,11 @@ class GuideDailyEvent {
       eventId: (map['event_id'] as String?)?.trim() ??
           (map['id'] as String?)?.trim() ??
           '',
-      title: (map['title'] as String?)?.trim() ?? '鍦扮悆绐佸彂浜嬩欢',
+      title: (map['title'] as String?)?.trim() ??
+          _guideLocalizedText(
+            zh: '地球突发事件',
+            en: 'Earth Dynamic Event',
+          ),
       description: (map['description'] as String?)?.trim() ?? '',
       rewardXp: (xpRaw is num ? xpRaw.round() : int.tryParse('$xpRaw') ?? 0)
           .clamp(0, 9999),
@@ -331,9 +344,15 @@ class GuideNightReflectionResult {
 
   factory GuideNightReflectionResult.fromMap(Map<String, dynamic> map) {
     final refsRaw = map['memory_refs'];
-    const fallbackTask = GuideSuggestedTask(
-      title: '明日恢复支线：拉伸 10 分钟',
-      description: '用短恢复动作降低明天的启动压力。',
+    final fallbackTask = GuideSuggestedTask(
+      title: _guideLocalizedText(
+        zh: '明日恢复支线：拉伸 10 分钟',
+        en: 'Tomorrow Recovery: 10-Min Stretch',
+      ),
+      description: _guideLocalizedText(
+        zh: '用短恢复动作降低明天的启动压力。',
+        en: 'Use a short recovery move to lower tomorrow startup pressure.',
+      ),
       xpReward: 20,
       questTier: 'Daily',
     );
@@ -511,8 +530,15 @@ class GuideService {
     }, onConflict: 'user_id');
   }
 
-  Future<GuideBootstrapResult> bootstrap({String scene = 'home'}) async {
-    final data = await _invoke('guide-bootstrap', body: {'scene': scene});
+  Future<GuideBootstrapResult> bootstrap({
+    String scene = 'home',
+    Map<String, dynamic>? clientContext,
+  }) async {
+    final body = <String, dynamic>{'scene': scene};
+    if (clientContext != null && clientContext.isNotEmpty) {
+      body['client_context'] = clientContext;
+    }
+    final data = await _invoke('guide-bootstrap', body: body);
     return GuideBootstrapResult.fromMap(data);
   }
 
@@ -535,6 +561,7 @@ class GuideService {
   Future<GuideNightReflectionResult> nightReflection({
     String? dayId,
     String? uploadRequestId,
+    Map<String, dynamic>? clientContext,
   }) async {
     final body = <String, dynamic>{};
     if (dayId != null && dayId.trim().isNotEmpty) {
@@ -543,12 +570,22 @@ class GuideService {
     if (uploadRequestId != null && uploadRequestId.trim().isNotEmpty) {
       body['upload_request_id'] = uploadRequestId.trim();
     }
+    if (clientContext != null && clientContext.isNotEmpty) {
+      body['client_context'] = clientContext;
+    }
     final data = await _invoke('guide-night-reflection', body: body);
     return GuideNightReflectionResult.fromMap(data);
   }
 
-  Future<GuideDailyEvent> generateEvent({String scene = 'home'}) async {
-    final data = await _invoke('guide-event-generate', body: {'scene': scene});
+  Future<GuideDailyEvent> generateEvent({
+    String scene = 'home',
+    Map<String, dynamic>? clientContext,
+  }) async {
+    final body = <String, dynamic>{'scene': scene};
+    if (clientContext != null && clientContext.isNotEmpty) {
+      body['client_context'] = clientContext;
+    }
+    final data = await _invoke('guide-event-generate', body: body);
     return GuideDailyEvent.fromMap(data);
   }
 
@@ -589,9 +626,12 @@ class GuideService {
     final accessToken =
         await SupabaseAuthService.instance.getValidAccessToken();
     if (accessToken == null || accessToken.isEmpty) {
-      throw const GuideServiceException(
+      throw GuideServiceException(
         type: GuideErrorType.authExpired,
-        message: '鐢ㄦ埛浼氳瘽宸插け鏁堬紝璇烽噸鏂扮櫥褰曞悗閲嶈瘯',
+        message: _guideLocalizedText(
+          zh: '用户会话已失效，请重新登录后再试',
+          en: 'Your session expired. Please sign in again.',
+        ),
       );
     }
     try {
@@ -604,8 +644,10 @@ class GuideService {
       );
       if (response.status < 200 || response.status >= 300) {
         final status = response.status;
-        final message =
-            '$functionName 璋冪敤澶辫触: status=$status data=${response.data}';
+        final message = _guideLocalizedText(
+          zh: '$functionName 调用失败: status=$status data=${response.data}',
+          en: '$functionName failed: status=$status data=${response.data}',
+        );
         if (status == 401 || status == 403) {
           throw GuideServiceException(
             type: GuideErrorType.authExpired,
@@ -629,7 +671,10 @@ class GuideService {
       final data = response.data;
       if (data is Map<String, dynamic>) {
         if (data['success'] == false) {
-          final errorText = '${data['error'] ?? '$functionName 杩斿洖澶辫触'}';
+          final errorText = '${data['error'] ?? _guideLocalizedText(
+                zh: '$functionName 返回失败',
+                en: '$functionName returned failure',
+              )}';
           throw GuideServiceException(
             type: _inferErrorType(errorText),
             message: errorText,
@@ -642,7 +687,10 @@ class GuideService {
           (key, value) => MapEntry('$key', value),
         );
         if (casted['success'] == false) {
-          final errorText = '${casted['error'] ?? '$functionName 杩斿洖澶辫触'}';
+          final errorText = '${casted['error'] ?? _guideLocalizedText(
+                zh: '$functionName 返回失败',
+                en: '$functionName returned failure',
+              )}';
           throw GuideServiceException(
             type: _inferErrorType(errorText),
             message: errorText,
@@ -652,7 +700,10 @@ class GuideService {
       }
       throw GuideServiceException(
         type: GuideErrorType.service,
-        message: '$functionName 杩斿洖鏍煎紡寮傚父',
+        message: _guideLocalizedText(
+          zh: '$functionName 返回格式异常',
+          en: '$functionName returned an unexpected payload format',
+        ),
       );
     } on GuideServiceException {
       rethrow;

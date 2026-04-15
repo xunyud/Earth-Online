@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 
 import '../../quest/controllers/quest_controller.dart';
 import '../controllers/stats_controller.dart';
@@ -265,14 +266,14 @@ class _StatsPageState extends State<StatsPage>
             ),
             const SizedBox(height: 16),
             Text(
-              '还没有数据',
+              context.tr('stats.empty_title'),
               style: StatsTextStyles.sectionTitle.copyWith(
                 color: StatsColors.subtitleText,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              '完成一些任务后，这里会展示你的成长轨迹',
+              context.tr('stats.empty_body'),
               style: StatsTextStyles.metricLabel.copyWith(fontSize: 13),
               textAlign: TextAlign.center,
             ),

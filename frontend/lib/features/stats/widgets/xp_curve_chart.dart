@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../theme/stats_colors.dart';
 import '../theme/stats_text_styles.dart';
 import '../theme/stats_decorations.dart';
@@ -55,7 +56,10 @@ class XpCurveChart extends StatelessWidget {
                 // 标题行 + XP 徽章
                 Row(
                   children: [
-                    Text('XP 成长曲线', style: StatsTextStyles.sectionTitle),
+                    Text(
+                      context.tr('stats.xp_curve_title'),
+                      style: StatsTextStyles.sectionTitle,
+                    ),
                     const Spacer(),
                     if (recent30DaysXp > 0)
                       Container(

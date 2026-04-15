@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../../../core/theme/quest_theme.dart';
 import '../theme/stats_colors.dart';
 import '../theme/stats_text_styles.dart';
@@ -36,9 +37,9 @@ class QuestMixCard extends StatelessWidget {
       'Daily': theme.dailyQuestColor,
     };
     final nameMap = {
-      'Main_Quest': '主线任务',
-      'Side_Quest': '支线任务',
-      'Daily': '日常任务',
+      'Main_Quest': context.tr('quick_add.create.tier_main'),
+      'Side_Quest': context.tr('quick_add.create.tier_side'),
+      'Daily': context.tr('quick_add.create.tier_daily'),
     };
 
     return FadeTransition(
@@ -56,7 +57,10 @@ class QuestMixCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('任务构成', style: StatsTextStyles.sectionTitle),
+                Text(
+                  context.tr('stats.quest_mix_title'),
+                  style: StatsTextStyles.sectionTitle,
+                ),
                 const SizedBox(height: 16),
                 ...tiers.asMap().entries.map((entry) {
                   final i = entry.key;
@@ -127,7 +131,10 @@ class _QuestMixBar extends StatelessWidget {
             ),
             const Spacer(),
             Text(
-              '${count}个 ($percentLabel)',
+              context.tr(
+                'stats.quest_mix_count',
+                params: {'count': '$count', 'percent': percentLabel},
+              ),
               style: StatsTextStyles.chartLabel.copyWith(
                 fontSize: 12,
               ),

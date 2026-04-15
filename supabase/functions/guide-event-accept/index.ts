@@ -48,7 +48,17 @@ Deno.serve(async (req) => {
     if (!eventId) return json(400, { success: false, error: "Missing event_id" })
 
     const supabase = createClient(supabaseUrl, serviceRole)
-    const payload = await acceptOrDismissDailyEvent(supabase, authData.user.id, eventId, accept)
+    const clientContext =
+      body?.client_context && typeof body.client_context === "object" && !Array.isArray(body.client_context)
+        ? body.client_context as Record<string, unknown>
+        : undefined
+    const payload = await acceptOrDismissDailyEvent(
+      supabase,
+      authData.user.id,
+      eventId,
+      accept,
+      clientContext,
+    )
     return json(200, { success: true, ...payload })
   } catch (error) {
     return json(500, { success: false, error: error instanceof Error ? error.message : String(error) })

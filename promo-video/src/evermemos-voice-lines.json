@@ -1,0 +1,34 @@
+[
+  {
+    "id": "opener",
+    "voice": "Most people are not short on goals. They are short on mental space."
+  },
+  {
+    "id": "promise",
+    "voice": "We built a memory-native companion that remembers what matters, follows up at the right time, and helps reduce daily stress."
+  },
+  {
+    "id": "memory",
+    "voice": "Instead of asking users to repeat themselves, our system keeps track of tasks, context, and priorities over time."
+  },
+  {
+    "id": "clarity",
+    "voice": "That memory becomes useful structure. It helps the user see what needs attention now, without carrying every detail in their head."
+  },
+  {
+    "id": "care",
+    "voice": "But the real value is not just recall. It is timing. When the system notices pressure building, it can check in gently, remind the user what matters, and help them feel supported."
+  },
+  {
+    "id": "summary-setup",
+    "voice": "Because memory compounds, the product can also turn a week of scattered tasks into a clear summary and a useful report."
+  },
+  {
+    "id": "summary-report",
+    "voice": "It becomes a better starting point for the next week."
+  },
+  {
+    "id": "closing",
+    "voice": "This is not just task management. It is memory that helps people feel less overwhelmed, more organized, and more cared for."
+  }
+]

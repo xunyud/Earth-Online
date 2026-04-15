@@ -1,4 +1,27 @@
 
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = []
+enable_signup = true
+enable_anonymous_sign_ins = true
+
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+secure_password_change = false
+max_frequency = "1m0s"
+otp_length = 6
+otp_expiry = 3600
+
 [functions.wechat-webhook]
 enabled = true
 verify_jwt = false
@@ -71,3 +94,23 @@ entrypoint = "./functions/guide-event-accept/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/guide-portrait-generate/index.ts"
+
+[functions.agent-turn]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/agent-turn/index.ts"
+
+[functions.agent-run-status]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/agent-run-status/index.ts"
+
+[functions.agent-step-approve]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/agent-step-approve/index.ts"
+
+[functions.agent-step-complete]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/agent-step-complete/index.ts"

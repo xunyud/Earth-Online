@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_text_styles.dart';
 import '../theme/stats_colors.dart';
 
 /// Pill 形分段切换控件
@@ -50,13 +51,13 @@ class SegmentedToggle extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 labels[i],
-                style: TextStyle(
+                style: AppTextStyles.withFontFallback(TextStyle(
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   color: isSelected
                       ? StatsColors.bodyText
                       : StatsColors.subtitleText,
-                ),
+                )),
               ),
             ),
           );

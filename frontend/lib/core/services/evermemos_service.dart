@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/quest/models/quest_node.dart';
 import '../config/app_config.dart';
+import '../i18n/app_locale_controller.dart';
 
 class EvermemosSyncResult {
   final int syncedCount;
@@ -112,14 +113,6 @@ class EvermemosUserProfileReport {
     'social',
   ];
 
-  static const Map<String, String> dimensionLabels = <String, String>{
-    'execution': '执行力',
-    'consistency': '稳定性',
-    'growth': '成长性',
-    'wellbeing': '自我照顾',
-    'social': '协作沟通',
-  };
-
   final String userId;
   final int memoryCount;
   final Map<String, double> scores;
@@ -157,6 +150,10 @@ class EvermemosService {
   final Set<String> _uploadedQuestIdsToday = <String>{};
   String? _uploadedQuestDayKey;
 
+  bool get _isEnglish => AppLocaleController.instance.isEnglish;
+
+  String _txt(String zh, String en) => _isEnglish ? en : zh;
+
   void dispose() {
     _client.close();
   }
@@ -166,18 +163,33 @@ class EvermemosService {
   ) async {
     final todayCompleted = _extractTodayCompletedQuests(quests);
     if (todayCompleted.isEmpty) {
-      throw const EvermemosSyncException('今天还没有已完成任务可供上传。');
+      throw EvermemosSyncException(
+        _txt(
+          '今天还没有已完成任务可供上传。',
+          'There are no completed quests from today to upload yet.',
+        ),
+      );
     }
     _resetUploadedQuestCacheIfNeeded();
     final unsyncedTodayCompleted = todayCompleted
         .where((quest) => !_uploadedQuestIdsToday.contains(quest.id))
         .toList();
     if (unsyncedTodayCompleted.isEmpty) {
-      throw const EvermemosSyncException('今天的新完成任务都已上传，无需重复上传。');
+      throw EvermemosSyncException(
+        _txt(
+          '今天的新完成任务都已上传，无需重复上传。',
+          'All newly completed quests from today were already uploaded.',
+        ),
+      );
     }
     final userId = _currentUserIdProvider()?.trim() ?? '';
     if (userId.isEmpty) {
-      throw const EvermemosSyncException('未检测到当前登录用户，禁止上传无主记忆。');
+      throw EvermemosSyncException(
+        _txt(
+          '未检测到当前登录用户，禁止上传无主记忆。',
+          'No signed-in user was found, so orphan memories cannot be uploaded.',
+        ),
+      );
     }
 
     debugPrint(
@@ -211,7 +223,11 @@ class EvermemosService {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw EvermemosSyncException(
-          '上传失败 (${response.statusCode})：${response.body}');
+        _txt(
+          '上传失败 (${response.statusCode})：${response.body}',
+          'Upload failed (${response.statusCode}): ${response.body}',
+        ),
+      );
     }
 
     final decodedBody = _tryDecodeJsonObject(response.body);
@@ -246,7 +262,10 @@ class EvermemosService {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw EvermemosSyncException(
-        '状态查询失败 (${response.statusCode})：${response.body}',
+        _txt(
+          '状态查询失败 (${response.statusCode})：${response.body}',
+          'Status check failed (${response.statusCode}): ${response.body}',
+        ),
       );
     }
 
@@ -298,13 +317,23 @@ class EvermemosService {
       return lastStatus;
     }
 
-    throw const EvermemosSyncException('状态轮询失败：未获取到有效返回。');
+    throw EvermemosSyncException(
+      _txt(
+        '状态轮询失败：未获取到有效返回。',
+        'Status polling failed: no valid response was received.',
+      ),
+    );
   }
 
   Future<EvermemosMemoryFetchResult> fetchMemoriesForCurrentUser() async {
     final userId = _currentUserIdProvider()?.trim() ?? '';
     if (userId.isEmpty) {
-      throw const EvermemosSyncException('未检测到当前登录用户，无法拉取记忆。');
+      throw EvermemosSyncException(
+        _txt(
+          '未检测到当前登录用户，无法拉取记忆。',
+          'No signed-in user was found, so memories cannot be fetched.',
+        ),
+      );
     }
 
     final groupId = 'quest-log:$userId';
@@ -350,7 +379,10 @@ class EvermemosService {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw EvermemosSyncException(
-        '拉取记忆失败 (${response.statusCode})：${response.body}',
+        _txt(
+          '拉取记忆失败 (${response.statusCode})：${response.body}',
+          'Memory fetch failed (${response.statusCode}): ${response.body}',
+        ),
       );
     }
 
@@ -393,12 +425,26 @@ class EvermemosService {
           'wellbeing': 50,
           'social': 50,
         },
-        tags: const <String>['等待记录积累', '初始探索者'],
-        summary: '当前记忆样本不足，先记录几条今天的真实行动，画像会越来越准确。',
-        strengths: const <String>['建议先连续记录 3 天再生成完整画像。'],
-        suggestions: const <String>[
-          '每天至少上传 1 条记忆，优先记录“完成了什么”和“为什么做”。',
-          '任务完成后补一句感受，画像会更快识别你的节奏。',
+        tags: <String>[
+          _txt('等待记录积累', 'Waiting for More Memories'),
+          _txt('初始探索者', 'Early Explorer'),
+        ],
+        summary: _txt(
+          '当前记忆样本不足，先记录几条今天的真实行动，画像会越来越准确。',
+          'There are not enough memory samples yet. Record a few real actions from today and the portrait will become more accurate.',
+        ),
+        strengths: <String>[
+          _txt('建议先连续记录 3 天再生成完整画像。', 'Record for 3 days first before generating a full portrait.'),
+        ],
+        suggestions: <String>[
+          _txt(
+            '每天至少上传 1 条记忆，优先记录“完成了什么”和“为什么做”。',
+            'Upload at least one memory each day, focusing on what you finished and why you did it.',
+          ),
+          _txt(
+            '任务完成后补一句感受，画像会更快识别你的节奏。',
+            'Add one line about how it felt after finishing a quest so the portrait can learn your rhythm faster.',
+          ),
         ],
         highlights: const <String>[],
         recentMemories: const <EvermemosMemorySnippet>[],
@@ -481,25 +527,40 @@ class EvermemosService {
     final tags = {
       _tagForDimension(top1.key),
       _tagForDimension(top2.key),
-      if (memoryCount >= 10) '持续行动者',
+      if (memoryCount >= 10) _txt('持续行动者', 'Consistent Doer'),
     }.toList();
 
     final summary =
-        '最近 $activeDays 天你留下了 $memoryCount 条生存记录。${_labelOf(top1.key)}'
-        '（${top1.value.toStringAsFixed(0)}）与${_labelOf(top2.key)}'
-        '（${top2.value.toStringAsFixed(0)}）表现最稳定，说明你已经形成了清晰的行动节奏。';
+        _isEnglish
+            ? 'You left $memoryCount life records across the last $activeDays days. '
+                '${_labelOf(top1.key)} (${top1.value.toStringAsFixed(0)}) and '
+                '${_labelOf(top2.key)} (${top2.value.toStringAsFixed(0)}) are the most stable dimensions, which suggests you are forming a clear action rhythm.'
+            : '最近 $activeDays 天你留下了 $memoryCount 条生存记录。${_labelOf(top1.key)}'
+                '（${top1.value.toStringAsFixed(0)}）与${_labelOf(top2.key)}'
+                '（${top2.value.toStringAsFixed(0)}）表现最稳定，说明你已经形成了清晰的行动节奏。';
 
     final strengths = <String>[
-      '近阶段「${_labelOf(top1.key)}」维度领先（${top1.value.toStringAsFixed(0)}分），关键行动推进感明显。',
-      '你在${_labelOf(top2.key)}上保持连续输出，最近活跃记录覆盖 $activeDays 天。',
+      _isEnglish
+          ? '${_labelOf(top1.key)} leads right now (${top1.value.toStringAsFixed(0)}), showing strong forward momentum.'
+          : '近阶段「${_labelOf(top1.key)}」维度领先（${top1.value.toStringAsFixed(0)}分），关键行动推进感明显。',
+      _isEnglish
+          ? 'You stayed consistent in ${_labelOf(top2.key)}, with recent activity spanning $activeDays days.'
+          : '你在${_labelOf(top2.key)}上保持连续输出，最近活跃记录覆盖 $activeDays 天。',
       if (executionHits > 0 || growthHits > 0)
-        '行动/成长关键词累计命中 ${executionHits + growthHits} 次，目标感较强。',
+        _txt(
+          '行动/成长关键词累计命中 ${executionHits + growthHits} 次，目标感较强。',
+          'Action and growth keywords appeared ${executionHits + growthHits} times, which suggests a strong sense of direction.',
+        ),
     ];
 
     final suggestions = <String>[
       _suggestionForDimension(low1.key),
       _suggestionForDimension(low2.key),
-      if (wellbeingHits <= 1) '本周可以补 1 条“休息或运动”记忆，帮助节奏更可持续。',
+      if (wellbeingHits <= 1)
+        _txt(
+          '本周可以补 1 条“休息或运动”记忆，帮助节奏更可持续。',
+          'Add one “rest or exercise” memory this week to make your rhythm more sustainable.',
+        ),
     ];
 
     final recentMemories = _buildRecentMemorySnippets(memories, maxCount: 5);
@@ -541,11 +602,23 @@ class EvermemosService {
 
   String _buildMemoryContent(List<QuestNode> quests) {
     final buffer = StringBuffer()
-      ..writeln('请将以下任务整理为一段温暖的地球日记。')
-      ..writeln('要求：使用第一人称或温暖第二人称；避免“报告称/未提及”等机器腔。')
-      ..writeln('保留真实行动细节，并给出积极、有人情味的表达。')
+      ..writeln(_txt(
+        '请将以下任务整理为一段温暖的地球日记。',
+        'Please turn the following tasks into a warm Earth diary entry.',
+      ))
+      ..writeln(_txt(
+        '要求：使用第一人称或温暖第二人称；避免“报告称/未提及”等机器腔。',
+        'Requirements: use first person or a warm second person voice, and avoid robotic phrasing.',
+      ))
+      ..writeln(_txt(
+        '保留真实行动细节，并给出积极、有人情味的表达。',
+        'Keep the real action details and express them in a positive, human way.',
+      ))
       ..writeln('')
-      ..writeln('今天我在地球上完成了 ${quests.length} 件行动：');
+      ..writeln(_txt(
+        '今天我在地球上完成了 ${quests.length} 件行动：',
+        'Today I completed ${quests.length} actions on Earth:',
+      ));
     for (var i = 0; i < quests.length; i++) {
       buffer.writeln('${i + 1}. ${quests[i].title}');
     }
@@ -556,7 +629,12 @@ class EvermemosService {
         .toList();
     if (descriptions.isNotEmpty) {
       buffer.writeln('');
-      buffer.writeln('补充背景：${descriptions.take(3).join('；')}');
+      buffer.writeln(
+        _txt(
+          '补充背景：${descriptions.take(3).join('；')}',
+          'Extra context: ${descriptions.take(3).join('; ')}',
+        ),
+      );
     }
     return buffer.toString().trim();
   }
@@ -617,40 +695,71 @@ class EvermemosService {
   }
 
   String _labelOf(String dimension) {
-    return EvermemosUserProfileReport.dimensionLabels[dimension] ?? dimension;
+    switch (dimension) {
+      case 'execution':
+        return _txt('执行力', 'Execution');
+      case 'consistency':
+        return _txt('稳定性', 'Consistency');
+      case 'growth':
+        return _txt('成长性', 'Growth');
+      case 'wellbeing':
+        return _txt('自我照顾', 'Wellbeing');
+      case 'social':
+        return _txt('协作沟通', 'Social');
+      default:
+        return dimension;
+    }
   }
 
   String _tagForDimension(String dimension) {
     switch (dimension) {
       case 'execution':
-        return '行动推进者';
+        return _txt('行动推进者', 'Momentum Builder');
       case 'consistency':
-        return '节奏稳定者';
+        return _txt('节奏稳定者', 'Rhythm Keeper');
       case 'growth':
-        return '成长探索者';
+        return _txt('成长探索者', 'Growth Explorer');
       case 'wellbeing':
-        return '自我照顾者';
+        return _txt('自我照顾者', 'Self-Care Keeper');
       case 'social':
-        return '协作连接者';
+        return _txt('协作连接者', 'Connection Builder');
       default:
-        return '均衡玩家';
+        return _txt('均衡玩家', 'Balanced Player');
     }
   }
 
   String _suggestionForDimension(String dimension) {
     switch (dimension) {
       case 'execution':
-        return '把大目标拆成 25 分钟小任务，每天至少推进一个最小动作。';
+        return _txt(
+          '把大目标拆成 25 分钟小任务，每天至少推进一个最小动作。',
+          'Break large goals into 25-minute tasks and move at least one small step forward each day.',
+        );
       case 'consistency':
-        return '固定一个每日复盘时间，哪怕只写 2 句话，也能提高连续性。';
+        return _txt(
+          '固定一个每日复盘时间，哪怕只写 2 句话，也能提高连续性。',
+          'Fix one daily review time. Even two sentences can improve consistency.',
+        );
       case 'growth':
-        return '每周挑 1 次任务做“复盘+改进”，把经验写成可复用清单。';
+        return _txt(
+          '每周挑 1 次任务做“复盘+改进”，把经验写成可复用清单。',
+          'Pick one task each week for review and improvement, then turn the lessons into a reusable checklist.',
+        );
       case 'wellbeing':
-        return '在任务列表中加入“休息/运动/补水”型任务，保持长期续航。';
+        return _txt(
+          '在任务列表中加入“休息/运动/补水”型任务，保持长期续航。',
+          'Add rest, exercise, or hydration quests to your list to support long-term energy.',
+        );
       case 'social':
-        return '把关键进展同步给同伴或家人，建立外部反馈回路。';
+        return _txt(
+          '把关键进展同步给同伴或家人，建立外部反馈回路。',
+          'Share key progress with a teammate or family member to build an external feedback loop.',
+        );
       default:
-        return '继续保持记录，画像会随着样本增加而更准确。';
+        return _txt(
+          '继续保持记录，画像会随着样本增加而更准确。',
+          'Keep recording consistently and the portrait will become more accurate as samples grow.',
+        );
     }
   }
 
@@ -698,17 +807,23 @@ class EvermemosService {
   }
 
   String _formatSnippetTime(DateTime? dt) {
-    if (dt == null) return '时间未知';
+    if (dt == null) return _txt('时间未知', 'Unknown time');
     final now = DateTime.now();
     final local = dt.toLocal();
     final sameDay = local.year == now.year &&
         local.month == now.month &&
         local.day == now.day;
     if (sameDay) {
-      return '今天 ${_twoDigits(local.hour)}:${_twoDigits(local.minute)}';
+      return _txt(
+        '今天 ${_twoDigits(local.hour)}:${_twoDigits(local.minute)}',
+        'Today ${_twoDigits(local.hour)}:${_twoDigits(local.minute)}',
+      );
     }
     if (local.year == now.year) {
-      return '${local.month}月${local.day}日';
+      return _txt(
+        '${local.month}月${local.day}日',
+        '${local.month}/${local.day}',
+      );
     }
     return '${local.year}/${local.month}/${local.day}';
   }

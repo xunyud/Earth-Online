@@ -43,10 +43,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool get _isRegisterMode => _authMode == _AuthMode.signUp;
 
-  _AuthCopy get _copy => _AuthCopy(
-        isEnglish: AppLocaleController.instance.isEnglish,
-        isRegisterMode: _isRegisterMode,
-      );
+  _AuthCopy get _copy => _AuthCopy(isRegisterMode: _isRegisterMode);
 
   @override
   void initState() {
@@ -397,45 +394,45 @@ class _LoginScreenState extends State<LoginScreen>
                             return Stack(
                               clipBehavior: Clip.none,
                               children: [
-                            _LoginPanel(
-                              theme: questTheme,
-                              heroAnimation: _heroFade,
-                              authMode: _authMode,
-                              canEditEmail: canEditEmail,
-                              otpSent: _otpSent,
-                              submitting: _submitting,
-                              resendSeconds: _resendSeconds,
-                              emailController: _emailController,
-                              otpController: _otpController,
-                              onModeChanged: _switchAuthMode,
-                              onSendOtp: _sendOtp,
-                              onVerifyOtp: _verifyOtp,
-                              onAnonymous: _signInAnonymously,
-                              onResetOtp: _submitting
-                                  ? null
-                                  : () {
-                                      setState(_resetOtpState);
-                                    },
-                            ),
-                            // 藤蔓装饰
-                            const Positioned(
-                              top: -14,
-                              left: -10,
-                              child: Text('🌿',
-                                  style: TextStyle(fontSize: 28)),
-                            ),
-                            const Positioned(
-                              top: -10,
-                              right: -6,
-                              child: Text('🍃',
-                                  style: TextStyle(fontSize: 22)),
-                            ),
-                            const Positioned(
-                              bottom: -8,
-                              right: 16,
-                              child: Text('🌱',
-                                  style: TextStyle(fontSize: 18)),
-                            ),
+                                _LoginPanel(
+                                  theme: questTheme,
+                                  heroAnimation: _heroFade,
+                                  authMode: _authMode,
+                                  canEditEmail: canEditEmail,
+                                  otpSent: _otpSent,
+                                  submitting: _submitting,
+                                  resendSeconds: _resendSeconds,
+                                  emailController: _emailController,
+                                  otpController: _otpController,
+                                  onModeChanged: _switchAuthMode,
+                                  onSendOtp: _sendOtp,
+                                  onVerifyOtp: _verifyOtp,
+                                  onAnonymous: _signInAnonymously,
+                                  onResetOtp: _submitting
+                                      ? null
+                                      : () {
+                                          setState(_resetOtpState);
+                                        },
+                                ),
+                                // 藤蔓装饰
+                                const Positioned(
+                                  top: -14,
+                                  left: -10,
+                                  child: Text('🌿',
+                                      style: TextStyle(fontSize: 28)),
+                                ),
+                                const Positioned(
+                                  top: -10,
+                                  right: -6,
+                                  child: Text('🍃',
+                                      style: TextStyle(fontSize: 22)),
+                                ),
+                                const Positioned(
+                                  bottom: -8,
+                                  right: 16,
+                                  child: Text('🌱',
+                                      style: TextStyle(fontSize: 18)),
+                                ),
                               ],
                             );
                           },
@@ -490,10 +487,7 @@ class _LoginPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final primaryColor = theme.primaryAccentColor;
     final isRegisterMode = authMode == _AuthMode.signUp;
-    final copy = _AuthCopy(
-      isEnglish: AppLocaleController.instance.isEnglish,
-      isRegisterMode: isRegisterMode,
-    );
+    final copy = _AuthCopy(isRegisterMode: isRegisterMode);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(34),
@@ -551,6 +545,8 @@ class _LoginPanel extends StatelessWidget {
                           _LanguageToggle(
                             accentColor: primaryColor,
                             isEnglish: copy.isEnglish,
+                            chineseLabel: copy.chineseLanguageLabel,
+                            englishLabel: copy.englishLanguageLabel,
                           ),
                         ],
                       ),
@@ -849,10 +845,14 @@ class _AuthModeButton extends StatelessWidget {
 class _LanguageToggle extends StatelessWidget {
   final Color accentColor;
   final bool isEnglish;
+  final String chineseLabel;
+  final String englishLabel;
 
   const _LanguageToggle({
     required this.accentColor,
     required this.isEnglish,
+    required this.chineseLabel,
+    required this.englishLabel,
   });
 
   @override
@@ -868,7 +868,7 @@ class _LanguageToggle extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _LanguageChip(
-            label: '中文',
+            label: chineseLabel,
             selected: !isEnglish,
             accentColor: accentColor,
             onTap: () {
@@ -877,7 +877,7 @@ class _LanguageToggle extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           _LanguageChip(
-            label: 'English',
+            label: englishLabel,
             selected: isEnglish,
             accentColor: accentColor,
             onTap: () {
@@ -1195,103 +1195,97 @@ class _FloatingIconState extends State<_FloatingIcon>
 }
 
 class _AuthCopy {
-  final bool isEnglish;
   final bool isRegisterMode;
+  const _AuthCopy({required this.isRegisterMode});
 
-  const _AuthCopy({
-    required this.isEnglish,
-    required this.isRegisterMode,
-  });
+  String _modeKey() => isRegisterMode ? 'signup' : 'signin';
+  String _stageKey(bool completed) => completed ? 'after' : 'before';
+
+  bool get isEnglish => AppLocaleController.instance.isEnglish;
+
+  String get chineseLanguageLabel =>
+      _languageLabel('auth.language.chinese', 'Chinese');
+
+  String get englishLanguageLabel =>
+      _languageLabel('auth.language.english', 'English');
+
+  String _languageLabel(String key, String fallback) {
+    final label = AppLocaleController.instance.t(key);
+    return label == key ? fallback : label;
+  }
 
   String get welcomeTitle =>
-      isEnglish ? 'Welcome to Earth Online' : '欢迎来到地球Online';
+      AppLocaleController.instance.t('auth.welcome_title');
 
-  String get signInLabel => isEnglish ? 'Sign in' : '登录';
+  String get signInLabel => AppLocaleController.instance.t('auth.sign_in');
 
-  String get signUpLabel => isEnglish ? 'Sign up' : '注册';
+  String get signUpLabel => AppLocaleController.instance.t('auth.sign_up');
 
-  String get emailLabel => isEnglish ? 'Email' : '邮箱地址';
+  String get emailLabel => AppLocaleController.instance.t('auth.email_label');
 
-  String get emailHint => 'you@example.com';
+  String get emailHint => AppLocaleController.instance.t('auth.email_hint');
 
   String sendButtonLabel(int resendSeconds) {
     if (resendSeconds > 0) {
-      return isEnglish
-          ? 'Resend\n${resendSeconds}s'
-          : '重新发送\n${resendSeconds}s';
+      return AppLocaleController.instance.t(
+        'auth.send_button_resend',
+        params: {'seconds': '$resendSeconds'},
+      );
     }
-    return isEnglish ? 'Send code' : '发送验证码';
+    return AppLocaleController.instance.t('auth.send_button');
   }
 
   String otpPrompt(bool otpSent) {
-    if (isEnglish) {
-      if (!otpSent) {
-        return isRegisterMode
-            ? 'Send the sign-up code first, then enter 6 digits to create your account.'
-            : 'Send the code first, then enter 6 digits to continue.';
-      }
-      return isRegisterMode
-          ? 'Sign-up code sent. Enter 6 digits to create your account.'
-          : 'Code sent. Enter 6 digits to continue.';
-    }
-    if (!otpSent) {
-      return isRegisterMode ? '先发送注册码，再输入6位数字完成注册。' : '先发送验证码，再输入6位数字继续登录。';
-    }
-    return isRegisterMode ? '注册码已发送，请输入6位数字完成注册。' : '验证码已发送，请输入6位数字继续登录。';
+    final mode = _modeKey();
+    final stage = _stageKey(otpSent);
+    return AppLocaleController.instance.t('auth.otp_prompt.$mode.$stage');
   }
 
-  String get codeLabel => isEnglish ? '6-digit code' : '6位验证码';
+  String get codeLabel => AppLocaleController.instance.t('auth.code_label');
 
-  String get codeHint =>
-      isEnglish ? 'Enter the code from your inbox' : '输入邮箱里的验证码';
+  String get codeHint => AppLocaleController.instance.t('auth.code_hint');
 
   String get primaryButtonLabel {
-    if (isRegisterMode) {
-      return isEnglish ? 'Create account' : '创建账号';
-    }
-    return isEnglish ? 'Continue' : '继续登录';
+    final mode = _modeKey();
+    return AppLocaleController.instance.t('auth.primary_button.$mode');
   }
 
-  String get exploreLabel => isEnglish ? 'Explore first' : '先随便看看';
+  String get exploreLabel => AppLocaleController.instance.t('auth.explore');
 
-  String get editEmailLabel => isEnglish ? 'Edit email' : '修改邮箱';
+  String get editEmailLabel =>
+      AppLocaleController.instance.t('auth.edit_email');
 
   String get invalidEmail =>
-      isEnglish ? 'Enter a valid email address.' : '请输入正确的邮箱地址';
+      AppLocaleController.instance.t('auth.invalid_email');
 
-  String get invalidCode => isEnglish ? 'Enter the 6-digit code.' : '请输入6位验证码';
+  String get invalidCode => AppLocaleController.instance.t('auth.invalid_code');
 
   String get codeSentMessage {
-    if (isEnglish) {
-      return isRegisterMode
-          ? 'Sign-up code sent. Check your inbox.'
-          : 'Code sent. Check your inbox.';
-    }
-    return isRegisterMode ? '注册码已发送，请检查你的邮箱。' : '验证码已发送，请检查你的邮箱。';
+    final mode = _modeKey();
+    return AppLocaleController.instance.t('auth.code_sent.$mode');
   }
 
   String sendCodeFailed(Object error) {
-    if (isEnglish) {
-      return isRegisterMode
-          ? 'Could not send the sign-up code: $error'
-          : 'Could not send the code: $error';
-    }
-    return isRegisterMode ? '发送注册码失败：$error' : '发送验证码失败：$error';
+    final mode = _modeKey();
+    return AppLocaleController.instance.t(
+      'auth.send_code_failed.$mode',
+      params: {'error': '$error'},
+    );
   }
 
   String get verifySuccessMessage {
-    if (isEnglish) {
-      return isRegisterMode ? 'Account created.' : 'Signed in.';
-    }
-    return isRegisterMode ? '账号创建完成。' : '登录成功。';
+    final mode = _modeKey();
+    return AppLocaleController.instance.t('auth.verify_success.$mode');
   }
 
   String get verifyFailedMessage =>
-      isEnglish ? 'The code is invalid or expired.' : '验证码错误或已过期。';
+      AppLocaleController.instance.t('auth.verify_failed');
 
   String get guestSuccessMessage =>
-      isEnglish ? 'Guest mode started.' : '已进入访客模式。';
+      AppLocaleController.instance.t('auth.guest_success');
 
-  String guestFailedMessage(Object error) =>
-      isEnglish ? 'Could not start guest mode: $error' : '开启访客模式失败：$error';
+  String guestFailedMessage(Object error) => AppLocaleController.instance.t(
+        'auth.guest_failed',
+        params: {'error': '$error'},
+      );
 }

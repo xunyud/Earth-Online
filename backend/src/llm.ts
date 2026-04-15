@@ -3,10 +3,44 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+function normalizeOpenAIBaseUrl(baseUrl: string) {
+  const normalized = baseUrl.trim().replace(/\/+$/, '');
+  return normalized.endsWith('/v1') ? normalized : `${normalized}/v1`;
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL // Optional
+  baseURL: normalizeOpenAIBaseUrl(
+    process.env.OPENAI_BASE_URL || 'https://api.86gamestore.com',
+  )
 });
+
+export async function freeformChat(
+  message: string,
+  options: {
+    systemPrompt: string;
+    model?: string;
+  },
+): Promise<string> {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY not set');
+  }
+
+  const completion = await openai.chat.completions.create({
+    model: options.model || process.env.OPENAI_CHAT_MODEL || 'deepseek-chat',
+    temperature: 0.4,
+    messages: [
+      { role: 'system', content: options.systemPrompt },
+      { role: 'user', content: message },
+    ],
+  });
+
+  const reply = completion.choices[0]?.message?.content?.trim() || '';
+  if (!reply) {
+    throw new Error('Empty freeform chat reply');
+  }
+  return reply;
+}
 
 export async function extractTasks(text: string): Promise<any[]> {
   if (!process.env.OPENAI_API_KEY) {

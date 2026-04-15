@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/theme/quest_theme.dart';
+import '../models/agent_run.dart';
+import '../models/agent_step.dart';
 
 enum GuideDialogRole {
   assistant,
@@ -68,6 +70,10 @@ class GuidePanelDialog extends StatelessWidget {
   final String retryLabel;
   final String closeLabel;
   final bool sending;
+  final AgentRun? agentRun;
+  final List<AgentStep> agentSteps;
+  final VoidCallback? onApproveAgentStep;
+  final VoidCallback? onRejectAgentStep;
   final String Function(int count) memoryRefsLabelBuilder;
   final VoidCallback? onRetry;
   final ValueChanged<String> onSubmit;
@@ -99,6 +105,10 @@ class GuidePanelDialog extends StatelessWidget {
     required this.retryLabel,
     required this.closeLabel,
     required this.sending,
+    required this.agentRun,
+    required this.agentSteps,
+    required this.onApproveAgentStep,
+    required this.onRejectAgentStep,
     required this.memoryRefsLabelBuilder,
     required this.onRetry,
     required this.onSubmit,

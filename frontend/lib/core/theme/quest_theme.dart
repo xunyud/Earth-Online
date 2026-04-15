@@ -63,7 +63,7 @@ class QuestTheme extends ThemeExtension<QuestTheme> {
 
   // Factory for "Fresh Breath" Theme (Default)
   static QuestTheme freshBreath() {
-    return const QuestTheme(
+    return QuestTheme(
       mainQuestColor: AppColors.mintGreen,
       sideQuestColor: AppColors.skyBlue,
       dailyQuestColor: AppColors.softBlue,
@@ -75,7 +75,7 @@ class QuestTheme extends ThemeExtension<QuestTheme> {
   }
 
   static QuestTheme forestAdventure() {
-    return const QuestTheme(
+    return QuestTheme(
       mainQuestColor: AppColors.goldAccent,
       sideQuestColor: AppColors.steelBlue,
       dailyQuestColor: AppColors.limeGreen,

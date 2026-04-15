@@ -4,68 +4,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../quest/controllers/quest_controller.dart';
 import '../models/reward.dart';
 import '../models/inventory_item.dart';
+import '../models/system_reward_catalog.dart';
 
 class RewardController extends ChangeNotifier {
-  static const Set<String> _supportedSystemRewardTitles = {
-    '听一首歌',
-    '散步二十分钟',
-    '看一集喜欢的内容',
-    '买一杯喜欢的饮料',
-    '躺平放空半小时',
-    '喝杯奶茶',
-    '点一份喜欢的小甜点',
-    '玩游戏一小时',
-  };
-  static const List<Map<String, Object>> _dailySystemRewardSeeds = [
-    {
-      'title': '听一首歌',
-      'description': '给自己几分钟，安静听完一首喜欢的歌。',
-      'cost': 1,
-      'icon': '🎵',
-    },
-    {
-      'title': '散步二十分钟',
-      'description': '暂时离开任务列表，去走一走换换脑子。',
-      'cost': 20,
-      'icon': '🚶',
-    },
-    {
-      'title': '看一集喜欢的内容',
-      'description': '看一集喜欢的剧、动画或视频。',
-      'cost': 30,
-      'icon': '📺',
-    },
-    {
-      'title': '买一杯喜欢的饮料',
-      'description': '用一杯喜欢的饮料犒劳一下自己。',
-      'cost': 35,
-      'icon': '🥤',
-    },
-    {
-      'title': '躺平放空半小时',
-      'description': '什么都不做，专心休息半小时。',
-      'cost': 40,
-      'icon': '🛋️',
-    },
-    {
-      'title': '喝杯奶茶',
-      'description': '买一杯奶茶，认真享受一下。',
-      'cost': 50,
-      'icon': '🧋',
-    },
-    {
-      'title': '点一份喜欢的小甜点',
-      'description': '来一份甜点，给努力一个具体回报。',
-      'cost': 60,
-      'icon': '🍰',
-    },
-    {
-      'title': '玩游戏一小时',
-      'description': '给自己一小时完整的娱乐时间。',
-      'cost': 80,
-      'icon': '🎮',
-    },
-  ];
+  static final List<Map<String, Object>> _dailySystemRewardSeeds =
+      buildSystemRewardSeedPayloads();
 
   final SupabaseClient _supabase;
   final QuestController _questController;
@@ -141,11 +84,11 @@ class RewardController extends ChangeNotifier {
 
   static bool isSupportedSystemReward(Reward reward) {
     if (!reward.isSystem) return true;
-    return _supportedSystemRewardTitles.contains(reward.title.trim());
+    return systemRewardBaseTitles.contains(reward.title.trim());
   }
 
   static bool _isDailySystemShopReward(Reward reward) {
-    return _supportedSystemRewardTitles.contains(reward.title.trim()) &&
+    return systemRewardBaseTitles.contains(reward.title.trim()) &&
         reward.effectType == null;
   }
 
@@ -386,7 +329,8 @@ class RewardController extends ChangeNotifier {
           'is_deleted': false,
           'is_expanded': true,
           'is_reward': true,
-          'description': '放下负担，去好好享受属于你的战利品吧！',
+          'description': item.systemRewardDefinition?.zhDescription ??
+              '放下负担，去好好享受属于你的战利品吧！',
         });
         await _questController.refreshQuests();
       }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../../../core/theme/quest_theme.dart';
 import '../controllers/quest_controller.dart';
 import '../models/quest_node.dart';
@@ -118,9 +119,9 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
   Future<void> _save() async {
     if (widget.quest.isCompleted || widget.quest.isReward) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text('此任务不可修改。'),
+          content: Text(context.tr('quest.error.quest_locked')),
         ),
       );
       return;
@@ -154,8 +155,8 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final locked = widget.quest.isCompleted || widget.quest.isReward;
     final lockedMsg = widget.quest.isReward
-        ? '🎁 这是一个奖励任务，尽情享受吧，不可编辑。'
-        : '已完成的任务无法修改，请先撤销完成状态。';
+        ? context.tr('quest.edit.locked_reward')
+        : context.tr('quest.edit.locked_completed');
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
@@ -220,9 +221,9 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
                     fontWeight: FontWeight.w800,
                     color: theme.primaryAccentColor,
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: InputBorder.none,
-                    hintText: '任务标题',
+                    hintText: context.tr('quest.edit.title_hint'),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -240,9 +241,9 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
                     maxLines: 5,
                     enabled: !locked && !_saving,
                     style: AppTextStyles.body.copyWith(fontSize: 15),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       border: InputBorder.none,
-                      hintText: '添加任务详情/备注...',
+                      hintText: context.tr('quest.edit.description_hint'),
                     ),
                   ),
                 ),
@@ -257,8 +258,14 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
                           icon: const Icon(Icons.schedule_rounded, size: 18),
                           label: Text(
                             _dailyDueMinutes == null
-                                ? '设置每日截止时间'
-                                : '每日截止 ${_formatDailyDueMinutes(_dailyDueMinutes!)}',
+                                ? context.tr('quest.edit.daily_due_set')
+                                : context.tr(
+                                    'quest.edit.daily_due_value',
+                                    params: {
+                                      'time':
+                                          _formatDailyDueMinutes(_dailyDueMinutes!)
+                                    },
+                                  ),
                             style: AppTextStyles.body.copyWith(fontSize: 14),
                           ),
                           style: OutlinedButton.styleFrom(
@@ -280,7 +287,7 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
                               : () => setState(() => _dailyDueMinutes = null),
                           icon: const Icon(Icons.close_rounded),
                           color: AppColors.textSecondary,
-                          tooltip: '清除每日截止时间',
+                          tooltip: context.tr('quest.edit.clear_daily_due'),
                         ),
                       ],
                     ],
@@ -303,7 +310,7 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
                           ),
                           label: Text(
                             _dueDate == null
-                                ? '设置截止日期'
+                                ? context.tr('quest.edit.due_set')
                                 : _formatDate(_dueDate!),
                             style: AppTextStyles.body.copyWith(fontSize: 14),
                           ),
@@ -326,7 +333,7 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
                               : () => setState(() => _dueDate = null),
                           icon: const Icon(Icons.close_rounded),
                           color: AppColors.textSecondary,
-                          tooltip: '清除日期',
+                          tooltip: context.tr('quest.edit.clear_date'),
                         ),
                       ],
                     ],
@@ -347,7 +354,7 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
                           const Icon(Icons.auto_awesome_rounded, size: 18),
                           const SizedBox(width: 8),
                           Text(
-                            '经验值奖励',
+                            context.tr('quest.edit.xp_reward'),
                             style: AppTextStyles.caption.copyWith(
                               color: AppColors.textSecondary,
                               fontWeight: FontWeight.w700,
@@ -403,7 +410,10 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: const Text('关闭', style: AppTextStyles.button),
+                        child: Text(
+                          context.tr('quest.edit.close'),
+                          style: AppTextStyles.button,
+                        ),
                       )
                     : ElevatedButton(
                         onPressed: _saving ? null : _save,
@@ -424,7 +434,10 @@ class _QuestEditSheetState extends State<QuestEditSheet> {
                                       Colors.white),
                                 ),
                               )
-                            : const Text('保存', style: AppTextStyles.button),
+                            : Text(
+                                context.tr('quest.edit.save'),
+                                style: AppTextStyles.button,
+                              ),
                       ),
               ],
             ),

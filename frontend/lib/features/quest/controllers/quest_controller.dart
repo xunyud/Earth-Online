@@ -52,14 +52,14 @@ class QuestController extends ChangeNotifier {
   RealtimeChannel? _questChannel;
   bool _isDisposed = false;
 
-  static const List<String> _perfectDayEncouragements = [
-    '太棒了！今天的面板被你彻底清空，好好休息吧，你值得这一切！',
-    '你做到了。不是靠爆发，而是靠稳定的日常。',
-    '今日地球 Online：通关成功。明天也请温柔地继续。',
-    '完成不是终点，是你对自己的承诺又兑现了一次。',
-    '给自己一个拥抱：你把这一天过得很漂亮。',
-    '厉害！把任务清空的你，已经在悄悄变强。',
-    '今天就到这里吧：你已经很努力了。',
+  static const List<String> _perfectDayEncouragementKeys = <String>[
+    'quest.perfect_day.1',
+    'quest.perfect_day.2',
+    'quest.perfect_day.3',
+    'quest.perfect_day.4',
+    'quest.perfect_day.5',
+    'quest.perfect_day.6',
+    'quest.perfect_day.7',
   ];
 
   List<QuestNode> _quests = [];
@@ -303,8 +303,9 @@ class QuestController extends ChangeNotifier {
 
     if (shouldSetPerfect && !existingPerfect) {
       final pickIndex = DateTime.now().microsecondsSinceEpoch %
-          _perfectDayEncouragements.length;
-      payload['encouragement'] = _perfectDayEncouragements[pickIndex];
+          _perfectDayEncouragementKeys.length;
+      payload['encouragement'] = AppLocaleController.instance
+          .t(_perfectDayEncouragementKeys[pickIndex]);
     }
 
     await _supabase

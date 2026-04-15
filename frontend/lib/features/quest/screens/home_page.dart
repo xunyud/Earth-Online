@@ -1,17 +1,23 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:confetti/confetti.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/i18n/app_locale_controller.dart';
 import '../../../core/services/evermemos_service.dart';
 import '../../../core/services/guide_service.dart';
 import '../../../core/services/preferences_service.dart';
 import '../../../core/services/supabase_auth_service.dart';
+import '../../../core/services/local_agent_runtime_service.dart';
+import '../../../core/models/local_tool_call.dart';
+import '../../../core/models/local_tool_result.dart';
 import '../../../core/theme/quest_theme.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../core/widgets/app_drawer.dart';
@@ -29,6 +35,10 @@ import '../../stats/screens/stats_page.dart';
 import 'life_diary_page.dart';
 import '../controllers/quest_controller.dart';
 import '../models/quest_node.dart';
+import '../models/agent_run.dart';
+import '../models/agent_step.dart';
+import '../services/agent_run_service.dart';
+import '../services/weekly_summary_job_service.dart';
 import '../widgets/guide_panel_dialog.dart';
 import '../widgets/night_reflection_dialog.dart';
 import '../widgets/quest_board.dart';
@@ -79,6 +89,18 @@ class _GuideRewardMatch {
   });
 }
 
+class _AgentRunResult {
+  final AgentRun? run;
+  final List<AgentStep> steps;
+  final String? latestAssistantMessage;
+
+  const _AgentRunResult({
+    required this.run,
+    required this.steps,
+    this.latestAssistantMessage,
+  });
+}
+
 class HomePage extends StatefulWidget {
   final String currentThemeId;
   final ValueChanged<String>? onThemeChange;
@@ -97,6 +119,8 @@ class _HomePageState extends State<HomePage> {
   final QuestController _controller = QuestController();
   final EvermemosService _evermemosService = EvermemosService();
   final GuideService _guideService = GuideService();
+  final AgentRunService _agentRunService = AgentRunService();
+  late final LocalAgentRuntimeService _localAgentRuntimeService;
   final ConfettiController _confetti =
       ConfettiController(duration: const Duration(seconds: 2));
 
@@ -109,6 +133,11 @@ class _HomePageState extends State<HomePage> {
   final GlobalKey _coachKeyShopBtn = GlobalKey(debugLabel: 'coach_shop_btn');
   bool _showCoachMarks = false;
   late final Future<void> _initFuture;
+  final Set<String> _runningLocalAgentStepIds = <String>{};
+  final Set<String> _finishedLocalAgentStepIds = <String>{};
+  final Map<String, LocalToolResult> _localAgentStepResults =
+      <String, LocalToolResult>{};
+  String? _trackedAgentRunId;
 
   int _previousUncompletedCount = -1;
   bool _isSyncingMemory = false;
@@ -130,7 +159,17 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _localAgentRuntimeService = LocalAgentRuntimeService(
+      questCreateHandler: _executeAgentQuestCreate,
+      questUpdateHandler: _executeAgentQuestUpdate,
+      questSplitHandler: _executeAgentQuestSplit,
+      chatFreeformHandler: _executeAgentFreeformChat,
+      weeklySummaryGenerateHandler: _executeAgentWeeklySummaryGenerate,
+      rewardRedeemHandler: _executeAgentRewardRedeem,
+      navigationOpenHandler: _executeAgentNavigationOpen,
+    );
     _controller.addListener(_onQuestStateChanged);
+    _agentRunService.addListener(_onAgentRunStateChanged);
     _initFuture = _controller.init();
     unawaited(_loadGuideDisplayName());
     unawaited(_loadProfileDisplayName());
@@ -142,6 +181,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _controller.removeListener(_onQuestStateChanged);
+    _agentRunService.removeListener(_onAgentRunStateChanged);
+    _agentRunService.dispose();
     _evermemosService.dispose();
     _confetti.dispose();
     _controller.dispose();
@@ -162,6 +203,21 @@ class _HomePageState extends State<HomePage> {
       showForestSnackBar(context, context.tr('home.all_done'));
     }
     _previousUncompletedCount = uncompleted;
+  }
+
+  void _onAgentRunStateChanged() {
+    final runId = _agentRunService.currentRun?.id;
+    if (_trackedAgentRunId != runId) {
+      _trackedAgentRunId = runId;
+      _runningLocalAgentStepIds.clear();
+      _finishedLocalAgentStepIds.clear();
+      _localAgentStepResults.clear();
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+    unawaited(_tryExecuteReadyAgentStep());
   }
 
   String _localDateId() {
@@ -212,6 +268,8 @@ class _HomePageState extends State<HomePage> {
         .toList(growable: false);
     return <String, dynamic>{
       'guide_name': _guideName,
+      'language_code': AppLocaleController.instance.locale.languageCode,
+      'is_english': AppLocaleController.instance.isEnglish,
       'memory_digest': _guideMemoryDigest.trim(),
       'behavior_signals': _guideBehaviorSignals,
       'active_task_titles': activeTasks.map((quest) => quest.title).toList(),
@@ -420,10 +478,750 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  _AgentRunResult _currentAgentRunResult() {
+    String? latestAssistantMessage;
+    for (final item in _guideMessages.reversed) {
+      if (item.role == 'assistant' && item.content.trim().isNotEmpty) {
+        latestAssistantMessage = item.content.trim();
+        break;
+      }
+    }
+    return _AgentRunResult(
+      run: _agentRunService.currentRun,
+      steps: List<AgentStep>.from(_agentRunService.steps),
+      latestAssistantMessage: latestAssistantMessage,
+    );
+  }
+
+  QuestNode? _findAgentTargetTaskByArguments(Map<String, dynamic> arguments) {
+    final taskId = '${arguments['task_id'] ?? ''}'.trim();
+    if (taskId.isNotEmpty) {
+      final byId =
+          _controller.activeQuests.where((quest) => quest.id == taskId);
+      if (byId.isNotEmpty) return byId.first;
+    }
+
+    final taskTitle = '${arguments['task_title'] ?? ''}'.trim();
+    if (taskTitle.isNotEmpty) {
+      final byTitle = _controller.activeQuests.where(
+        (quest) =>
+            !quest.isDeleted &&
+            !quest.isReward &&
+            quest.title.trim().toLowerCase() == taskTitle.toLowerCase(),
+      );
+      if (byTitle.isNotEmpty) return byTitle.first;
+    }
+
+    final sourceText = '${arguments['source_text'] ?? ''}'.trim();
+    if (sourceText.isNotEmpty) {
+      return _findGuideTargetTask(sourceText);
+    }
+    return null;
+  }
+
+  int? _parseAgentInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse('${value ?? ''}');
+  }
+
+  DateTime? _parseAgentDueDate(Map<String, dynamic> arguments) {
+    final dueAt = '${arguments['due_at'] ?? ''}'.trim();
+    if (dueAt.isNotEmpty) {
+      final parsed = DateTime.tryParse(dueAt);
+      if (parsed != null) return parsed.toLocal();
+    }
+    final sourceText = '${arguments['source_text'] ?? ''}'.trim();
+    if (sourceText.isNotEmpty) {
+      return _extractGuideDueDate(sourceText);
+    }
+    return null;
+  }
+
+  List<String> _parseAgentSubtasks(Map<String, dynamic> arguments) {
+    final raw = arguments['subtasks'];
+    if (raw is! List) return const <String>[];
+    return raw
+        .map((item) => '$item'.trim())
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  Future<void> _performAgentNavigation(String target) async {
+    if (!mounted) return;
+    switch (target) {
+      case 'stats':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => StatsPage(questController: _controller),
+          ),
+        );
+        return;
+      case 'shop':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RewardShopPage(questController: _controller),
+          ),
+        );
+        return;
+      case 'weekly_summary':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LifeDiaryPage()),
+        );
+        return;
+    }
+  }
+
+  Future<LocalToolResult> _executeAgentQuestCreate(
+    Map<String, dynamic> arguments,
+  ) async {
+    final sourceText = '${arguments['source_text'] ?? ''}'.trim();
+    final explicitTitle = '${arguments['title'] ?? ''}'.trim();
+    final baseText = explicitTitle.isNotEmpty ? explicitTitle : sourceText;
+    final title = _normalizeGuideTaskTitle(baseText);
+    if (title.isEmpty) {
+      return const LocalToolResult(
+        success: false,
+        outputText: '还没有识别到要创建的任务标题。',
+        errorText: 'missing_task_title',
+      );
+    }
+
+    final questTierRaw = '${arguments['quest_tier'] ?? ''}'.trim();
+    final questTier = switch (questTierRaw) {
+      'Main_Quest' => 'Main_Quest',
+      'Side_Quest' => 'Side_Quest',
+      _ => 'Daily',
+    };
+    final xpReward =
+        (_parseAgentInt(arguments['xp_reward']) ?? 20).clamp(5, 200);
+    final dailyDueMinutes = _parseAgentInt(arguments['daily_due_minutes']);
+    final parentMainQuestId =
+        '${arguments['parent_main_quest_id'] ?? ''}'.trim().isEmpty
+            ? null
+            : '${arguments['parent_main_quest_id'] ?? ''}'.trim();
+
+    final inserted = await _controller.createManualQuest(
+      title: title,
+      description:
+          _guideTaskDescription(sourceText.isNotEmpty ? sourceText : title),
+      questTier: questTier,
+      parentMainQuestId: parentMainQuestId,
+      dailyDueMinutes: dailyDueMinutes,
+      xpReward: xpReward,
+    );
+    if (inserted == null) {
+      return const LocalToolResult(
+        success: false,
+        outputText: '任务创建失败，请稍后再试。',
+        errorText: 'quest_create_failed',
+      );
+    }
+
+    final subtasks = _parseAgentSubtasks(arguments);
+    final createdChildren = subtasks.isEmpty
+        ? const <QuestNode>[]
+        : await _controller.addGuideChildTasks(
+            parent: inserted,
+            stepTitles: subtasks,
+            xpReward: (inserted.xpReward / 2).round(),
+          );
+
+    return LocalToolResult(
+      success: true,
+      outputText: createdChildren.isEmpty
+          ? '已创建任务：${inserted.title}'
+          : '已创建任务：${inserted.title}，并补充 ${createdChildren.length} 个子任务',
+      resultJson: <String, dynamic>{
+        'created_task_id': inserted.id,
+        'created_task_title': inserted.title,
+        if (createdChildren.isNotEmpty)
+          'created_subtasks':
+              createdChildren.map((item) => item.title).toList(growable: false),
+      },
+    );
+  }
+
+  Future<LocalToolResult> _executeAgentQuestUpdate(
+    Map<String, dynamic> arguments,
+  ) async {
+    final target = _findAgentTargetTaskByArguments(arguments);
+    if (target == null) {
+      return const LocalToolResult(
+        success: false,
+        outputText: '没有找到要更新的任务。',
+        errorText: 'quest_not_found',
+      );
+    }
+
+    final sourceText = '${arguments['source_text'] ?? ''}'.trim();
+    final nextTitleRaw = '${arguments['updated_title'] ?? ''}'.trim();
+    final nextTitle = nextTitleRaw.isNotEmpty
+        ? nextTitleRaw
+        : (sourceText.isNotEmpty
+            ? _extractGuideNaturalTitleFromModifyText(sourceText, target)
+            : null);
+    final nextDescriptionRaw =
+        '${arguments['updated_description'] ?? ''}'.trim();
+    final nextDescription =
+        nextDescriptionRaw.isEmpty ? null : nextDescriptionRaw;
+    final nextXp = (_parseAgentInt(arguments['updated_xp_reward']) ??
+            (sourceText.isNotEmpty ? _extractGuideXp(sourceText) : null))
+        ?.clamp(5, 200);
+    final dueDate = _parseAgentDueDate(arguments);
+    final dailyDueMinutes = _parseAgentInt(arguments['daily_due_minutes']);
+
+    if (nextTitle == null &&
+        nextDescription == null &&
+        nextXp == null &&
+        dueDate == null &&
+        dailyDueMinutes == null) {
+      return const LocalToolResult(
+        success: false,
+        outputText: '没有识别到可更新的任务字段。',
+        errorText: 'quest_update_empty',
+      );
+    }
+
+    await _controller.updateQuestDetails(
+      target.id,
+      title: nextTitle,
+      description: nextDescription,
+      dueDate: dueDate,
+      dailyDueMinutes: dailyDueMinutes,
+      xpReward: nextXp,
+    );
+
+    return LocalToolResult(
+      success: true,
+      outputText: '已更新任务：${nextTitle ?? target.title}',
+      resultJson: <String, dynamic>{
+        'updated_task_id': target.id,
+        'updated_task_title': nextTitle ?? target.title,
+        if (dueDate != null) 'due_at': dueDate.toIso8601String(),
+      },
+    );
+  }
+
+  Future<LocalToolResult> _executeAgentQuestSplit(
+    Map<String, dynamic> arguments,
+  ) async {
+    final target = _findAgentTargetTaskByArguments(arguments);
+    if (target == null) {
+      return const LocalToolResult(
+        success: false,
+        outputText: '没有找到要拆分的任务。',
+        errorText: 'quest_not_found',
+      );
+    }
+
+    final sourceText = '${arguments['source_text'] ?? ''}'.trim();
+    final subtasks = _parseAgentSubtasks(arguments);
+    final stepTitles = subtasks.isNotEmpty
+        ? subtasks
+        : _buildGuideSplitSteps(
+            target, sourceText.isNotEmpty ? sourceText : target.title);
+
+    if (stepTitles.isEmpty) {
+      return const LocalToolResult(
+        success: false,
+        outputText: '还没有识别到可拆分的子任务。',
+        errorText: 'missing_subtasks',
+      );
+    }
+
+    final inserted = await _controller.addGuideChildTasks(
+      parent: target,
+      stepTitles: stepTitles,
+      xpReward: (target.xpReward / 2).round(),
+    );
+    if (inserted.isEmpty) {
+      return const LocalToolResult(
+        success: false,
+        outputText: '任务拆分失败，请稍后再试。',
+        errorText: 'quest_split_failed',
+      );
+    }
+
+    return LocalToolResult(
+      success: true,
+      outputText: '已拆分任务：${target.title}',
+      resultJson: <String, dynamic>{
+        'split_task_id': target.id,
+        'created_subtasks':
+            inserted.map((item) => item.title).toList(growable: false),
+      },
+    );
+  }
+
+  Map<String, dynamic> _guideChatResultToJson(GuideChatResult result) {
+    return <String, dynamic>{
+      'reply': result.reply,
+      'intent': switch (result.intent) {
+        GuideChatIntent.action => 'action',
+        GuideChatIntent.advice => 'advice',
+        GuideChatIntent.companion => 'companion',
+      },
+      'quick_actions': result.quickActions,
+      if (result.messageCard != null)
+        'message_card': <String, dynamic>{
+          'label': result.messageCard!.label,
+          'content': result.messageCard!.content,
+        },
+      if (result.resultCard != null)
+        'result_card': <String, dynamic>{
+          'label': result.resultCard!.label,
+          'title': result.resultCard!.title,
+          'description': result.resultCard!.description,
+        },
+      if (result.suggestedTask != null)
+        'suggested_task': <String, dynamic>{
+          'title': result.suggestedTask!.title,
+          'description': result.suggestedTask!.description,
+          'xp_reward': result.suggestedTask!.xpReward,
+          'quest_tier': result.suggestedTask!.questTier,
+        },
+      if (result.taskEditDraft != null)
+        'task_edit_draft': <String, dynamic>{
+          'task_id': result.taskEditDraft!.taskId,
+          'task_title': result.taskEditDraft!.taskTitle,
+          'action': result.taskEditDraft!.action,
+          'updated_title': result.taskEditDraft!.updatedTitle,
+          'updated_description': result.taskEditDraft!.updatedDescription,
+          'updated_xp_reward': result.taskEditDraft!.updatedXpReward,
+          'subtasks': result.taskEditDraft!.subtasks,
+        },
+      'memory_refs': result.memoryRefs,
+    };
+  }
+
+  GuideChatResult? _extractGuideChatResultFromAgentLocalResult(
+    LocalToolResult? localResult,
+  ) {
+    final raw = localResult?.resultJson?['guide_chat_result'];
+    if (raw is Map<String, dynamic>) {
+      return GuideChatResult.fromMap(raw);
+    }
+    if (raw is Map) {
+      return GuideChatResult.fromMap(
+        raw.map((key, value) => MapEntry('$key', value)),
+      );
+    }
+    return null;
+  }
+
+  Uri _buildOpenAIChatUri() {
+    final normalized = AppConfig.openaiBaseUrl.trim().replaceAll(
+          RegExp(r'/+$'),
+          '',
+        );
+    final withVersion =
+        normalized.endsWith('/v1') ? normalized : '$normalized/v1';
+    return Uri.parse('$withVersion/chat/completions');
+  }
+
+  String _buildDirectFreeformChatSystemPrompt() {
+    final activeTasks = _controller.activeQuests
+        .where((quest) => !quest.isDeleted && !quest.isReward)
+        .map((quest) => quest.title.trim())
+        .where((title) => title.isNotEmpty)
+        .take(8)
+        .toList(growable: false);
+    final memoryDigest = _guideMemoryDigest.trim().isEmpty
+        ? '暂无稳定长期记忆摘要。'
+        : _guideMemoryDigest.trim();
+    final behaviorSignals = _guideBehaviorSignals.isEmpty
+        ? '暂无明显行为信号。'
+        : _guideBehaviorSignals.join('；');
+    final activeTaskText =
+        activeTasks.isEmpty ? '当前任务板为空。' : activeTasks.join('；');
+    return '''
+你是 Earth Online 里的“小忆”，是一个温和、具体、会继续聊下去的陪伴型效率助手。
+请直接回答用户，不要复述“我已复盘你最近几条记忆”这类模板句。
+除非用户明确要求，不要把回答强行转成任务。
+回答要求：
+1. 用中文回答。
+2. 1 到 3 句，先直接回应用户当前问题。
+3. 如果合适，可以补一句很短的追问或陪伴式延续。
+4. 不要输出 JSON，不要输出 Markdown 代码块。
+
+当前上下文：
+- 你的名字：$_guideName
+- 记忆摘要：$memoryDigest
+- 行为信号：$behaviorSignals
+- 当前任务：$activeTaskText
+''';
+  }
+
+  Future<GuideChatResult?> _requestDirectFreeformChat(String sourceText) async {
+    final proxyUrl = AppConfig.agentChatProxyUrl.trim();
+    if (proxyUrl.isNotEmpty) {
+      try {
+        final response = await http.post(
+          Uri.parse(proxyUrl),
+          headers: const <String, String>{
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(<String, dynamic>{
+            'message': sourceText,
+            'model': AppConfig.openaiChatModel,
+            'systemPrompt': _buildDirectFreeformChatSystemPrompt(),
+          }),
+        ).timeout(const Duration(seconds: 5));
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          final decoded = jsonDecode(response.body);
+          final reply = '${decoded['reply'] ?? ''}'.trim();
+          if (reply.isNotEmpty) {
+            return GuideChatResult(
+              reply: reply,
+              intent: GuideChatIntent.companion,
+              quickActions: _buildGuideQuickActions(GuideChatIntent.companion),
+              messageCard: null,
+              resultCard: null,
+              suggestedTask: null,
+              taskEditDraft: null,
+              memoryRefs: const <String>[],
+            );
+          }
+        }
+      } catch (_) {
+        // 本地代理不可用时继续回退到后续链路，避免整次对话直接失败。
+      }
+    }
+
+    final apiKey = AppConfig.openaiApiKey.trim();
+    if (apiKey.isEmpty) return null;
+
+    try {
+      final response = await http.post(
+        _buildOpenAIChatUri(),
+        headers: <String, String>{
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'model': AppConfig.openaiChatModel,
+          'temperature': 0.4,
+          'messages': <Map<String, String>>[
+            <String, String>{
+              'role': 'system',
+              'content': _buildDirectFreeformChatSystemPrompt(),
+            },
+            <String, String>{'role': 'user', 'content': sourceText},
+          ],
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return null;
+      }
+
+      final decoded = jsonDecode(response.body);
+      final reply =
+          '${decoded['choices']?[0]?['message']?['content'] ?? ''}'.trim();
+      if (reply.isEmpty) {
+        return null;
+      }
+
+      return GuideChatResult(
+        reply: reply,
+        intent: GuideChatIntent.companion,
+        quickActions: _buildGuideQuickActions(GuideChatIntent.companion),
+        messageCard: null,
+        resultCard: null,
+        suggestedTask: null,
+        taskEditDraft: null,
+        memoryRefs: const <String>[],
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _shouldShowAgentStepMessage(AgentStep step) {
+    final sourceTool = '${step.resultJson?['source_tool'] ?? ''}'.trim();
+    return step.toolName != 'app.chat.freeform.respond' &&
+        sourceTool != 'app.chat.freeform.respond';
+  }
+
+  Future<LocalToolResult> _executeAgentFreeformChat(
+    Map<String, dynamic> arguments,
+  ) async {
+    final sourceText = '${arguments['source_text'] ?? ''}'.trim();
+    if (sourceText.isEmpty) {
+      return const LocalToolResult(
+        success: false,
+        outputText: '还没有收到要继续聊天的内容。',
+        errorText: 'missing_chat_message',
+      );
+    }
+
+    try {
+      final result = await _requestDirectFreeformChat(sourceText) ??
+          await _guideService
+              .chat(
+                message: sourceText,
+                scene: 'home',
+                clientContext: _buildGuideClientContext(),
+              )
+              .timeout(const Duration(seconds: 8));
+      final resolvedResult = result.reply.trim().isEmpty
+          ? _buildCompanionGuideResult(sourceText)
+          : result;
+      return LocalToolResult(
+        success: true,
+        outputText: resolvedResult.reply,
+        resultJson: <String, dynamic>{
+          'guide_chat_result': _guideChatResultToJson(resolvedResult),
+        },
+      );
+    } catch (_) {
+      final fallback = _buildCompanionGuideResult(sourceText);
+      return LocalToolResult(
+        success: true,
+        outputText: fallback.reply,
+        resultJson: <String, dynamic>{
+          'guide_chat_result': _guideChatResultToJson(fallback),
+        },
+      );
+    }
+  }
+
+  Future<LocalToolResult> _executeAgentWeeklySummaryGenerate(
+    Map<String, dynamic> arguments,
+  ) async {
+    final job = await WeeklySummaryJobService.instance.enqueue();
+    if (job == null) {
+      return const LocalToolResult(
+        success: false,
+        outputText: '当前未登录，无法生成周报。',
+        errorText: 'missing_user_session',
+      );
+    }
+
+    return LocalToolResult(
+      success: true,
+      outputText: job.isActive ? '已开始生成本周周报' : '本周周报已可查看',
+      resultJson: <String, dynamic>{
+        'weekly_summary_job_id': job.id,
+        'navigation_target': 'weekly_summary',
+        'source_text': '${arguments['source_text'] ?? ''}',
+      },
+    );
+  }
+
+  Future<LocalToolResult> _executeAgentRewardRedeem(
+    Map<String, dynamic> arguments,
+  ) async {
+    final rewardController = RewardController(quest: _controller);
+    try {
+      await rewardController.loadRewards();
+      await rewardController.loadInventory();
+
+      final rewards = <Reward>[
+        ...rewardController.systemRewards,
+        ...rewardController.customRewards,
+      ];
+      final rewardTitle = '${arguments['reward_title'] ?? ''}'.trim();
+      final sourceText = rewardTitle.isNotEmpty
+          ? rewardTitle
+          : '${arguments['source_text'] ?? ''}'.trim();
+      final match = _findGuideRewardMatch(sourceText, rewards);
+      final reward = match.reward;
+      if (reward == null) {
+        return const LocalToolResult(
+          success: false,
+          outputText: '没有找到可兑换的奖励。',
+          errorText: 'reward_not_found',
+        );
+      }
+
+      if (_controller.currentGold < reward.cost) {
+        return LocalToolResult(
+          success: false,
+          outputText: '金币不足，无法兑换 ${reward.localizedTitle(false)}',
+          errorText: 'insufficient_gold',
+        );
+      }
+
+      final redeemed = await rewardController.buyReward(reward);
+      if (!redeemed) {
+        return LocalToolResult(
+          success: false,
+          outputText: '奖励兑换失败：${reward.localizedTitle(false)}',
+          errorText: 'reward_redeem_failed',
+        );
+      }
+
+      return LocalToolResult(
+        success: true,
+        outputText: '已兑换奖励：${reward.localizedTitle(false)}',
+        resultJson: <String, dynamic>{
+          'reward_id': reward.id,
+          'reward_title': reward.localizedTitle(false),
+        },
+      );
+    } finally {
+      rewardController.dispose();
+    }
+  }
+
+  Future<LocalToolResult> _executeAgentNavigationOpen(
+    Map<String, dynamic> arguments,
+  ) async {
+    final target = '${arguments['target'] ?? ''}'.trim();
+    if (target.isEmpty) {
+      return const LocalToolResult(
+        success: false,
+        outputText: '没有指定要打开的页面。',
+        errorText: 'missing_navigation_target',
+      );
+    }
+
+    return LocalToolResult(
+      success: true,
+      outputText: switch (target) {
+        'stats' => '已打开统计页',
+        'shop' => '已打开商店',
+        'weekly_summary' => '已打开周报页',
+        _ => '已打开目标页面',
+      },
+      resultJson: <String, dynamic>{
+        'navigation_target': target,
+      },
+    );
+  }
+
+  Future<LocalToolResult?> _startAgentRunFromGuideInput(String text) async {
+    _runningLocalAgentStepIds.clear();
+    _finishedLocalAgentStepIds.clear();
+    _localAgentStepResults.clear();
+    final snapshot = await _agentRunService.startRun(
+      goal: text,
+      clientContext: _buildGuideClientContext(),
+    );
+    _trackedAgentRunId = snapshot.run.id;
+    _appendAgentMessagesFromSteps(snapshot.steps);
+    final immediateResult = await _tryExecuteReadyAgentStep();
+    if (immediateResult != null) return immediateResult;
+    final pendingStepId = _agentRunService.latestStep?.id;
+    if (pendingStepId == null || pendingStepId.isEmpty) return null;
+    return _waitForLocalAgentStepResult(pendingStepId);
+  }
+
+  Future<LocalToolResult?> _waitForLocalAgentStepResult(
+    String stepId, {
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      final result = _localAgentStepResults[stepId];
+      if (result != null) return result;
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+    }
+    return _localAgentStepResults[stepId];
+  }
+
+  void _appendAgentMessagesFromSteps(List<AgentStep> steps) {
+    final existingKeys = _guideMessages
+        .where((message) => message.agentStepId != null)
+        .map((message) => '${message.role}:${message.agentStepId}')
+        .toSet();
+
+    for (final step in steps) {
+      if ((step.outputText ?? '').trim().isEmpty) continue;
+      if (!_shouldShowAgentStepMessage(step)) continue;
+      final role = step.kind == 'error' ? 'assistant' : 'assistant';
+      final key = '$role:${step.id}';
+      if (existingKeys.contains(key)) continue;
+      _appendGuideMessage(
+        role,
+        step.outputText!.trim(),
+        agentStepId: step.id,
+      );
+      existingKeys.add(key);
+    }
+  }
+
+  Future<LocalToolResult?> _tryExecuteReadyAgentStep() async {
+    final run = _agentRunService.currentRun;
+    final step = _agentRunService.latestStep;
+    if (run == null || step == null) return null;
+    final cachedResult = _localAgentStepResults[step.id];
+    if (cachedResult != null) {
+      return cachedResult;
+    }
+    if (!step.isToolCall || !step.isReady || step.needsConfirmation) {
+      return null;
+    }
+    if (_runningLocalAgentStepIds.contains(step.id) ||
+        _finishedLocalAgentStepIds.contains(step.id)) {
+      return null;
+    }
+
+    _runningLocalAgentStepIds.add(step.id);
+    try {
+      late final LocalToolResult result;
+      try {
+        result = await _localAgentRuntimeService.execute(
+          LocalToolCall(
+            stepId: step.id,
+            toolName: step.toolName ?? '',
+            arguments: step.argumentsJson,
+          ),
+        );
+      } catch (error) {
+        result = LocalToolResult(
+          success: false,
+          outputText: '本地步骤执行失败：$error',
+          errorText: 'local_agent_execution_exception',
+          resultJson: <String, dynamic>{
+            'step_id': step.id,
+            'tool_name': step.toolName,
+            'error': '$error',
+          },
+        );
+      }
+      _localAgentStepResults[step.id] = result;
+      final snapshot = await _agentRunService.reportLatestLocalResult(
+        success: result.success,
+        outputText: result.outputText,
+        errorText: result.errorText,
+        resultJson: result.resultJson,
+      );
+      _finishedLocalAgentStepIds.add(step.id);
+      if (snapshot != null) {
+        _appendAgentMessagesFromSteps(snapshot.steps);
+      }
+      return result;
+    } finally {
+      _runningLocalAgentStepIds.remove(step.id);
+    }
+  }
+
+  Future<void> _approveLatestAgentStep() async {
+    final snapshot = await _agentRunService.approveLatestStep();
+    if (snapshot != null) {
+      _appendAgentMessagesFromSteps(snapshot.steps);
+      await _tryExecuteReadyAgentStep();
+    }
+  }
+
+  Future<void> _rejectLatestAgentStep() async {
+    final snapshot = await _agentRunService.rejectLatestStep();
+    if (snapshot != null) {
+      _appendAgentMessagesFromSteps(snapshot.steps);
+    }
+  }
+
   void _appendGuideMessage(
     String role,
     String content, {
     List<String> memoryRefs = const <String>[],
+    String? agentStepId,
   }) {
     final text = content.trim();
     if (text.isEmpty) return;
@@ -433,12 +1231,19 @@ class _HomePageState extends State<HomePage> {
           role: role,
           content: text,
           memoryRefCount: memoryRefs.length,
+          agentStepId: agentStepId,
         ),
       );
       if (_guideMessages.length > 60) {
         _guideMessages.removeRange(0, _guideMessages.length - 60);
       }
     });
+  }
+
+  bool _shouldRouteToAgent(String text) {
+    final normalized = text.trim().toLowerCase();
+    if (normalized.isEmpty) return false;
+    return true;
   }
 
   Future<void> _runGuideBootstrapIfNeeded() async {
@@ -473,7 +1278,8 @@ class _HomePageState extends State<HomePage> {
 
     setState(() => _isGuideBootstrapping = true);
     try {
-      final result = await _guideService.bootstrap(scene: 'home');
+      final result = await _guideService.bootstrap(
+          scene: 'home', clientContext: _buildGuideClientContext());
       if (!mounted) return;
       setState(() {
         _guideStatus = _GuideConnectionStatus.ready;
@@ -649,7 +1455,10 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   child: Text(
-                    '+${event.rewardGold} 金币',
+                    _guideText(
+                      '+${event.rewardGold} 金币',
+                      '+${event.rewardGold} gold',
+                    ),
                     style: AppTextStyles.caption.copyWith(
                       fontWeight: FontWeight.w800,
                       color: const Color(0xFF8B5B00),
@@ -774,6 +1583,40 @@ class _HomePageState extends State<HomePage> {
     return zh;
   }
 
+  bool _containsGuideCjk(String text) {
+    return RegExp(r'[\u3400-\u9FFF]').hasMatch(text);
+  }
+
+  GuideChatResult _guideResultForCurrentLocale(GuideChatResult result) {
+    if (!context.isEnglish || !_containsGuideCjk(result.reply)) {
+      return result;
+    }
+
+    final fallbackReply = result.resultCard?.title.trim().isNotEmpty == true
+        ? result.resultCard!.title.trim()
+        : result.resultCard?.description.trim().isNotEmpty == true
+            ? result.resultCard!.description.trim()
+            : result.messageCard?.content.trim().isNotEmpty == true
+                ? result.messageCard!.content.trim()
+                : switch (result.intent) {
+                    GuideChatIntent.action => 'Done. I updated it for you.',
+                    GuideChatIntent.advice =>
+                      'Let us sort the situation first.',
+                    GuideChatIntent.companion => 'I am here with you.',
+                  };
+
+    return GuideChatResult(
+      reply: fallbackReply,
+      intent: result.intent,
+      quickActions: result.quickActions,
+      messageCard: result.messageCard,
+      resultCard: result.resultCard,
+      suggestedTask: result.suggestedTask,
+      taskEditDraft: result.taskEditDraft,
+      memoryRefs: result.memoryRefs,
+    );
+  }
+
   String _normalizeGuideLookup(String text) {
     return text.trim().toLowerCase();
   }
@@ -799,7 +1642,12 @@ class _HomePageState extends State<HomePage> {
     }
 
     final exactMatches = availableRewards
-        .where((reward) => _normalizeGuideLookup(reward.title) == query)
+        .where(
+          (reward) => reward
+              .localizedLookupTitles(context.isEnglish)
+              .map(_normalizeGuideLookup)
+              .contains(query),
+        )
         .toList(growable: false);
     if (exactMatches.length == 1) {
       return _GuideRewardMatch(
@@ -812,9 +1660,14 @@ class _HomePageState extends State<HomePage> {
     }
 
     final partialMatches = availableRewards.where((reward) {
-      final title = _normalizeGuideLookup(reward.title);
-      return title.isNotEmpty &&
-          (query.contains(title) || title.contains(query));
+      for (final candidate in reward.localizedLookupTitles(context.isEnglish)) {
+        final title = _normalizeGuideLookup(candidate);
+        if (title.isNotEmpty &&
+            (query.contains(title) || title.contains(query))) {
+          return true;
+        }
+      }
+      return false;
     }).toList(growable: false);
     if (partialMatches.length == 1) {
       return _GuideRewardMatch(
@@ -829,12 +1682,22 @@ class _HomePageState extends State<HomePage> {
     String text, {
     List<Reward> candidates = const <Reward>[],
   }) {
-    final rewardTitles = candidates
-        .map((reward) => reward.title.trim())
+    final rewardTitlesZh = candidates
+        .map((reward) => reward.localizedTitle(false).trim())
         .where((title) => title.isNotEmpty)
         .take(3)
         .toList(growable: false);
-    final hasCandidates = rewardTitles.isNotEmpty;
+    final rewardTitlesEn = candidates
+        .map((reward) => reward.localizedTitle(true).trim())
+        .where((title) => title.isNotEmpty)
+        .take(3)
+        .toList(growable: false);
+    final hasCandidates =
+        rewardTitlesZh.isNotEmpty && rewardTitlesEn.isNotEmpty;
+    final zhCandidateList = rewardTitlesZh.join('、');
+    final enCandidateList = rewardTitlesEn.join(', ');
+    final firstZh = hasCandidates ? rewardTitlesZh.first : '';
+    final firstEn = hasCandidates ? rewardTitlesEn.first : '';
 
     return GuideChatResult(
       reply: _guideText(
@@ -847,8 +1710,8 @@ class _HomePageState extends State<HomePage> {
         label: _guideText('还需要你确认', 'Need your confirmation'),
         content: hasCandidates
             ? _guideText(
-                '我现在想到的候选有：${rewardTitles.join('、')}。你可以直接说“兑换${rewardTitles.first}”。',
-                'Possible matches so far: ${rewardTitles.join(', ')}. You can say "Redeem ${rewardTitles.first}".',
+                '我现在想到的候选有：$zhCandidateList。你可以直接说“兑换$firstZh”。',
+                'Possible matches so far: $enCandidateList. You can say "Redeem $firstEn".',
               )
             : _guideText(
                 '我还没从“$text”里抓到具体奖励名。你可以直接说“兑换森林主题”这种更明确的话。',
@@ -967,8 +1830,10 @@ class _HomePageState extends State<HomePage> {
             messageCard: null,
             resultCard: GuideResultCard(
               label: _guideText('这次还差一点', 'Almost there'),
-              title: _guideText('金币还不够兑换 ${reward.title}',
-                  'Not enough gold for ${reward.title}'),
+              title: _guideText(
+                '金币还不够兑换 ${reward.localizedTitle(false)}',
+                'Not enough gold for ${reward.localizedTitle(true)}',
+              ),
               description: _guideText(
                 '它需要 ${reward.cost} 金币，你现在有 ${_controller.currentGold} 金币。',
                 'It needs ${reward.cost} gold, and you currently have ${_controller.currentGold}.',
@@ -995,7 +1860,9 @@ class _HomePageState extends State<HomePage> {
             resultCard: GuideResultCard(
               label: _guideText('这次没接稳', 'This did not stick'),
               title: _guideText(
-                  '未能兑换 ${reward.title}', 'Could not redeem ${reward.title}'),
+                '未能兑换 ${reward.localizedTitle(false)}',
+                'Could not redeem ${reward.localizedTitle(true)}',
+              ),
               description: _guideText(
                 '你可以稍后再试一次，或者先打开商店看看当前可兑换的奖励。',
                 'You can try again shortly, or open the shop to review what is currently redeemable.',
@@ -1019,8 +1886,10 @@ class _HomePageState extends State<HomePage> {
           messageCard: null,
           resultCard: GuideResultCard(
             label: _guideText('已为你兑换', 'Redeemed for you'),
-            title:
-                _guideText('已兑换 ${reward.title}', 'Redeemed ${reward.title}'),
+            title: _guideText(
+              '已兑换 ${reward.localizedTitle(false)}',
+              'Redeemed ${reward.localizedTitle(true)}',
+            ),
             description: _guideText(
               '这次一共花了 ${reward.cost} 金币，奖励已经放进你的背包或立即生效。',
               'This spent ${reward.cost} gold, and the reward is now in your inventory or already active.',
@@ -1065,31 +1934,50 @@ class _HomePageState extends State<HomePage> {
   ) {
     final source = latestUserText.trim();
     if (action == context.tr('guide.quick.listen_more')) {
-      return source.isEmpty ? '我想继续说说。' : '$source 我想继续说说。';
+      return source.isEmpty
+          ? _guideText('我想继续说说。', 'I want to keep talking.')
+          : _guideText('$source 我想继续说说。', '$source I want to keep talking.');
     }
     if (action == context.tr('guide.quick.stay_with_me')) {
-      return source.isEmpty ? '我想让你陪我聊聊。' : '$source 我现在更想让你陪我聊聊。';
+      return source.isEmpty
+          ? _guideText('我想让你陪我聊聊。', 'I want you to keep me company.')
+          : _guideText('$source 我现在更想让你陪我聊聊。',
+              '$source I now want you to be here with me.');
     }
     if (action == context.tr('guide.quick.hardest_part')) {
-      return source.isEmpty ? '现在最难的是哪一块？' : '$source 现在最难的是哪一块？';
+      return source.isEmpty
+          ? _guideText('现在最难的是哪一块？', 'What feels hardest right now?')
+          : _guideText(
+              '$source 现在最难的是哪一块？', '$source What feels hardest right now?');
     }
     if (action == context.tr('guide.quick.help_sort')) {
-      return source.isEmpty ? '帮我理一下。' : '$source 帮我理一下。';
+      return source.isEmpty
+          ? _guideText('帮我理一下。', 'Help me sort this out.')
+          : _guideText('$source 帮我理一下。', '$source Help me sort this out.');
     }
     if (action == context.tr('guide.quick.ask_advice')) {
-      return source.isEmpty ? '给我一个建议。' : '$source 给我一个建议。';
+      return source.isEmpty
+          ? _guideText('给我一个建议。', 'Give me a suggestion.')
+          : _guideText('$source 给我一个建议。', '$source Give me a suggestion.');
     }
     if (action == context.tr('guide.quick.push_or_rest')) {
-      return source.isEmpty ? '现在更适合推进还是休息？' : '$source 现在更适合推进还是休息？';
+      return source.isEmpty
+          ? _guideText('现在更适合推进还是休息？', 'Should I push forward or rest now?')
+          : _guideText(
+              '$source 现在更适合推进还是休息？',
+              '$source Should I push forward or rest now?',
+            );
     }
     if (action == context.tr('guide.quick.generate_task')) {
-      return source.isEmpty ? '把这句变成任务。' : '把“$source”变成任务。';
+      return source.isEmpty
+          ? _guideText('把这句变成任务。', 'Turn this into a quest.')
+          : _guideText('把“$source”变成任务。', 'Turn "$source" into a quest.');
     }
     if (action == context.tr('guide.quick.view_weekly')) {
-      return '看看这周怎么样。';
+      return _guideText('看看这周怎么样。', 'See how this week went.');
     }
     if (action == context.tr('guide.quick.open_stats')) {
-      return '打开统计。';
+      return _guideText('打开统计。', 'Open the stats.');
     }
     return action;
   }
@@ -1118,17 +2006,29 @@ class _HomePageState extends State<HomePage> {
   String _guideCompanionReply(String text) {
     final normalized = text.trim();
     if (normalized.contains('不开心') || normalized.contains('难过')) {
-      return '我听到了。你现在更需要先被接住，而不是立刻把自己整理好。我们先把让你不舒服的那一块放到台面上，我陪你慢慢说。';
+      return _guideText(
+        '我听到了。你现在更需要先被接住，而不是立刻把自己整理好。我们先把让你不舒服的那一块放到台面上，我陪你慢慢说。',
+        'I hear you. You need to be held first, not forced to tidy up. Let us lay out the uncomfortable part while I stay with you.',
+      );
     }
     if (normalized.contains('乱')) {
-      return '$_guideName在。你现在不像完全停住，更像是事情一下子都挤过来了。先别急着安排任务，我们先把乱的地方说清楚。';
+      return _guideText(
+        '$_guideName在。你现在不像完全停住，更像是事情一下子都挤过来了。先别急着安排任务，我们先把乱的地方说清楚。',
+        '$_guideName is here. It feels less like being stuck and more like everything coming at once. Let us name the mess before planning anything.',
+      );
     }
     if (normalized.contains('累') ||
         normalized.contains('不想动') ||
         normalized.contains('撑')) {
-      return '听起来你更需要被接住，而不是被催。我们先不急着推进，我先陪你把状态放平一点。';
+      return _guideText(
+        '听起来你更需要被接住，而不是被催。我们先不急着推进，我先陪你把状态放平一点。',
+        'It sounds like you need to be held, not pushed. Let us pause progress while I help you settle first.',
+      );
     }
-    return '我在听。你不用现在就把事情说得很完整，我们先把最想说的那一块放到台面上。';
+    return _guideText(
+      '我在听。你不用现在就把事情说得很完整，我们先把最想说的那一块放到台面上。',
+      'I am listening. You do not need to explain everything right now; let us start with the part you most want to say.',
+    );
   }
 
   List<String> _buildGuideEntryQuickActions() {
@@ -1142,22 +2042,40 @@ class _HomePageState extends State<HomePage> {
   List<String> _buildGuideModeExamples(String action) {
     if (action == context.tr('guide.mode.generate_task')) {
       return [
-        '把“准备周会开场白”变成任务',
-        '帮我生成开会任务',
-        '给我一个恢复任务',
+        _guideText(
+          '把“准备周会开场白”变成任务',
+          'Turn "Prepare the meeting opening" into a task',
+        ),
+        _guideText(
+          '帮我生成开会任务',
+          'Help me generate a meeting task',
+        ),
+        _guideText(
+          '给我一个恢复任务',
+          'Give me a recovery task',
+        ),
       ];
     }
     if (action == context.tr('guide.mode.modify_task')) {
       return [
-        '修改任务“开会”，截止时间是 3 月 20 日',
-        '把“开会”标题改成“准备周会”',
-        '把“开会”拆成：确认时间、整理材料、写开场',
+        _guideText(
+          '修改任务“开会”，截止时间是 3 月 20 日',
+          'Edit the "Meeting" task to be due on March 20',
+        ),
+        _guideText(
+          '把“开会”标题改成“准备周会”',
+          'Change the title "Meeting" to "Prepare the meeting"',
+        ),
+        _guideText(
+          '把“开会”拆成：确认时间、整理材料、写开场',
+          'Split "Meeting" into: confirm the time, organize materials, write the opener',
+        ),
       ];
     }
     return [
-      '我现在有点乱',
-      '陪我聊聊开会前的压力',
-      '最难的是开场那一块',
+      _guideText('我现在有点乱', 'I am feeling scattered right now'),
+      _guideText('陪我聊聊开会前的压力', 'Talk with me about the pre-meeting pressure'),
+      _guideText('最难的是开场那一块', 'The hardest part is the opening'),
     ];
   }
 
@@ -1198,25 +2116,52 @@ class _HomePageState extends State<HomePage> {
 
   String _guideCompanionCardContent(String text) {
     final normalized = text.trim();
+    final lower = normalized.toLowerCase();
     final memory = _guideMemorySummary().trim();
-    if (normalized.contains('不开心') || normalized.contains('难过')) {
+    if (normalized.contains('不开心') ||
+        normalized.contains('难过') ||
+        lower.contains('sad') ||
+        lower.contains('upset')) {
       if (memory.isNotEmpty) {
-        return '$_guideName记得：$memory 你现在可以先不用解决问题，我们先把这份不开心说清楚。';
+        return _guideText(
+          '$_guideName记得：$memory。你现在可以先不用急着解决问题，我们先把这份难过说清楚。',
+          '$_guideName remembers: $memory. You do not need to solve it yet. Let us name what feels heavy first.',
+        );
       }
-      return '$_guideName会先陪你把这份不开心放下来，再一起看接下来最需要被照顾的是哪一块。';
+      return _guideText(
+        '$_guideName会先陪你把这份难过放下来，再一起看接下来最需要被照顾的是哪一块。',
+        '$_guideName will stay with you first, then help you see what needs care most right now.',
+      );
     }
-    if (normalized.contains('乱')) {
-      return '$_guideName会先陪你把眼前最乱的那一块摊开，不急着立刻下结论。';
+    if (normalized.contains('乱') ||
+        lower.contains('scattered') ||
+        lower.contains('overwhelmed')) {
+      return _guideText(
+        '$_guideName会先陪你把眼前最乱的那一块摊开，不急着立刻下结论。',
+        '$_guideName will help you unpack the messiest part first, without rushing to a conclusion.',
+      );
     }
     if (normalized.contains('累') ||
         normalized.contains('不想动') ||
-        normalized.contains('拖')) {
-      return '$_guideName会先帮你把节奏放慢一点，再决定现在是休息、梳理还是只说一会儿。';
+        normalized.contains('拖') ||
+        lower.contains('tired') ||
+        lower.contains('burned out') ||
+        lower.contains('stuck')) {
+      return _guideText(
+        '$_guideName会先帮你把节奏放慢一点，再决定现在是休息、梳理还是只说一会儿。',
+        '$_guideName will slow the pace down first, then decide whether you need rest, structure, or just a little company.',
+      );
     }
     if (memory.isNotEmpty) {
-      return '$_guideName记得：$memory';
+      return _guideText(
+        '$_guideName记得：$memory',
+        '$_guideName remembers: $memory',
+      );
     }
-    return '$_guideName会先陪你把现在的状态说清楚，再决定要不要动手。';
+    return _guideText(
+      '$_guideName会先陪你把现在的状态说清楚，再决定要不要动手。',
+      '$_guideName will help you describe where you are first, then decide whether to take action.',
+    );
   }
 
   GuideChatResult _buildCompanionGuideResult(String text) {
@@ -1237,14 +2182,38 @@ class _HomePageState extends State<HomePage> {
 
   GuideChatResult _buildAdviceGuideResult(String text) {
     final normalized = text.trim();
-    var reply = '我会先帮你判断，不急着把话直接变成任务。';
-    var cardContent = '先分轻重，再决定推进还是恢复，会比硬撑更稳。';
-    if (normalized.contains('休息') || normalized.contains('推进')) {
-      reply = '如果你还能推进一点点，我建议保留一个最小动作；如果已经发涩，就先给自己留恢复边界。';
-      cardContent = '现在更像是“保留一点推进，同时别把自己压扁”，适合轻推进。';
-    } else if (normalized.contains('不知道')) {
-      reply = '不知道先做什么的时候，通常不是懒，而是缺一个足够小的起点。';
-      cardContent = '先找一件 5 到 10 分钟能开始的事，会比追求完整计划更有效。';
+    final lower = normalized.toLowerCase();
+    var reply = _guideText(
+      '我会先帮你判断，不急着把话直接变成任务。',
+      'I will help you judge the situation first, instead of turning it into a task too quickly.',
+    );
+    var cardContent = _guideText(
+      '先分轻重，再决定推进还是恢复，会比硬撑更稳。',
+      'Sort what is heavy first, then choose between progress and recovery. That is steadier than forcing it.',
+    );
+    if (normalized.contains('休息') ||
+        normalized.contains('推进') ||
+        lower.contains('rest') ||
+        lower.contains('push')) {
+      reply = _guideText(
+        '如果你还能推进一点点，我建议保留一个最小动作；如果已经发涩，就先给自己留恢复边界。',
+        'If you can still move a little, keep one tiny action. If you already feel stuck, protect a recovery boundary first.',
+      );
+      cardContent = _guideText(
+        '现在更像是“保留一点推进，同时别把自己压扁”，适合轻推进。',
+        'This looks more like keeping a little momentum without crushing yourself.',
+      );
+    } else if (normalized.contains('不知道') ||
+        lower.contains('not sure') ||
+        lower.contains('what should i do first')) {
+      reply = _guideText(
+        '不知道先做什么的时候，通常不是懒，而是缺一个足够小的起点。',
+        'When you do not know where to start, the problem is usually not laziness. It is the lack of a small enough starting point.',
+      );
+      cardContent = _guideText(
+        '先找一件 5 到 10 分钟能开始的事，会比追求完整计划更有效。',
+        'Pick one thing you can start within 5 to 10 minutes. That is usually more useful than waiting for a perfect plan.',
+      );
     }
 
     return GuideChatResult(
@@ -1268,20 +2237,40 @@ class _HomePageState extends State<HomePage> {
     return quoted.group(1)?.trim() ?? '';
   }
 
-  static const List<String> _recoveryTasks = [
-    '站起来拉伸 5 分钟',
-    '喝一杯温水',
-    '出门散步 10 分钟',
-    '闭眼深呼吸 3 分钟',
-    '洗把脸，活动一下肩颈',
-    '听一首喜欢的歌放松一下',
-    '整理一下桌面',
-    '给自己泡一杯茶',
-  ];
+  List<String> _guideRecoveryTasks() {
+    if (context.isEnglish) {
+      return const <String>[
+        'Stand up and stretch for 5 minutes',
+        'Drink a warm glass of water',
+        'Take a 10-minute walk outside',
+        'Close your eyes and breathe for 3 minutes',
+        'Wash your face and loosen your shoulders',
+        'Play one song you love and unwind',
+        'Tidy up your desk for a moment',
+        'Make yourself a cup of tea',
+      ];
+    }
+    return const <String>[
+      '站起来拉伸 5 分钟',
+      '喝一杯温水',
+      '出门散步 10 分钟',
+      '闭眼深呼吸 3 分钟',
+      '洗把脸，活动一下肩颈',
+      '听一首喜欢的歌放松一下',
+      '整理一下桌面',
+      '给自己泡一杯茶',
+    ];
+  }
+
+  String _randomGuideRecoveryTask() {
+    final tasks = _guideRecoveryTasks().toList()..shuffle();
+    return tasks.first;
+  }
 
   String _normalizeGuideTaskTitle(String raw) {
-    if (raw.contains('恢复任务')) {
-      return (_recoveryTasks.toList()..shuffle()).first;
+    final lowerRaw = raw.toLowerCase();
+    if (raw.contains('恢复任务') || lowerRaw.contains('recovery task')) {
+      return _randomGuideRecoveryTask();
     }
 
     var cleaned = raw
@@ -1310,26 +2299,52 @@ class _HomePageState extends State<HomePage> {
         .replaceAll('带子项', '')
         .replaceAll('带上子项', '')
         .replaceAll('加上子项', '')
+        .replaceAll('Turn this into a quest', '')
+        .replaceAll('turn this into a quest', '')
+        .replaceAll('turn this into a task', '')
+        .replaceAll('make this a task', '')
+        .replaceAll('create a task', '')
+        .replaceAll('generate a task', '')
+        .replaceAll('help me create', '')
+        .replaceAll('help me make', '')
+        .replaceAll('help me generate', '')
+        .replaceAll('give me a', '')
+        .replaceAll('give me an', '')
+        .replaceAll('more detailed', '')
+        .replaceAll('more specific', '')
+        .replaceAll('with subtasks', '')
+        .replaceAll('with steps', '')
         .replaceAll('。', '')
+        .replaceAll('.', '')
         .trim();
     if (cleaned.endsWith('任务')) {
       cleaned = cleaned.substring(0, cleaned.length - 2).trim();
     }
+    if (cleaned.toLowerCase().endsWith(' task')) {
+      cleaned = cleaned.substring(0, cleaned.length - 5).trim();
+    }
     if (cleaned.endsWith('的')) {
       cleaned = cleaned.substring(0, cleaned.length - 1).trim();
     }
-    if (cleaned == '恢复' || cleaned == '恢复一下') {
-      return (_recoveryTasks.toList()..shuffle()).first;
+    final lowerCleaned = cleaned.toLowerCase();
+    if (cleaned == '恢复' ||
+        cleaned == '恢复一下' ||
+        lowerCleaned == 'recovery' ||
+        lowerCleaned == 'recovery task') {
+      return _randomGuideRecoveryTask();
     }
     if (cleaned.isEmpty) return '';
-    final segments = cleaned.split(RegExp(r'[，,；;：:]'));
+    final segments = cleaned.split(RegExp(r'[，,；;：:。.!?]'));
     return segments.first.trim();
   }
 
   String _guideTaskDescription(String raw) {
     final cleaned = raw.replaceAll('。', '').trim();
     if (cleaned.isEmpty) {
-      return '$_guideName根据这次对话整理出的新任务。';
+      return _guideText(
+        '$_guideName根据这次对话整理出的新任务。',
+        'A new task $_guideName organized from this conversation.',
+      );
     }
     return cleaned;
   }
@@ -1523,6 +2538,23 @@ class _HomePageState extends State<HomePage> {
 
   String _formatGuideDueDate(DateTime date) {
     final local = date.toLocal();
+    if (context.isEnglish) {
+      const months = <String>[
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${months[local.month - 1]} ${local.day}';
+    }
     return '${local.month}月${local.day}日';
   }
 
@@ -1537,7 +2569,13 @@ class _HomePageState extends State<HomePage> {
         normalized.contains('拆解') ||
         normalized.contains('分步骤') ||
         normalized.contains('子项') ||
-        normalized.contains('子任务');
+        normalized.contains('子任务') ||
+        normalized.contains('more detailed') ||
+        normalized.contains('more specific') ||
+        normalized.contains('break it down') ||
+        normalized.contains('split') ||
+        normalized.contains('steps') ||
+        normalized.contains('subtask');
   }
 
   bool _isGuideConfirmationText(String text) {
@@ -1553,7 +2591,14 @@ class _HomePageState extends State<HomePage> {
         normalized == '行' ||
         normalized == '继续' ||
         normalized == '是的' ||
-        normalized == '嗯';
+        normalized == '嗯' ||
+        normalized == 'yes' ||
+        normalized == 'yep' ||
+        normalized == 'sure' ||
+        normalized == 'ok' ||
+        normalized == 'okay' ||
+        normalized == 'do it' ||
+        normalized == 'continue';
   }
 
   bool _isGuideCancellationText(String text) {
@@ -1565,7 +2610,11 @@ class _HomePageState extends State<HomePage> {
         normalized == '不要' ||
         normalized == '先别' ||
         normalized == '算了' ||
-        normalized == '取消';
+        normalized == '取消' ||
+        normalized == 'no' ||
+        normalized == 'not now' ||
+        normalized == 'skip' ||
+        normalized == 'cancel';
   }
 
   List<String> _extractGuideStepTitles(String text) {
@@ -1596,7 +2645,14 @@ class _HomePageState extends State<HomePage> {
     if (explicitSteps.length >= 2) {
       return explicitSteps.take(3).toList();
     }
-    return [
+    if (context.isEnglish) {
+      return <String>[
+        'Clarify the goal of ${quest.title}',
+        'Finish the first small step of ${quest.title}',
+        'Review it and patch one detail',
+      ];
+    }
+    return <String>[
       '确认${quest.title}的目标',
       '完成${quest.title}的第一小步',
       '回看并补一处细节',
@@ -1608,11 +2664,35 @@ class _HomePageState extends State<HomePage> {
     if (explicitSteps.length >= 2) {
       return explicitSteps.take(3).toList();
     }
-    if (title.contains('开会') || title.contains('会议')) {
-      return const <String>['确认时间', '整理材料', '写开场'];
+    final lowerTitle = title.toLowerCase();
+    if (title.contains('开会') ||
+        title.contains('会议') ||
+        lowerTitle.contains('meeting')) {
+      return context.isEnglish
+          ? const <String>[
+              'Confirm the time',
+              'Organize the materials',
+              'Write the opener',
+            ]
+          : const <String>['确认时间', '整理材料', '写开场'];
     }
-    if (title.contains('打扫') || title.contains('卫生')) {
-      return const <String>['清桌面杂物', '擦拭台面灰尘', '扫地拖地'];
+    if (title.contains('打扫') ||
+        title.contains('卫生') ||
+        lowerTitle.contains('clean')) {
+      return context.isEnglish
+          ? const <String>[
+              'Clear the desk clutter',
+              'Wipe the surfaces',
+              'Sweep and mop the floor',
+            ]
+          : const <String>['清桌面杂物', '擦拭台面灰尘', '扫地拖地'];
+    }
+    if (context.isEnglish) {
+      return <String>[
+        'Clarify the scope of $title',
+        'Finish the first step of $title',
+        'Wrap up and review $title',
+      ];
     }
     return <String>[
       '确认$title的范围',
@@ -1680,7 +2760,10 @@ class _HomePageState extends State<HomePage> {
       _pendingGuideTaskDueDate = null;
       return _GuideTurnResponse(
         result: GuideChatResult(
-          reply: '好，那我先不继续这轮任务修改。你想继续时，直接告诉我要改哪条任务就行。',
+          reply: _guideText(
+            '好，那我先不继续这轮任务修改。你想继续时，直接告诉我要改哪条任务就行。',
+            'Okay. I will pause this task edit for now. When you want to continue, just tell me which task to change.',
+          ),
           intent: GuideChatIntent.action,
           quickActions: _buildGuideQuickActions(GuideChatIntent.action),
           messageCard: null,
@@ -1706,7 +2789,7 @@ class _HomePageState extends State<HomePage> {
       final inserted = await _controller.addGuideSuggestedTask(
         title: draft.taskTitle,
         description: draft.updatedDescription.trim().isEmpty
-            ? '$_guideName根据这次对话整理出的新任务。'
+            ? _guideTaskDescription('')
             : draft.updatedDescription,
         xpReward: draft.updatedXpReward ?? 20,
         questTier: 'Daily',
@@ -1714,7 +2797,10 @@ class _HomePageState extends State<HomePage> {
       if (inserted == null) {
         return _GuideTurnResponse(
           result: GuideChatResult(
-            reply: '我刚才试着按你的条件补一条新任务，但这次没有成功。你可以再说一次，我继续帮你生成。',
+            reply: _guideText(
+              '我刚才试着按你的条件补一条新任务，但这次没有成功。你可以再说一次，我继续帮你生成。',
+              'I tried to add a new task that matches your request, but it did not go through this time. Tell me again and I will keep helping.',
+            ),
             intent: GuideChatIntent.action,
             quickActions: _buildGuideQuickActions(GuideChatIntent.action),
             messageCard: null,
@@ -1754,8 +2840,14 @@ class _HomePageState extends State<HomePage> {
       return _GuideTurnResponse(
         result: GuideChatResult(
           reply: insertedChildren.isEmpty
-              ? '好，我已经按这轮条件补了一条“${inserted.title}”任务。'
-              : '好，我已经按这轮条件补了一条“${inserted.title}”任务，也顺手拆成了子项。',
+              ? _guideText(
+                  '好，我已经按这轮条件补了一条“${inserted.title}”任务。',
+                  'Done. I added a new task called "${inserted.title}" for you.',
+                )
+              : _guideText(
+                  '好，我已经按这轮条件补了一条“${inserted.title}”任务，也顺手拆成了子项。',
+                  'Done. I added a new task called "${inserted.title}" and also split it into subtasks.',
+                ),
           intent: GuideChatIntent.action,
           quickActions: _buildGuideQuickActions(GuideChatIntent.action),
           messageCard: null,
@@ -1804,7 +2896,10 @@ class _HomePageState extends State<HomePage> {
       _pendingGuideTaskDueDate = null;
       return _GuideTurnResponse(
         result: GuideChatResult(
-          reply: '我没在任务板里找到刚才那条任务，可能已经被删掉或改名了。你把任务名再告诉我一次，我马上继续。',
+          reply: _guideText(
+            '我没在任务板里找到刚才那条任务，可能已经被删掉或改名了。你把任务名再告诉我一次，我马上继续。',
+            'I could not find that task on your board just now. It may have been deleted or renamed. Tell me the task name again and I will continue.',
+          ),
           intent: GuideChatIntent.action,
           quickActions: _buildGuideQuickActions(GuideChatIntent.action),
           messageCard: null,
@@ -1841,8 +2936,14 @@ class _HomePageState extends State<HomePage> {
       return _GuideTurnResponse(
         result: GuideChatResult(
           reply: children.isEmpty
-              ? '好，不过这条任务下面目前没有子任务，所以我先只保留主任务的截止时间。'
-              : '好，我已经把拆解后的子任务截止时间也一起同步到${_formatGuideDueDate(dueDate)}了。',
+              ? _guideText(
+                  '好，不过这条任务下面目前没有子任务，所以我先只保留主任务的截止时间。',
+                  'Okay. There are no subtasks under this task right now, so I only kept the parent due date.',
+                )
+              : _guideText(
+                  '好，我已经把拆解后的子任务截止时间也一起同步到${_formatGuideDueDate(dueDate)}了。',
+                  'Okay. I also synced the subtasks to ${_formatGuideDueDate(dueDate)}.',
+                ),
           intent: GuideChatIntent.action,
           quickActions: _buildGuideQuickActions(GuideChatIntent.action),
           messageCard: null,
@@ -1887,7 +2988,10 @@ class _HomePageState extends State<HomePage> {
       if (inserted.isEmpty) {
         return _GuideTurnResponse(
           result: GuideChatResult(
-            reply: '我刚才试着把这些子项放进任务板，但这次没有成功。你可以再说一次，我继续帮你落板。',
+            reply: _guideText(
+              '我刚才试着把这些子项放进任务板，但这次没有成功。你可以再说一次，我继续帮你落板。',
+              'I tried to place these subtasks on your board, but it did not work this time. Tell me again and I will keep helping.',
+            ),
             intent: GuideChatIntent.action,
             quickActions: _buildGuideQuickActions(GuideChatIntent.action),
             messageCard: null,
@@ -1910,7 +3014,10 @@ class _HomePageState extends State<HomePage> {
       _pendingGuideTaskDueDate = null;
       return _GuideTurnResponse(
         result: GuideChatResult(
-          reply: '好，我已经把这几项放进任务板，作为“${target.title}”的子任务了。',
+          reply: _guideText(
+            '好，我已经把这几项放进任务板，作为“${target.title}”的子任务了。',
+            'Done. I added these items as subtasks under "${target.title}".',
+          ),
           intent: GuideChatIntent.action,
           quickActions: _buildGuideQuickActions(GuideChatIntent.action),
           messageCard: null,
@@ -1950,7 +3057,10 @@ class _HomePageState extends State<HomePage> {
     if (title.isEmpty) {
       return _GuideTurnResponse(
         result: GuideChatResult(
-          reply: '我还没抓到要生成的事情。你可以直接说一句具体要做的事，比如“整理会议材料”。',
+          reply: _guideText(
+            '我还没抓到要生成的事情。你可以直接说一句具体要做的事，比如“整理会议材料”。',
+            'I still have not caught the thing you want to create. Tell me one concrete thing to do, like "Organize the meeting materials".',
+          ),
           intent: GuideChatIntent.advice,
           quickActions: _buildGuideQuickActions(GuideChatIntent.advice),
           messageCard: GuideMessageCard(
@@ -1977,7 +3087,10 @@ class _HomePageState extends State<HomePage> {
     if (inserted == null) {
       return _GuideTurnResponse(
         result: GuideChatResult(
-          reply: '我刚刚试着帮你生成任务，但这次没有成功。你可以换个更明确的说法，我再试一次。',
+          reply: _guideText(
+            '我刚刚试着帮你生成任务，但这次没有成功。你可以换个更明确的说法，我再试一次。',
+            'I just tried to create the task for you, but it did not work this time. Try a clearer request and I will try again.',
+          ),
           intent: GuideChatIntent.action,
           quickActions: _buildGuideQuickActions(GuideChatIntent.action),
           messageCard: null,
@@ -2008,8 +3121,14 @@ class _HomePageState extends State<HomePage> {
     return _GuideTurnResponse(
       result: GuideChatResult(
         reply: insertedChildren.isEmpty
-            ? '好，我已经把这句话整理成任务，放到任务板里了。'
-            : '好，我已经把这句话整理成任务，也顺手帮你拆成可以直接开做的子项了。',
+            ? _guideText(
+                '好，我已经把这句话整理成任务，放到任务板里了。',
+                'Done. I turned that sentence into a task and placed it on your board.',
+              )
+            : _guideText(
+                '好，我已经把这句话整理成任务，也顺手帮你拆成可以直接开做的子项了。',
+                'Done. I turned that sentence into a task and also split it into subtasks you can start right away.',
+              ),
         intent: GuideChatIntent.action,
         quickActions: _buildGuideQuickActions(GuideChatIntent.action),
         messageCard: null,
@@ -2066,8 +3185,14 @@ class _HomePageState extends State<HomePage> {
         return _GuideTurnResponse(
           result: GuideChatResult(
             reply: dueDate == null
-                ? '我现在没在任务板里找到“$suggestedTitle”。要不要我直接按你的条件生成一个新任务？'
-                : '我现在没在任务板里找到“$suggestedTitle”。要不要我直接生成一个新任务，并把截止时间设为${_formatGuideDueDate(dueDate)}？',
+                ? _guideText(
+                    '我现在没在任务板里找到“$suggestedTitle”。要不要我直接按你的条件生成一个新任务？',
+                    'I cannot find "$suggestedTitle" on your board right now. Do you want me to create a new task that matches your request?',
+                  )
+                : _guideText(
+                    '我现在没在任务板里找到“$suggestedTitle”。要不要我直接生成一个新任务，并把截止时间设为${_formatGuideDueDate(dueDate)}？',
+                    'I cannot find "$suggestedTitle" on your board right now. Do you want me to create a new task with a due date of ${_formatGuideDueDate(dueDate)}?',
+                  ),
             intent: GuideChatIntent.action,
             quickActions: _buildGuideQuickActions(GuideChatIntent.action),
             messageCard: GuideMessageCard(
@@ -2106,7 +3231,10 @@ class _HomePageState extends State<HomePage> {
       }
       return _GuideTurnResponse(
         result: GuideChatResult(
-          reply: '我还没确定你想改哪一条任务。你可以直接说任务名，比如“把‘准备周会’改轻一点”。',
+          reply: _guideText(
+            '我还没确定你想改哪一条任务。你可以直接说任务名，比如“把‘准备周会’改轻一点”。',
+            'I am not sure which task you want to change yet. You can say the task name directly, like "Lighten up Prepare the weekly meeting".',
+          ),
           intent: GuideChatIntent.advice,
           quickActions: _buildGuideQuickActions(GuideChatIntent.advice),
           messageCard: GuideMessageCard(
@@ -2144,7 +3272,10 @@ class _HomePageState extends State<HomePage> {
       if (inserted.isEmpty) {
         return _GuideTurnResponse(
           result: GuideChatResult(
-            reply: '我试着帮你拆小这条任务，但这次没有成功。',
+            reply: _guideText(
+              '我试着帮你拆小这条任务，但这次没有成功。',
+              'I tried to break this task into smaller steps, but it did not work this time.',
+            ),
             intent: GuideChatIntent.action,
             quickActions: _buildGuideQuickActions(GuideChatIntent.action),
             messageCard: null,
@@ -2172,7 +3303,10 @@ class _HomePageState extends State<HomePage> {
       }
       return _GuideTurnResponse(
         result: GuideChatResult(
-          reply: '好，我已经把“${target.title}”拆成更容易开始的几步了。',
+          reply: _guideText(
+            '好，我已经把“${target.title}”拆成更容易开始的几步了。',
+            'Done. I split "${target.title}" into a few easier starting steps.',
+          ),
           intent: GuideChatIntent.action,
           quickActions: _buildGuideQuickActions(GuideChatIntent.action),
           messageCard: null,
@@ -2268,7 +3402,10 @@ class _HomePageState extends State<HomePage> {
         dueDate == null) {
       return _GuideTurnResponse(
         result: GuideChatResult(
-          reply: '我找到这条任务了。你可以继续告诉我，是想改标题、改描述、调 XP，还是把它拆小一点。',
+          reply: _guideText(
+            '我找到这条任务了。你可以继续告诉我，是想改标题、改描述、调 XP，还是把它拆小一点。',
+            'I found the task. You can now tell me whether to change the title, update the description, adjust the XP, or break it into smaller steps.',
+          ),
           intent: GuideChatIntent.advice,
           quickActions: _buildGuideQuickActions(GuideChatIntent.advice),
           messageCard: GuideMessageCard(
@@ -2346,8 +3483,10 @@ class _HomePageState extends State<HomePage> {
         );
         return _GuideTurnResponse(
           result: GuideChatResult(
-            reply:
-                '已修改${nextTitle ?? target.title}任务，截止时间设为${_formatGuideDueDate(dueDate)}。需要我把拆解后的子任务也同步更新截止时间吗？',
+            reply: _guideText(
+              '已修改${nextTitle ?? target.title}任务，截止时间设为${_formatGuideDueDate(dueDate)}。需要我把拆解后的子任务也同步更新截止时间吗？',
+              'The task "${nextTitle ?? target.title}" now has a due date of ${_formatGuideDueDate(dueDate)}. Do you want me to sync that date to its subtasks too?',
+            ),
             intent: GuideChatIntent.action,
             quickActions: _buildGuideQuickActions(GuideChatIntent.action),
             messageCard: GuideMessageCard(
@@ -2377,7 +3516,10 @@ class _HomePageState extends State<HomePage> {
 
     return _GuideTurnResponse(
       result: GuideChatResult(
-        reply: '好，我已经帮你把“${nextTitle ?? target.title}”改好了。',
+        reply: _guideText(
+          '好，我已经帮你把“${nextTitle ?? target.title}”改好了。',
+          'Done. I updated "${nextTitle ?? target.title}" for you.',
+        ),
         intent: GuideChatIntent.action,
         quickActions: _buildGuideQuickActions(GuideChatIntent.action),
         messageCard: null,
@@ -2450,7 +3592,10 @@ class _HomePageState extends State<HomePage> {
       case _GuideActionType.weeklySummary:
         return _GuideTurnResponse(
           result: GuideChatResult(
-            reply: '好，我带你去看看这周的记录和总结。',
+            reply: _guideText(
+              '好，我带你去看看这周的记录和总结。',
+              'Okay. I will take you to this week’s records and summary.',
+            ),
             intent: GuideChatIntent.action,
             quickActions: _buildGuideQuickActions(GuideChatIntent.action),
             messageCard: null,
@@ -2478,7 +3623,10 @@ class _HomePageState extends State<HomePage> {
       case _GuideActionType.openStats:
         return _GuideTurnResponse(
           result: GuideChatResult(
-            reply: '好，我先帮你把统计打开。',
+            reply: _guideText(
+              '好，我先帮你把统计打开。',
+              'Okay. I will open the stats view for you first.',
+            ),
             intent: GuideChatIntent.action,
             quickActions: _buildGuideQuickActions(GuideChatIntent.action),
             messageCard: null,
@@ -2516,6 +3664,68 @@ class _HomePageState extends State<HomePage> {
     if (_pendingGuideTaskEditDraft != null &&
         (_isGuideConfirmationText(text) || _isGuideCancellationText(text))) {
       return _handlePendingGuideTaskEdit(text);
+    }
+
+    if (_shouldRouteToAgent(text)) {
+      final fallbackReply = context.tr('guide.fallback.reply');
+      try {
+        final localResult = await _startAgentRunFromGuideInput(text);
+        final guideChatResult = _extractGuideChatResultFromAgentLocalResult(
+          localResult,
+        );
+        final latest = _currentAgentRunResult().latestAssistantMessage;
+        final localOutput = localResult?.outputText.trim() ?? '';
+        final navigationTarget =
+            '${localResult?.resultJson?['navigation_target'] ?? ''}'.trim();
+        final result = guideChatResult ??
+            GuideChatResult(
+              reply: localOutput.isNotEmpty
+                  ? localOutput
+                  : (latest ?? fallbackReply),
+              intent: GuideChatIntent.action,
+              quickActions: const <String>[],
+              messageCard: null,
+              resultCard: null,
+              suggestedTask: null,
+              taskEditDraft: null,
+              memoryRefs: const <String>[],
+            );
+        return _GuideTurnResponse(
+          result: result,
+          pendingTaskEditDraft: result.taskEditDraft,
+          closeDialogBeforeAction: navigationTarget.isNotEmpty,
+          postAction: navigationTarget.isEmpty
+              ? null
+              : () => _performAgentNavigation(navigationTarget),
+        );
+      } catch (_) {
+        final action = _matchGuideAction(text);
+        if (action != null) {
+          return _handleGuideAction(text);
+        }
+        final localResult = await _executeAgentFreeformChat(
+          <String, dynamic>{'source_text': text},
+        );
+        final result =
+            _extractGuideChatResultFromAgentLocalResult(localResult) ??
+                GuideChatResult(
+                  reply: localResult.outputText.trim().isEmpty
+                      ? fallbackReply
+                      : localResult.outputText.trim(),
+                  intent: GuideChatIntent.companion,
+                  quickActions:
+                      _buildGuideQuickActions(GuideChatIntent.companion),
+                  messageCard: null,
+                  resultCard: null,
+                  suggestedTask: null,
+                  taskEditDraft: null,
+                  memoryRefs: const <String>[],
+                );
+        return _GuideTurnResponse(
+          result: result,
+          pendingTaskEditDraft: result.taskEditDraft,
+        );
+      }
     }
 
     final intent = _classifyGuideIntent(text);
@@ -2600,7 +3810,7 @@ class _HomePageState extends State<HomePage> {
       try {
         final turn = await _handleGuideTurn(text);
         if (!mounted || !dialogContext.mounted) return;
-        final result = turn.result;
+        final result = _guideResultForCurrentLocale(turn.result);
         _pendingGuideTaskEditDraft = turn.pendingTaskEditDraft;
         _pendingGuideTaskDueDate = turn.pendingTaskDueDate;
         final reply = result.reply.trim().isNotEmpty
@@ -2654,6 +3864,7 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setModalState) {
+          final agentState = _currentAgentRunResult();
           final guideName = _guideName;
           return GuidePanelDialog(
             title: guideName,
@@ -2701,6 +3912,10 @@ class _HomePageState extends State<HomePage> {
             retryLabel: context.tr('common.retry'),
             closeLabel: context.tr('common.close'),
             sending: sending,
+            agentRun: agentState.run,
+            agentSteps: agentState.steps,
+            onApproveAgentStep: () => _approveLatestAgentStep(),
+            onRejectAgentStep: () => _rejectLatestAgentStep(),
             memoryRefsLabelBuilder: (count) => context.tr(
               'guide.memory.refs',
               params: {'count': '$count'},
@@ -2712,8 +3927,14 @@ class _HomePageState extends State<HomePage> {
                       setModalState,
                       context.tr('guide.quick.listen_more'),
                       analysisText: latestUserText.isEmpty
-                          ? '我想继续说说。'
-                          : '$latestUserText 我想继续说说。',
+                          ? _guideText(
+                              '我想继续说说。',
+                              'I want to keep talking.',
+                            )
+                          : _guideText(
+                              '$latestUserText 我想继续说说。',
+                              '$latestUserText I want to keep talking.',
+                            ),
                     ),
             onSubmit: (value) => send(dialogContext, setModalState, value),
             onQuickActionTap: (action) {
@@ -2757,6 +3978,7 @@ class _HomePageState extends State<HomePage> {
       result = await _guideService.nightReflection(
         dayId: _localDateId(),
         uploadRequestId: uploadRequestId,
+        clientContext: _buildGuideClientContext(),
       );
     } catch (_) {
       result = const GuideNightReflectionResult(
@@ -2817,6 +4039,7 @@ class _HomePageState extends State<HomePage> {
         _guideService.chat(
           message: nightRecordOnlyMessage,
           scene: 'night_reflection',
+          clientContext: _buildGuideClientContext(),
         ),
       );
     }
@@ -3664,7 +4887,10 @@ class _HomePageState extends State<HomePage> {
                               if (_controller.longestStreak > 0) ...[
                                 _buildTopStatChip(
                                   icon: Icons.local_fire_department_rounded,
-                                  label: '${_controller.longestStreak}天',
+                                  label: _guideText(
+                                    '${_controller.longestStreak}天',
+                                    '${_controller.longestStreak} days',
+                                  ),
                                   color: Colors.deepOrange,
                                 ),
                                 const SizedBox(width: 6),
@@ -3969,6 +5195,7 @@ class _PortraitInsightData {
       rhythmScore: rhythmScore,
       resilienceScore: resilienceScore,
       awarenessScore: awarenessScore,
+      isEnglish: AppLocaleController.instance.isEnglish,
     );
 
     return _PortraitInsightData(
@@ -3990,42 +5217,87 @@ List<String> _buildPortraitEvaluations({
   required int rhythmScore,
   required int resilienceScore,
   required int awarenessScore,
+  required bool isEnglish,
 }) {
+  String pick(String zh, String en) => isEnglish ? en : zh;
+
   final evaluations = <String>[
     if (energyScore >= 75)
-      '$guideName觉得你最近是带着推进力在行动，不太像只靠情绪硬撑。'
+      pick(
+        '$guideName觉得你最近是带着推进力在行动，不太像只靠情绪硬撑。',
+        '$guideName feels that you have been moving with real momentum lately, not just forcing yourself through emotions.',
+      )
     else if (energyScore >= 55)
-      '$guideName觉得你还有行动意愿，但更适合用小步推进，而不是一下把自己拉满。'
+      pick(
+        '$guideName觉得你还有行动意愿，但更适合用小步推进，而不是一下把自己拉满。',
+        '$guideName feels you still want to move, but small steps fit better than trying to push yourself to the limit.',
+      )
     else
-      '$guideName觉得你现在更需要先回收精力，温和启动会比强推自己更有效。',
+      pick(
+        '$guideName觉得你现在更需要先回收精力，温和启动会比强推自己更有效。',
+        '$guideName feels you need to recover your energy first. A gentle start will work better than forcing yourself.',
+      ),
     if (rhythmScore >= 72)
-      '你的节奏感比较稳，说明你已经在形成“做一点也算前进”的惯性。'
+      pick(
+        '你的节奏感比较稳，说明你已经在形成“做一点也算前进”的惯性。',
+        'Your rhythm looks steady, which suggests you are building the habit that even a small step still counts as progress.',
+      )
     else if (rhythmScore >= 50)
-      '你的节奏正在恢复中，关键不是更拼，而是把重复的小动作守住。'
+      pick(
+        '你的节奏正在恢复中，关键不是更拼，而是把重复的小动作守住。',
+        'Your rhythm is coming back. The key is not pushing harder, but protecting the small repeatable actions.',
+      )
     else
-      '你的节奏还偏散，$guideName更建议先固定一个最容易完成的起手动作。',
+      pick(
+        '你的节奏还偏散，$guideName更建议先固定一个最容易完成的起手动作。',
+        'Your rhythm is still a bit scattered, so $guideName suggests locking in the easiest starter action first.',
+      ),
     if (resilienceScore >= 70)
-      '遇到波动时，你有把自己拉回来的能力，这说明恢复力已经在长出来了。'
+      pick(
+        '遇到波动时，你有把自己拉回来的能力，这说明恢复力已经在长出来了。',
+        'When things wobble, you can pull yourself back. That shows your resilience is already growing.',
+      )
     else if (resilienceScore >= 48)
-      '你有恢复的趋势，但还需要更明显的休息边界和回弹空间。'
+      pick(
+        '你有恢复的趋势，但还需要更明显的休息边界和回弹空间。',
+        'You are trending toward recovery, but you still need clearer rest boundaries and more space to bounce back.',
+      )
     else
-      '$guideName觉得你最近容易被消耗，先保证恢复感，比继续加任务更重要。',
+      pick(
+        '$guideName觉得你最近容易被消耗，先保证恢复感，比继续加任务更重要。',
+        '$guideName feels you have been easy to drain lately, so protecting recovery matters more than adding more tasks.',
+      ),
     if (awarenessScore >= 72)
-      '你对自己状态的观察是在线的，这会让你更容易做出适合当下的选择。'
+      pick(
+        '你对自己状态的观察是在线的，这会让你更容易做出适合当下的选择。',
+        'You are noticing your own state in real time, which makes it easier to choose what fits this moment.',
+      )
     else if (awarenessScore >= 52)
-      '你已经能感知到自己的状态变化，再多一点记录会让判断更稳定。'
+      pick(
+        '你已经能感知到自己的状态变化，再多一点记录会让判断更稳定。',
+        'You can already feel your state shifting. A little more logging will make your judgment steadier.',
+      )
     else
-      '$guideName觉得你还在一边做一边摸索，先把感受说清楚，比追求标准答案更重要。',
+      pick(
+        '$guideName觉得你还在一边做一边摸索，先把感受说清楚，比追求标准答案更重要。',
+        '$guideName feels you are still figuring things out as you go, so naming how it feels matters more than chasing a perfect answer.',
+      ),
   ];
 
   if (memoryRefs.isNotEmpty) {
     evaluations.add(
-      '这次$guideName参考了 ${memoryRefs.length} 段近期记忆，所以更像一份阶段观察，不是一次性的情绪判断。',
+      pick(
+        '这次$guideName参考了 ${memoryRefs.length} 段近期记忆，所以更像一份阶段观察，不是一次性的情绪判断。',
+        'This time $guideName referenced ${memoryRefs.length} recent memories, so this reads more like a stage snapshot than a one-off mood judgment.',
+      ),
     );
   }
   if (summary.length <= 40) {
     evaluations.add(
-      '目前样本还不算多，等你积累更多记录后，$guideName的判断会更具体也更贴身。',
+      pick(
+        '目前样本还不算多，等你积累更多记录后，$guideName的判断会更具体也更贴身。',
+        'The sample is still fairly small. Once you build up more records, $guideName can make a more specific and personal read.',
+      ),
     );
   }
   return evaluations.take(4).toList();
@@ -4713,11 +5985,13 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
   String get _confirmLabel {
     switch (_selectedMode) {
       case _QuickCreateMode.newMainWithSides:
-        return _normalizedSideTitles.isEmpty ? '创建主线' : '创建主线和支线';
+        return _normalizedSideTitles.isEmpty
+            ? context.tr('quick_add.create.tier_main')
+            : context.tr('quick_add.dialog.mode.new_main.title');
       case _QuickCreateMode.attachToExistingMain:
-        return '创建支线';
+        return context.tr('quick_add.create.tier_side');
       case _QuickCreateMode.daily:
-        return '创建日常任务';
+        return context.tr('quick_add.dialog.mode.daily.title');
     }
   }
 
@@ -4776,22 +6050,22 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
     })>[
       (
         mode: _QuickCreateMode.newMainWithSides,
-        title: '新建主线并添加支线',
-        description: '一次把当前主线和后续分支搭好，适合完整起步。',
+        title: context.tr('quick_add.dialog.mode.new_main.title'),
+        description: context.tr('quick_add.dialog.mode.new_main.description'),
         icon: Icons.account_tree_rounded,
         color: widget.theme.mainQuestColor,
       ),
       (
         mode: _QuickCreateMode.attachToExistingMain,
-        title: '挂到已有主线',
-        description: '保留原有能力，直接把新支线挂到已有主线上。',
+        title: context.tr('quick_add.dialog.mode.attach.title'),
+        description: context.tr('quick_add.dialog.mode.attach.description'),
         icon: Icons.call_split_rounded,
         color: widget.theme.sideQuestColor,
       ),
       (
         mode: _QuickCreateMode.daily,
-        title: '日常任务',
-        description: '维持每天重复执行的节奏，并设置每日截止时刻。',
+        title: context.tr('quick_add.dialog.mode.daily.title'),
+        description: context.tr('quick_add.dialog.mode.daily.description'),
         icon: Icons.wb_sunny_rounded,
         color: widget.theme.dailyQuestColor,
       ),
@@ -4804,7 +6078,7 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
 
     return QuestDialogShell(
       title: context.tr('quick_add.create.title'),
-      subtitle: '在一张卡里安排主线结构、挂接已有主线，或设置每日节奏。',
+      subtitle: context.tr('quick_add.dialog.subtitle'),
       maxWidth: 680,
       maxHeight: 760,
       scrollable: true,
@@ -4817,7 +6091,7 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
       onClose: widget.onClose,
       actions: [
         QuestDialogSecondaryButton(
-          label: '取消',
+          label: context.tr('common.cancel'),
           icon: Icons.close_rounded,
           onPressed: widget.onClose,
         ),
@@ -4960,19 +6234,19 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
     return QuestDialogInfoCard(
       key: const ValueKey<String>('quick_create_new_main_panel'),
       accentColor: accentColor,
-      label: '当前任务',
+      label: context.tr('quick_add.dialog.current_task'),
       icon: Icons.account_tree_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionTitle(
-            title: '主线标题',
-            description: '主线只创建一次，适合承载当前阶段的核心目标。',
+            title: context.tr('quick_add.dialog.main_title'),
+            description: context.tr('quick_add.dialog.main_description'),
           ),
           const SizedBox(height: 10),
           _buildTitleField(
             controller: _mainTitleController,
-            hint: '例如：四月作品集冲刺',
+            hint: context.tr('quick_add.dialog.main_hint'),
             icon: Icons.flag_rounded,
             autofocus: true,
           ),
@@ -4981,14 +6255,15 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
             children: [
               Expanded(
                 child: _buildSectionTitle(
-                  title: '支线草稿',
-                  description: '可以先留空，只创建主线；也可以顺手把分支一并搭好。',
+                  title: context.tr('quick_add.dialog.side_drafts_title'),
+                  description:
+                      context.tr('quick_add.dialog.side_drafts_description'),
                 ),
               ),
               TextButton.icon(
                 onPressed: _addSideDraft,
                 icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('添加一条支线'),
+                label: Text(context.tr('quick_add.dialog.add_side')),
                 style: TextButton.styleFrom(
                   foregroundColor: widget.theme.sideQuestColor,
                 ),
@@ -5008,7 +6283,7 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
                 ),
               ),
               child: Text(
-                '暂时没有支线草稿。你可以先创建主线，之后再回来继续拆分。',
+                context.tr('quick_add.dialog.no_side_drafts'),
                 style: AppTextStyles.caption.copyWith(
                   color: AppColors.textSecondary,
                   height: 1.5,
@@ -5035,28 +6310,28 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
     return QuestDialogInfoCard(
       key: const ValueKey<String>('quick_create_attach_existing_panel'),
       accentColor: accentColor,
-      label: '挂到已有主线',
+      label: context.tr('quick_add.dialog.attach_label'),
       icon: Icons.call_split_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionTitle(
-            title: '支线标题',
-            description: '只创建一条支线，并挂到选中的主线上。',
+            title: context.tr('quick_add.dialog.side_title'),
+            description: context.tr('quick_add.dialog.side_description'),
           ),
           const SizedBox(height: 10),
           _buildTitleField(
             controller: _attachSideTitleController,
-            hint: '例如：整理参考案例',
+            hint: context.tr('quick_add.dialog.side_hint'),
             icon: Icons.explore_rounded,
             autofocus: true,
           ),
           const SizedBox(height: 18),
           _buildSectionTitle(
-            title: '选择所属主线',
+            title: context.tr('quick_add.dialog.select_main_title'),
             description: widget.mainQuestOptions.isEmpty
-                ? '当前还没有可挂载的主线任务，请先创建主线任务。'
-                : '选择这条支线要归属的主线。',
+                ? context.tr('quick_add.dialog.select_main_empty')
+                : context.tr('quick_add.dialog.select_main_description'),
           ),
           const SizedBox(height: 12),
           if (widget.mainQuestOptions.isEmpty)
@@ -5071,7 +6346,7 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
                 ),
               ),
               child: Text(
-                '当前还没有可挂载的主线任务，请先创建主线任务。',
+                context.tr('quick_add.dialog.select_main_empty'),
                 style: AppTextStyles.caption.copyWith(
                   color: AppColors.textSecondary,
                   height: 1.5,
@@ -5146,8 +6421,12 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
                                       const SizedBox(height: 4),
                                       Text(
                                         selected
-                                            ? '新的支线会直接挂到这里。'
-                                            : '点一下，把当前支线归到这条主线。',
+                                            ? context.tr(
+                                                'quick_add.dialog.attach_selected',
+                                              )
+                                            : context.tr(
+                                                'quick_add.dialog.attach_unselected',
+                                              ),
                                         style: AppTextStyles.caption.copyWith(
                                           color: AppColors.textSecondary,
                                           height: 1.4,
@@ -5186,19 +6465,19 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
     return QuestDialogInfoCard(
       key: const ValueKey<String>('quick_create_daily_panel'),
       accentColor: accentColor,
-      label: '日常节奏',
+      label: context.tr('quick_add.dialog.daily_label'),
       icon: Icons.wb_sunny_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionTitle(
-            title: '日常任务标题',
-            description: '日常任务会在第二天重新变为未完成，可按每天固定时刻提醒自己。',
+            title: context.tr('quick_add.dialog.daily_title'),
+            description: context.tr('quick_add.dialog.daily_description'),
           ),
           const SizedBox(height: 10),
           _buildTitleField(
             controller: _dailyTitleController,
-            hint: '例如：晚间复盘 15 分钟',
+            hint: context.tr('quick_add.dialog.daily_hint'),
             icon: Icons.wb_sunny_rounded,
             autofocus: true,
           ),
@@ -5243,7 +6522,7 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '每日截止时间',
+                            context.tr('quick_add.dialog.daily_due_title'),
                             style: AppTextStyles.body.copyWith(
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF203322),
@@ -5252,8 +6531,15 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
                           const SizedBox(height: 4),
                           Text(
                             _dailyDueMinutes == null
-                                ? '未设置具体时刻，任务会按每日任务逻辑循环。'
-                                : '当前设置为每天 ${_formatDailyDueMinutes(_dailyDueMinutes!)}。',
+                                ? context.tr('quick_add.dialog.daily_due_empty')
+                                : context.tr(
+                                    'quick_add.dialog.daily_due_value',
+                                    params: {
+                                      'time': _formatDailyDueMinutes(
+                                        _dailyDueMinutes!,
+                                      ),
+                                    },
+                                  ),
                             style: AppTextStyles.caption.copyWith(
                               color: AppColors.textSecondary,
                               height: 1.45,
@@ -5273,7 +6559,11 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
                       onPressed: _pickDailyDueTime,
                       icon: const Icon(Icons.schedule_rounded, size: 18),
                       label: Text(
-                        _dailyDueMinutes == null ? '设置每日截止时间' : '重新选择时间',
+                        _dailyDueMinutes == null
+                            ? context.tr('quick_add.dialog.daily_due_set')
+                            : context.tr(
+                                'quick_add.dialog.daily_due_reselect',
+                              ),
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: widget.theme.dailyQuestColor,
@@ -5294,7 +6584,9 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
                         onPressed: () =>
                             setState(() => _dailyDueMinutes = null),
                         icon: const Icon(Icons.close_rounded, size: 18),
-                        label: const Text('清除时间'),
+                        label: Text(
+                          context.tr('quick_add.dialog.daily_due_clear'),
+                        ),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.textSecondary,
                         ),
@@ -5325,7 +6617,10 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
           Row(
             children: [
               Text(
-                '支线 ${index + 1}',
+                context.tr(
+                  'quick_add.dialog.side_index',
+                  params: {'index': '${index + 1}'},
+                ),
                 style: AppTextStyles.caption.copyWith(
                   fontWeight: FontWeight.w800,
                   color: widget.theme.sideQuestColor,
@@ -5335,7 +6630,7 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
               IconButton(
                 onPressed: () => _removeSideDraft(index),
                 icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                tooltip: '删除这条支线',
+                tooltip: context.tr('quick_add.dialog.delete_side'),
                 splashRadius: 18,
                 color: AppColors.textSecondary,
               ),
@@ -5343,7 +6638,7 @@ class _QuickCreateDialogBodyState extends State<_QuickCreateDialogBody> {
           ),
           _buildTitleField(
             controller: _sideDraftControllers[index],
-            hint: '例如：整理素材 / 打磨文案 / 联调页面',
+            hint: context.tr('quick_add.dialog.side_draft_hint'),
             icon: Icons.alt_route_rounded,
           ),
         ],
@@ -5590,10 +6885,12 @@ class _GuideChatMessage {
   final String role;
   final String content;
   final int memoryRefCount;
+  final String? agentStepId;
 
   const _GuideChatMessage({
     required this.role,
     required this.content,
     this.memoryRefCount = 0,
+    this.agentStepId,
   });
 }

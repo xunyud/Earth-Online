@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/constants/app_text_styles.dart';
 import 'core/constants/app_keys.dart';
 import 'core/i18n/app_locale_controller.dart';
 import 'core/services/preferences_service.dart';
@@ -217,6 +218,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               seedColor: questTheme.primaryAccentColor,
               primary: questTheme.primaryAccentColor,
               surface: questTheme.surfaceColor,
+            ),
+            textTheme: AppTextStyles.applyFontFallback(
+              baseTheme.textTheme,
+              isEnglish: _localeController.isEnglish,
+            ),
+            primaryTextTheme: AppTextStyles.applyFontFallback(
+              baseTheme.primaryTextTheme,
+              isEnglish: _localeController.isEnglish,
             ),
             extensions: [questTheme],
           ),

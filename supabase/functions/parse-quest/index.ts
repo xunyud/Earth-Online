@@ -1,57 +1,80 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/cors.ts'
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
-console.log("Function 'parse-quest' up and running!")
+console.log("Function 'parse-quest' up and running!");
 
 Deno.serve(async (req) => {
   // Handle CORS
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const authHeader = req.headers.get('Authorization') ?? ''
-    const accessToken = authHeader.replace('Bearer', '').trim()
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const accessToken = authHeader.replace("Bearer", "").trim();
     if (!accessToken) {
       return new Response(
-        JSON.stringify({ error: 'Missing bearer token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
+        JSON.stringify({ error: "Missing bearer token" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY')
+      throw new Error("Missing SUPABASE_URL or SUPABASE_ANON_KEY");
     }
 
-    const authClient = createClient(supabaseUrl, supabaseAnonKey)
-    const { data: authData, error: authError } = await authClient.auth.getUser(accessToken)
+    const authClient = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: authData, error: authError } = await authClient.auth.getUser(
+      accessToken,
+    );
     if (authError || !authData.user) {
       return new Response(
-        JSON.stringify({ error: 'Invalid JWT', details: authError?.message ?? null }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
+        JSON.stringify({
+          error: "Invalid JWT",
+          details: authError?.message ?? null,
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    const { text, user_id } = await req.json()
+    const { text, user_id } = await req.json();
 
     if (!text || !user_id) {
-      throw new Error('Missing text or user_id')
+      throw new Error("Missing text or user_id");
     }
     if (authData.user.id !== user_id) {
       return new Response(
-        JSON.stringify({ error: 'user_id does not match token user' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
+        JSON.stringify({ error: "user_id does not match token user" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    // 1. Call LLM (DeepSeek) - parse only, no DB writes
-    const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY') || Deno.env.get('OPENAI_API_KEY')
-    if (!deepSeekApiKey) {
-      throw new Error('DEEPSEEK_API_KEY not set')
+    // 1. Call the configured OpenAI-compatible LLM - parse only, no DB writes
+    const llmApiKey = Deno.env.get("OPENAI_API_KEY") ||
+      Deno.env.get("DEEPSEEK_API_KEY");
+    if (!llmApiKey) {
+      throw new Error("OPENAI_API_KEY or DEEPSEEK_API_KEY not set");
     }
+    const llmBaseUrl = (
+      Deno.env.get("OPENAI_BASE_URL") ||
+      Deno.env.get("DEEPSEEK_BASE_URL") ||
+      "https://api.86gamestore.com"
+    ).replace(/\/+$/, "");
+    const normalizedLlmBaseUrl = llmBaseUrl.endsWith("/v1")
+      ? llmBaseUrl
+      : `${llmBaseUrl}/v1`;
 
     const systemPrompt = `
     你是一个任务拆解助手。你的目标是把用户输入拆解为“纯父子层级”的任务树，并生成一句正常、温暖的鼓励语。
@@ -104,88 +127,96 @@ Deno.serve(async (req) => {
         { "title": "第三天写代码", "parent_index": null, "xpReward": 60 }
       ]
     }
-    `
+    `;
 
-    // Switch to DeepSeek API Endpoint
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
+    const response = await fetch(`${normalizedLlmBaseUrl}/chat/completions`, {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${deepSeekApiKey}`,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${llmApiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: 'deepseek-chat', 
+        model: "deepseek-chat",
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: text },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: text },
         ],
         temperature: 0.5,
       }),
-    })
+    });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`DeepSeek API Error: ${response.status} - ${errorText}`);
+      const errorText = await response.text();
+      throw new Error(`LLM API Error: ${response.status} - ${errorText}`);
     }
 
-    const llmData = await response.json()
+    const llmData = await response.json();
     if (!llmData.choices || !llmData.choices[0].message.content) {
-        throw new Error('Failed to get LLM response')
+      throw new Error("Failed to get LLM response");
     }
 
-    let parsed: any = null
+    let parsed: any = null;
     try {
-        // Clean up markdown code blocks if present
-        const rawContent = llmData.choices[0].message.content.replace(/```json/g, '').replace(/```/g, '').trim();
-        parsed = JSON.parse(rawContent)
+      // Clean up markdown code blocks if present
+      const rawContent = llmData.choices[0].message.content.replace(
+        /```json/g,
+        "",
+      ).replace(/```/g, "").trim();
+      parsed = JSON.parse(rawContent);
     } catch (e) {
-        console.error("LLM Parse Error:", e)
-        throw new Error('Failed to parse LLM JSON')
+      console.error("LLM Parse Error:", e);
+      throw new Error("Failed to parse LLM JSON");
     }
 
-    const tasksRaw = Array.isArray(parsed?.tasks) ? parsed.tasks : []
-    const cheerRaw = typeof parsed?.cheer === 'string' ? parsed.cheer.trim() : ''
+    const tasksRaw = Array.isArray(parsed?.tasks) ? parsed.tasks : [];
+    const cheerRaw = typeof parsed?.cheer === "string"
+      ? parsed.cheer.trim()
+      : "";
 
     const tasks: Array<{
-      title: string
-      parent_index: number | null
-      xpReward: number
-    }> = []
+      title: string;
+      parent_index: number | null;
+      xpReward: number;
+    }> = [];
 
     for (let i = 0; i < tasksRaw.length; i++) {
-      const q = tasksRaw[i]
-      const title = typeof q?.title === 'string' ? q.title.trim() : ''
-      if (!title) continue
-      let parent_index: number | null = null
+      const q = tasksRaw[i];
+      const title = typeof q?.title === "string" ? q.title.trim() : "";
+      if (!title) continue;
+      let parent_index: number | null = null;
       if (Number.isInteger(q?.parent_index)) {
-        parent_index = q.parent_index
+        parent_index = q.parent_index;
       }
       if (parent_index !== null && (parent_index < 0 || parent_index >= i)) {
-        parent_index = null
+        parent_index = null;
       }
 
-      let xp = Number.isFinite(q?.xpReward) ? Math.round(q.xpReward) : 20
-      if (xp < 10) xp = 10
-      if (xp > 100) xp = 100
+      let xp = Number.isFinite(q?.xpReward) ? Math.round(q.xpReward) : 20;
+      if (xp < 10) xp = 10;
+      if (xp > 100) xp = 100;
 
       tasks.push({
         title,
         parent_index,
         xpReward: xp,
-      })
+      });
     }
 
-    const cheer = cheerRaw && cheerRaw.length <= 60 ? cheerRaw : '辛苦了，慢慢来就好。'
+    const cheer = cheerRaw && cheerRaw.length <= 60
+      ? cheerRaw
+      : "辛苦了，慢慢来就好。";
 
     return new Response(
       JSON.stringify({ tasks, cheer }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    )
-
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    )
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
-})
+});

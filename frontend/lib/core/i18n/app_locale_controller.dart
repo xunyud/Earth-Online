@@ -352,6 +352,16 @@ const Map<String, Map<String, String>> _localizedTexts =
   'night.title': {'zh': '营地夜话', 'en': 'Campfire Reflection'},
   'night.keep_only': {'zh': '仅记录不加任务', 'en': 'Record Only'},
   'night.add_tomorrow': {'zh': '加入明日任务', 'en': 'Add Tomorrow Quest'},
+  'night.dialog.subtitle': {
+    'zh': '把今天的完成感收回来一点，再决定要不要给明天留一个起步动作。',
+    'en':
+        'Gather today back into yourself first, then decide whether tomorrow needs one small starting move.'
+  },
+  'night.dialog.review_label': {'zh': '今晚复盘', 'en': 'Tonight Reflection'},
+  'night.dialog.tomorrow_label': {
+    'zh': '如果你想顺手留给明天',
+    'en': 'If you want to leave something for tomorrow'
+  },
   'night.uploading': {'zh': '正在上传今日记忆...', 'en': 'Uploading today memory...'},
   'night.upload_queued': {
     'zh': '记忆已排队，正在处理中...',
@@ -473,6 +483,25 @@ const Map<String, Map<String, String>> _localizedTexts =
   'drawer.diary.desc': {'zh': '记录你的现实副本', 'en': 'Record your real-world run'},
   'drawer.recycle': {'zh': '回收站', 'en': 'Recycle Bin'},
   'drawer.recycle.desc': {'zh': '查看已删除任务', 'en': 'View deleted quests'},
+  'recycle.title': {'zh': '回收站', 'en': 'Recycle Bin'},
+  'recycle.restore_all.tooltip': {'zh': '恢复全部', 'en': 'Restore All'},
+  'recycle.restore_all.title': {'zh': '恢复全部', 'en': 'Restore All'},
+  'recycle.restore_all.message': {
+    'zh': '将把回收站内的所有任务恢复到主界面。是否继续？',
+    'en': 'Restore every quest in the recycle bin back to the main board?'
+  },
+  'recycle.restore_all.confirm': {'zh': '确认恢复', 'en': 'Confirm Restore'},
+  'recycle.empty_bin.tooltip': {'zh': '清空回收站', 'en': 'Empty Recycle Bin'},
+  'recycle.empty_bin.title': {'zh': '清空回收站', 'en': 'Empty Recycle Bin'},
+  'recycle.empty_bin.message': {
+    'zh': '回收站内的任务将被永久删除，无法找回。是否继续？',
+    'en':
+        'Everything in the recycle bin will be deleted permanently and cannot be recovered. Continue?'
+  },
+  'recycle.empty_bin.confirm': {'zh': '确认清空', 'en': 'Confirm Empty'},
+  'recycle.empty': {'zh': '回收站为空', 'en': 'Recycle bin is empty'},
+  'recycle.restore.tooltip': {'zh': '恢复', 'en': 'Restore'},
+  'recycle.delete.tooltip': {'zh': '彻底删除', 'en': 'Delete Permanently'},
   'drawer.guide': {'zh': '专属助手', 'en': 'Personal Assistant'},
   'drawer.guide.desc': {'zh': '打开专属助手对话', 'en': 'Open assistant chat'},
   'drawer.binding': {'zh': '微信绑定', 'en': 'WeChat Binding'},
@@ -556,6 +585,14 @@ const Map<String, Map<String, String>> _localizedTexts =
     'en':
         'This weekly report did not finish successfully. Please try again later.'
   },
+  'weekly.summary.invalid_response': {
+    'zh': '函数 {name} 返回了无法识别的数据格式',
+    'en': 'Function {name} returned a response in an unsupported format.'
+  },
+  'weekly.summary.job_api_failed': {
+    'zh': '周报任务接口返回失败',
+    'en': 'Weekly report job API returned a failure response.'
+  },
   'weekly.summary.later': {'zh': '稍后再看', 'en': 'Later'},
   'weekly.summary.acknowledge': {'zh': '知道了', 'en': 'OK'},
   'weekly.summary.open_now': {'zh': '查看周报', 'en': 'Open Report'},
@@ -586,6 +623,142 @@ const Map<String, Map<String, String>> _localizedTexts =
   'quick_add.create.tier_main': {'zh': '主线任务', 'en': 'Main Quest'},
   'quick_add.create.tier_side': {'zh': '支线任务', 'en': 'Side Quest'},
   'quick_add.create.tier_daily': {'zh': '日常任务', 'en': 'Daily'},
+  'quick_add.dialog.subtitle': {
+    'zh': '在一张卡里安排主线结构、挂接已有主线，或设置每日节奏。',
+    'en':
+        'Plan a new main quest, attach a side quest to an existing one, or set up a daily rhythm in one place.'
+  },
+  'quick_add.dialog.mode.new_main.title': {
+    'zh': '新建主线并添加支线',
+    'en': 'Create Main Quest and Side Quests'
+  },
+  'quick_add.dialog.mode.new_main.description': {
+    'zh': '一次把当前主线和后续分支搭好，适合完整起步。',
+    'en':
+        'Set up the main quest and its follow-up branches in one pass for a clean start.'
+  },
+  'quick_add.dialog.mode.attach.title': {
+    'zh': '挂到已有主线',
+    'en': 'Attach to Existing Main Quest'
+  },
+  'quick_add.dialog.mode.attach.description': {
+    'zh': '保留原有能力，直接把新支线挂到已有主线上。',
+    'en':
+        'Keep your current structure and attach a new side quest directly to an existing main quest.'
+  },
+  'quick_add.dialog.mode.daily.title': {
+    'zh': '日常任务',
+    'en': 'Daily Quest'
+  },
+  'quick_add.dialog.mode.daily.description': {
+    'zh': '维持每天重复执行的节奏，并设置每日截止时刻。',
+    'en':
+        'Support repeatable daily habits and optionally set a daily cutoff time.'
+  },
+  'quick_add.dialog.current_task': {'zh': '当前任务', 'en': 'Current Setup'},
+  'quick_add.dialog.main_title': {'zh': '主线标题', 'en': 'Main Quest Title'},
+  'quick_add.dialog.main_description': {
+    'zh': '主线只创建一次，适合承载当前阶段的核心目标。',
+    'en':
+        'A main quest is created once and works well for your core goal in this phase.'
+  },
+  'quick_add.dialog.main_hint': {
+    'zh': '例如：四月作品集冲刺',
+    'en': 'For example: April portfolio sprint'
+  },
+  'quick_add.dialog.side_drafts_title': {'zh': '支线草稿', 'en': 'Side Quest Drafts'},
+  'quick_add.dialog.side_drafts_description': {
+    'zh': '可以先留空，只创建主线；也可以顺手把分支一并搭好。',
+    'en':
+        'You can leave this empty and create only the main quest, or sketch the branches right away.'
+  },
+  'quick_add.dialog.add_side': {'zh': '添加一条支线', 'en': 'Add Side Quest'},
+  'quick_add.dialog.no_side_drafts': {
+    'zh': '暂时没有支线草稿。你可以先创建主线，之后再回来继续拆分。',
+    'en':
+        'No side-quest drafts yet. You can create the main quest first and come back later to break it down.'
+  },
+  'quick_add.dialog.attach_label': {
+    'zh': '挂到已有主线',
+    'en': 'Attach to Existing Main Quest'
+  },
+  'quick_add.dialog.side_title': {'zh': '支线标题', 'en': 'Side Quest Title'},
+  'quick_add.dialog.side_description': {
+    'zh': '只创建一条支线，并挂到选中的主线上。',
+    'en': 'Create one side quest and attach it to the selected main quest.'
+  },
+  'quick_add.dialog.side_hint': {
+    'zh': '例如：整理参考案例',
+    'en': 'For example: organize reference cases'
+  },
+  'quick_add.dialog.select_main_title': {
+    'zh': '选择所属主线',
+    'en': 'Choose Main Quest'
+  },
+  'quick_add.dialog.select_main_empty': {
+    'zh': '当前还没有可挂载的主线任务，请先创建主线任务。',
+    'en': 'No main quests are available yet. Create one first.'
+  },
+  'quick_add.dialog.select_main_description': {
+    'zh': '选择这条支线要归属的主线。',
+    'en': 'Choose which main quest this side quest should belong to.'
+  },
+  'quick_add.dialog.attach_selected': {
+    'zh': '新的支线会直接挂到这里。',
+    'en': 'The new side quest will attach here.'
+  },
+  'quick_add.dialog.attach_unselected': {
+    'zh': '点一下，把当前支线归到这条主线。',
+    'en': 'Tap to attach the current side quest to this main quest.'
+  },
+  'quick_add.dialog.daily_label': {'zh': '日常节奏', 'en': 'Daily Rhythm'},
+  'quick_add.dialog.daily_title': {'zh': '日常任务标题', 'en': 'Daily Quest Title'},
+  'quick_add.dialog.daily_description': {
+    'zh': '日常任务会在第二天重新变为未完成，可按每天固定时刻提醒自己。',
+    'en':
+        'Daily quests reset to incomplete the next day, and you can use a fixed daily time as a reminder.'
+  },
+  'quick_add.dialog.daily_hint': {
+    'zh': '例如：晚间复盘 15 分钟',
+    'en': 'For example: 15-minute evening review'
+  },
+  'quick_add.dialog.daily_due_title': {
+    'zh': '每日截止时间',
+    'en': 'Daily Cutoff Time'
+  },
+  'quick_add.dialog.daily_due_empty': {
+    'zh': '未设置具体时刻，任务会按每日任务逻辑循环。',
+    'en':
+        'No exact time is set yet. The quest will still repeat on the daily cycle.'
+  },
+  'quick_add.dialog.daily_due_value': {
+    'zh': '当前设置为每天 {time}。',
+    'en': 'Currently set to {time} every day.'
+  },
+  'quick_add.dialog.daily_due_set': {
+    'zh': '设置每日截止时间',
+    'en': 'Set Daily Cutoff Time'
+  },
+  'quick_add.dialog.daily_due_reselect': {
+    'zh': '重新选择时间',
+    'en': 'Choose Time Again'
+  },
+  'quick_add.dialog.daily_due_clear': {
+    'zh': '清除时间',
+    'en': 'Clear Time'
+  },
+  'quick_add.dialog.side_index': {
+    'zh': '支线 {index}',
+    'en': 'Side Quest {index}'
+  },
+  'quick_add.dialog.delete_side': {
+    'zh': '删除这条支线',
+    'en': 'Delete this side quest'
+  },
+  'quick_add.dialog.side_draft_hint': {
+    'zh': '例如：整理素材 / 打磨文案 / 联调页面',
+    'en': 'For example: organize assets / polish copy / integrate pages'
+  },
   'quick_add.voice.listening': {'zh': '正在听...', 'en': 'Listening...'},
   'quick_add.voice.unavailable': {
     'zh': '语音识别不可用',
@@ -689,6 +862,81 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '{count}个任务',
     'en': '{count} quests'
   },
+  'stats.dashboard_title': {'zh': '成长仪表盘', 'en': 'Growth Dashboard'},
+  'stats.dashboard_subtitle_streak': {
+    'zh': '你已连续成长 {count} 天',
+    'en': 'You have grown for {count} straight days'
+  },
+  'stats.dashboard_subtitle_empty': {
+    'zh': '开始记录你的成长旅程',
+    'en': 'Start recording your growth journey'
+  },
+  'stats.hero.total_xp': {'zh': '累计经验', 'en': 'Total XP'},
+  'stats.chart.completion_title': {'zh': '任务完成趋势', 'en': 'Quest Completion Trend'},
+  'stats.range.7_days': {'zh': '7天', 'en': '7D'},
+  'stats.range.30_days': {'zh': '30天', 'en': '30D'},
+  'stats.metric.daily_average': {'zh': '日均', 'en': 'Daily Avg'},
+  'stats.metric.perfect_days': {'zh': '完美天', 'en': 'Perfect Days'},
+  'stats.task_count': {'zh': '{count} 个任务', 'en': '{count} quests'},
+  'stats.checkin_calendar_title': {'zh': '签到日历', 'en': 'Check-In Calendar'},
+  'stats.makeup.cost_per_day': {'zh': '补签 50/天', 'en': 'Make up 50/day'},
+  'stats.date_range': {
+    'zh': '{startMonth}月{startDay}日 - {endMonth}月{endDay}日',
+    'en': '{startMonth}/{startDay} - {endMonth}/{endDay}'
+  },
+  'stats.weekday.mon': {'zh': '一', 'en': 'M'},
+  'stats.weekday.tue': {'zh': '二', 'en': 'T'},
+  'stats.weekday.wed': {'zh': '三', 'en': 'W'},
+  'stats.weekday.thu': {'zh': '四', 'en': 'T'},
+  'stats.weekday.fri': {'zh': '五', 'en': 'F'},
+  'stats.weekday.sat': {'zh': '六', 'en': 'S'},
+  'stats.weekday.sun': {'zh': '日', 'en': 'S'},
+  'stats.makeup.confirm_title': {'zh': '补签确认', 'en': 'Confirm Make-Up'},
+  'stats.makeup.date': {
+    'zh': '补签 {month}月{day}日',
+    'en': 'Make up {month}/{day}'
+  },
+  'stats.makeup.cost': {'zh': '花费 50 金币', 'en': 'Cost: 50 Gold'},
+  'stats.makeup.balance': {'zh': '余额 {gold}', 'en': 'Balance {gold}'},
+  'stats.makeup.insufficient_gold': {'zh': '金币不足', 'en': 'Not enough gold'},
+  'stats.makeup.confirm_action': {'zh': '确认补签', 'en': 'Confirm Make-Up'},
+  'stats.makeup.invalid_response': {
+    'zh': '返回数据异常',
+    'en': 'Unexpected response payload'
+  },
+  'stats.makeup.failed': {'zh': '补签失败: {error}', 'en': 'Make-up failed: {error}'},
+  'stats.quest_mix_title': {'zh': '任务构成', 'en': 'Quest Mix'},
+  'stats.quest_mix_count': {
+    'zh': '{count}个 ({percent})',
+    'en': '{count} ({percent})'
+  },
+  'stats.xp_curve_title': {'zh': 'XP 成长曲线', 'en': 'XP Growth Curve'},
+  'stats.insight.streak': {
+    'zh': '已经连续 {count} 天保持行动，这种节奏正在悄悄改变你的生活。',
+    'en':
+        'You have kept moving for {count} straight days. That rhythm is quietly changing your life.'
+  },
+  'stats.insight.weekly_completed': {
+    'zh': '这周完成了 {count} 个任务，每一步都在积累力量。',
+    'en': 'You finished {count} quests this week, and each step built momentum.'
+  },
+  'stats.insight.xp_1000': {
+    'zh': '经验值突破了 1000！冒险才刚刚开始。',
+    'en': 'You passed 1000 XP. The adventure is only getting started.'
+  },
+  'stats.insight.best_day': {
+    'zh': '最佳一天完成了 {count} 个任务。那天的你，真的很棒。',
+    'en': 'Your best day finished {count} quests. That version of you did great.'
+  },
+  'stats.insight.default': {
+    'zh': '每一步成长都值得被记住。继续前进吧。',
+    'en': 'Every step of growth is worth remembering. Keep going.'
+  },
+  'stats.milestone.first_quest': {'zh': '首次任务', 'en': 'First Quest'},
+  'stats.milestone.streak_7': {'zh': '连续7天', 'en': '7-Day Streak'},
+  'stats.milestone.xp_1000': {'zh': 'XP破千', 'en': '1000 XP'},
+  'stats.milestone.perfect_day': {'zh': '完美日 x{count}', 'en': 'Perfect Day x{count}'},
+  'stats.milestones_title': {'zh': '成长里程碑', 'en': 'Growth Milestones'},
   'level.title.apprentice_villager': {
     'zh': '见习村民',
     'en': 'Apprentice Villager'
@@ -779,6 +1027,55 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '已卸下 {title}',
     'en': 'Unequipped {title}'
   },
+  'quest.board.banner_ack': {'zh': '知道了', 'en': 'Got It'},
+  'quest.board.warm_quote.1': {
+    'zh': '新的一天，地球Online又为你准备了全新的冒险。',
+    'en': 'A new day is here, and Earth Online has a fresh adventure waiting for you.'
+  },
+  'quest.board.warm_quote.2': {
+    'zh': '慢慢来，所有的伟大都是由日常的琐碎构成的。',
+    'en': 'Take it slowly. Everything great is built from ordinary repeated moments.'
+  },
+  'quest.board.warm_quote.3': {
+    'zh': '你已经在路上了，这本身就很了不起。',
+    'en': 'You are already on the road, and that matters more than you think.'
+  },
+  'quest.board.warm_quote.4': {
+    'zh': '把今天过好，就是最强的成长。',
+    'en': 'Doing today well is already a strong kind of growth.'
+  },
+  'quest.board.warm_quote.5': {
+    'zh': '允许自己不完美，但别忘了继续前进。',
+    'en': 'Let yourself be imperfect, but keep moving forward.'
+  },
+  'quest.board.warm_quote.6': {
+    'zh': '别急，进度条会一点点被你点亮。',
+    'en': 'No rush. You will light up the progress bar bit by bit.'
+  },
+  'quest.board.warm_quote.7': {
+    'zh': '今天也请温柔地对待自己。',
+    'en': 'Please be gentle with yourself today too.'
+  },
+  'quest.board.warm_quote.8': {
+    'zh': '每一次勾选，都是对未来的投资。',
+    'en': 'Every check mark is an investment in your future.'
+  },
+  'quest.parse.default_cheer': {
+    'zh': '慢慢来，一步一步也算前进。',
+    'en': 'Take it slowly. One step at a time still counts as progress.'
+  },
+  'quest.parse.auth_retry': {
+    'zh': '请重新登录后再试',
+    'en': 'Please sign in again and try once more.'
+  },
+  'quest.parse.network_retry': {
+    'zh': '网络连接暂时拥挤，请稍后再试',
+    'en': 'The network is a little crowded right now. Please try again shortly.'
+  },
+  'quest.parse.failed': {
+    'zh': '调用 parse-quest 失败：{error}',
+    'en': 'parse-quest failed: {error}'
+  },
   'quest.completed.xp_only': {
     'zh': '任务完成！获得 +{xp} XP（{count} 项）',
     'en': 'Quest complete! +{xp} XP ({count} item(s))'
@@ -838,6 +1135,65 @@ const Map<String, Map<String, String>> _localizedTexts =
   'quest.error.quest_locked': {
     'zh': '此任务不可修改。',
     'en': 'This quest cannot be edited.'
+  },
+  'quest.edit.locked_reward': {
+    'zh': '🎁 这是一个奖励任务，尽情享受吧，不可编辑。',
+    'en': '🎁 This is a reward quest. Enjoy it as is, and it cannot be edited.'
+  },
+  'quest.edit.locked_completed': {
+    'zh': '已完成的任务无法修改，请先撤销完成状态。',
+    'en': 'Completed quests cannot be edited. Undo the completion state first.'
+  },
+  'quest.edit.title_hint': {'zh': '任务标题', 'en': 'Quest Title'},
+  'quest.edit.description_hint': {
+    'zh': '添加任务详情/备注...',
+    'en': 'Add quest details or notes...'
+  },
+  'quest.edit.daily_due_set': {
+    'zh': '设置每日截止时间',
+    'en': 'Set Daily Deadline'
+  },
+  'quest.edit.daily_due_value': {
+    'zh': '每日截止 {time}',
+    'en': 'Daily deadline {time}'
+  },
+  'quest.edit.clear_daily_due': {
+    'zh': '清除每日截止时间',
+    'en': 'Clear Daily Deadline'
+  },
+  'quest.edit.due_set': {'zh': '设置截止日期', 'en': 'Set Due Date'},
+  'quest.edit.clear_date': {'zh': '清除日期', 'en': 'Clear Date'},
+  'quest.edit.xp_reward': {'zh': '经验值奖励', 'en': 'XP Reward'},
+  'quest.edit.close': {'zh': '关闭', 'en': 'Close'},
+  'quest.edit.save': {'zh': '保存', 'en': 'Save'},
+  'quest.perfect_day.1': {
+    'zh': '太棒了！今天的面板被你彻底清空，好好休息吧，你值得这一切！',
+    'en':
+        'Amazing. You cleared the whole board today. Rest well, you earned this.'
+  },
+  'quest.perfect_day.2': {
+    'zh': '你做到了。不是靠爆发，而是靠稳定的日常。',
+    'en': 'You did it, not through a burst, but through a steady ordinary rhythm.'
+  },
+  'quest.perfect_day.3': {
+    'zh': '今日地球 Online：通关成功。明天也请温柔地继续。',
+    'en': 'Earth Online for today: cleared. Please keep going gently tomorrow too.'
+  },
+  'quest.perfect_day.4': {
+    'zh': '完成不是终点，是你对自己的承诺又兑现了一次。',
+    'en': 'Completion is not the end. It is one more promise to yourself kept.'
+  },
+  'quest.perfect_day.5': {
+    'zh': '给自己一个拥抱：你把这一天过得很漂亮。',
+    'en': 'Give yourself a hug. You carried this day well.'
+  },
+  'quest.perfect_day.6': {
+    'zh': '厉害！把任务清空的你，已经在悄悄变强。',
+    'en': 'Nicely done. Clearing the board is proof you are getting stronger quietly.'
+  },
+  'quest.perfect_day.7': {
+    'zh': '今天就到这里吧：你已经很努力了。',
+    'en': 'Let today end here. You have already worked hard.'
   },
   'drawer.profile.badge': {'zh': '本地资料', 'en': 'Local Profile'},
   'drawer.profile.edit_name': {'zh': '修改昵称', 'en': 'Edit Name'},

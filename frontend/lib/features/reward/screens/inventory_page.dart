@@ -63,8 +63,9 @@ class _InventoryPageState extends State<InventoryPage> {
         _toast(context.tr('inventory.used'), background: Colors.green.shade700);
       } else {
         _toast(
-          context
-              .tr('inventory.used_custom', params: {'title': item.rewardTitle}),
+          context.tr('inventory.used_custom', params: {
+            'title': item.localizedRewardTitle(context.isEnglish),
+          }),
           background: Colors.green.shade700,
         );
       }
@@ -82,11 +83,11 @@ class _InventoryPageState extends State<InventoryPage> {
         item.isEquipped
             ? context.tr(
                 'inventory.unequipped_toast',
-                params: {'title': item.rewardTitle},
+                params: {'title': item.localizedRewardTitle(context.isEnglish)},
               )
             : context.tr(
                 'inventory.equipped_toast',
-                params: {'title': item.rewardTitle},
+                params: {'title': item.localizedRewardTitle(context.isEnglish)},
               ),
         background: Colors.green.shade700,
       );
@@ -157,7 +158,7 @@ class _InventoryPageState extends State<InventoryPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.rewardTitle,
+                    item.localizedRewardTitle(context.isEnglish),
                     style: AppTextStyles.heading2.copyWith(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
@@ -276,7 +277,7 @@ class _InventoryPageState extends State<InventoryPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.rewardTitle,
+                    item.localizedRewardTitle(context.isEnglish),
                     style: AppTextStyles.heading2.copyWith(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,

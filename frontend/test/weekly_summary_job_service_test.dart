@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:frontend/core/i18n/app_locale_controller.dart';
 import 'package:frontend/features/quest/services/weekly_summary_job_service.dart';
 
 class _FakeWeeklySummaryJobGateway implements WeeklySummaryJobGateway {
@@ -29,6 +31,34 @@ class _GatewayCall {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+
+  test('enqueue carries current app language into weekly summary job request',
+      () async {
+    final gateway = _FakeWeeklySummaryJobGateway(<Map<String, dynamic>>[
+      <String, dynamic>{
+        'success': true,
+        'job': <String, dynamic>{
+          'id': 'job-queued',
+          'status': 'queued',
+        },
+      },
+    ]);
+    final service = WeeklySummaryJobService(
+      gateway: gateway,
+      currentUserIdProvider: () async => 'user-1',
+    );
+
+    await AppLocaleController.instance.setLanguageCode('en');
+    await service.enqueue();
+
+    expect(gateway.calls.single.functionName, 'weekly-summary-enqueue');
+    expect(gateway.calls.single.body['user_id'], 'user-1');
+    expect(gateway.calls.single.body['language_code'], 'en');
+    expect(gateway.calls.single.body['is_english'], isTrue);
+  });
+
   test('WeeklySummaryJob 会识别活跃状态与待提醒状态', () {
     final runningJob = WeeklySummaryJob.fromJson(<String, dynamic>{
       'id': 'job-running',

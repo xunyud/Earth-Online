@@ -41,18 +41,18 @@ class _QuestBoardState extends State<QuestBoard> {
   static const double _indentStep = 32.0;
   static const double _gutterWidth = 28.0;
   static const double _itemGap = 10.0;
+  static const List<String> _warmQuoteKeys = <String>[
+    'quest.board.warm_quote.1',
+    'quest.board.warm_quote.2',
+    'quest.board.warm_quote.3',
+    'quest.board.warm_quote.4',
+    'quest.board.warm_quote.5',
+    'quest.board.warm_quote.6',
+    'quest.board.warm_quote.7',
+    'quest.board.warm_quote.8',
+  ];
 
   static bool _didShowWelcome = false;
-  static const List<String> _warmQuotes = [
-    '新的一天，地球Online又为你准备了全新的冒险。',
-    '慢慢来，所有的伟大都是由日常的琐碎构成的。',
-    '你已经在路上了，这本身就很了不起。',
-    '把今天过好，就是最强的成长。',
-    '允许自己不完美，但别忘了继续前进。',
-    '别急，进度条会一点点被你点亮。',
-    '今天也请温柔地对待自己。',
-    '每一次勾选，都是对未来的投资。',
-  ];
 
   final GlobalKey _boardKey = GlobalKey();
   double _baseOffsetX = 0;
@@ -72,8 +72,8 @@ class _QuestBoardState extends State<QuestBoard> {
       Future.delayed(const Duration(seconds: 1), () {
         if (!mounted) return;
         final pickIndex =
-            DateTime.now().microsecondsSinceEpoch % _warmQuotes.length;
-        final quote = _warmQuotes[pickIndex];
+            DateTime.now().microsecondsSinceEpoch % _warmQuoteKeys.length;
+        final quote = context.tr(_warmQuoteKeys[pickIndex]);
 
         final messenger = ScaffoldMessenger.of(context);
         messenger.hideCurrentMaterialBanner();
@@ -93,7 +93,7 @@ class _QuestBoardState extends State<QuestBoard> {
               TextButton(
                 onPressed: messenger.hideCurrentMaterialBanner,
                 child: Text(
-                  '知道了',
+                  context.tr('quest.board.banner_ack'),
                   style: AppTextStyles.caption.copyWith(
                     color: Theme.of(context)
                         .extension<QuestTheme>()!

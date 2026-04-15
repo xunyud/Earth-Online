@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../i18n/app_locale_controller.dart';
 import 'supabase_auth_service.dart';
 import '../../features/quest/models/quest_node.dart';
 
@@ -69,7 +70,7 @@ class QuestService {
     final accessToken = accessTokenOverride ??
         await SupabaseAuthService.instance.getValidAccessToken();
     if (accessToken == null || accessToken.isEmpty) {
-      throw Exception('请重新登录后再试');
+      throw Exception(AppLocaleController.instance.t('quest.parse.auth_retry'));
     }
 
     final body = <String, dynamic>{
@@ -110,7 +111,9 @@ class QuestService {
 
         return ParseQuestResult(
           quests: quests,
-          cheer: cheer.isEmpty ? '慢慢来，一步一步也算前进。' : cheer,
+          cheer: cheer.isEmpty
+              ? AppLocaleController.instance.t('quest.parse.default_cheer')
+              : cheer,
         );
       } catch (error) {
         lastError = error;
@@ -124,9 +127,12 @@ class QuestService {
     }
 
     if (_shouldRetryParseQuestError(lastError)) {
-      throw Exception('网络连接暂时拥挤，请稍后再试');
+      throw Exception(AppLocaleController.instance.t('quest.parse.network_retry'));
     }
-    throw Exception('Error calling parse-quest: $lastError');
+    throw Exception(
+      AppLocaleController.instance
+          .t('quest.parse.failed', params: {'error': '$lastError'}),
+    );
   }
 
   static Future<ParseQuestFunctionResult> _invokeParseQuest({

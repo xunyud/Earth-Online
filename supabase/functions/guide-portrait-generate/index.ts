@@ -74,11 +74,16 @@ function buildSummary(memory: {
   behavior_signals: string[];
   recent_context: string[];
   long_term_callbacks: string[];
-}) {
-  const signal = memory.behavior_signals[0] || "近期节奏稳步推进";
-  const recent = memory.recent_context[0] || "今天有持续行动";
-  const callback = memory.long_term_callbacks[0] || "长期习惯正在形成";
-  return `画像依据：${signal}；${recent}；${callback}。`;
+}, isEnglish: boolean) {
+  const signal = memory.behavior_signals[0] ||
+    (isEnglish ? "Your rhythm has been moving forward steadily." : "近期节奏稳步推进");
+  const recent = memory.recent_context[0] ||
+    (isEnglish ? "You kept taking action today." : "今天有持续行动");
+  const callback = memory.long_term_callbacks[0] ||
+    (isEnglish ? "Long-term habits are taking shape." : "长期习惯正在形成");
+  return isEnglish
+    ? `Portrait cues: ${signal}; ${recent}; ${callback}.`
+    : `画像依据：${signal}；${recent}；${callback}。`;
 }
 
 function buildImageUrl(input: {
@@ -158,6 +163,8 @@ Deno.serve(async (req) => {
     const scene = toText(body.scene) || "profile";
     const style = toText(body.style) || "pencil_sketch";
     const forceRefresh = toBool(body.force_refresh, true);
+    const languageCode = toText(body.language_code).toLowerCase();
+    const isEnglish = body.is_english === true || languageCode.startsWith("en");
     const model = toText(Deno.env.get("POLLINATIONS_MODEL")) || "flux";
     const token = toText(Deno.env.get("POLLINATIONS_API_KEY"));
 
@@ -194,7 +201,7 @@ Deno.serve(async (req) => {
     });
 
     const prompt = buildPrompt(memory, style);
-    const summary = buildSummary(memory);
+    const summary = buildSummary(memory, isEnglish);
     const seed = Math.floor(Math.random() * 2147483647);
     const imageUrl = buildImageUrl({
       prompt,

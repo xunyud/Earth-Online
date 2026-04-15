@@ -1,3 +1,5 @@
+import 'system_reward_catalog.dart';
+
 class InventoryItem {
   final String id;
   final String rewardTitle;
@@ -20,12 +22,14 @@ class InventoryItem {
   });
 
   /// 是否为一次性消耗道具
-  bool get isConsumable => effectType == 'xp_boost' ||
+  bool get isConsumable =>
+      effectType == 'xp_boost' ||
       effectType == 'confetti_style' ||
       effectType == 'streak_protect';
 
   /// 是否为永久道具
-  bool get isPermanent => effectType == 'theme_unlock' ||
+  bool get isPermanent =>
+      effectType == 'theme_unlock' ||
       effectType == 'card_border' ||
       effectType == 'complete_effect';
 
@@ -45,4 +49,11 @@ class InventoryItem {
       effectValue: json['effect_value'] as String?,
     );
   }
+
+  SystemRewardDefinition? get systemRewardDefinition =>
+      resolveSystemRewardDefinition(rewardTitle);
+
+  String localizedRewardTitle(bool isEnglish) =>
+      systemRewardDefinition?.title(isEnglish) ??
+      (rewardTitle.isEmpty ? '' : rewardTitle);
 }

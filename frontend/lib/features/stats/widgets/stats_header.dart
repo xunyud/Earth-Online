@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../../core/i18n/app_locale_controller.dart';
 import '../theme/stats_colors.dart';
 import '../theme/stats_text_styles.dart';
 
@@ -49,20 +51,23 @@ class StatsHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '成长仪表盘',
-                      style: TextStyle(
+                    Text(
+                      context.tr('stats.dashboard_title'),
+                      style: AppTextStyles.withFontFallback(const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.5,
                         color: StatsColors.bodyText,
-                      ),
+                      )),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       streakDays > 0
-                          ? '你已连续成长 $streakDays 天'
-                          : '开始记录你的成长旅程',
+                          ? context.tr(
+                              'stats.dashboard_subtitle_streak',
+                              params: {'count': '$streakDays'},
+                            )
+                          : context.tr('stats.dashboard_subtitle_empty'),
                       style: StatsTextStyles.metricLabel.copyWith(
                         fontSize: 13,
                         letterSpacing: 0,

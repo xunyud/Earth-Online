@@ -455,13 +455,18 @@ class _DiaryDayCard extends StatelessWidget {
     );
   }
 
-  static const _weeklySummaryPrefix = '【本周总结】';
+  static const _weeklySummaryPrefixes = <String>[
+    '[WEEKLY_SUMMARY]',
+    '【本周总结】',
+  ];
 
   /// 判断是周报还是普通鼓励语，返回对应卡片
   Widget _buildEncouragementOrSummary(String text, QuestTheme theme) {
-    if (text.startsWith(_weeklySummaryPrefix)) {
-      final md = text.substring(_weeklySummaryPrefix.length).trim();
-      return _buildWeeklySummaryCard(md, theme);
+    for (final prefix in _weeklySummaryPrefixes) {
+      if (text.startsWith(prefix)) {
+        final md = text.substring(prefix.length).trim();
+        return _buildWeeklySummaryCard(md, theme);
+      }
     }
     return _buildEncouragementCard(text);
   }

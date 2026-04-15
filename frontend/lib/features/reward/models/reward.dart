@@ -1,3 +1,5 @@
+import 'system_reward_catalog.dart';
+
 class Reward {
   final String id;
   final String title;
@@ -60,5 +62,28 @@ class Reward {
     if (value is num) return value.round();
     if (value is String) return int.tryParse(value.trim()) ?? 0;
     return 0;
+  }
+
+  SystemRewardDefinition? get systemRewardDefinition =>
+      resolveSystemRewardDefinition(title);
+
+  String localizedTitle(bool isEnglish) =>
+      systemRewardDefinition?.title(isEnglish) ?? (title.isEmpty ? '' : title);
+
+  String? localizedDescription(bool isEnglish) =>
+      systemRewardDefinition?.description(isEnglish) ?? description;
+
+  List<String> localizedLookupTitles(bool isEnglish) {
+    final base = systemRewardDefinition;
+    if (base == null) {
+      final trimmed = title.trim();
+      return trimmed.isEmpty ? const <String>[] : <String>[trimmed];
+    }
+    return <String>[
+      base.title(isEnglish),
+      base.title(false),
+      base.title(true),
+      ...base.aliases,
+    ];
   }
 }

@@ -73,4 +73,43 @@ void main() {
     );
     expect(migrationSource, contains('notified_at'));
   });
+  test('weekly summary queueing propagates current language code', () async {
+    final pageSource =
+        await File('lib/features/quest/screens/life_diary_page.dart')
+            .readAsString();
+    final serviceSource = await File(
+      'lib/features/quest/services/weekly_summary_job_service.dart',
+    ).readAsString();
+    final enqueueSource = await File(
+      '../supabase/functions/weekly-summary-enqueue/index.ts',
+    ).readAsString();
+    final functionSource = await File(
+      '../supabase/functions/weekly-summary/index.ts',
+    ).readAsString();
+
+    expect(
+      pageSource,
+      contains(
+        "_weeklySummaryService.enqueue(languageCode: AppLocaleController.instance.locale.languageCode)",
+      ),
+    );
+    expect(
+      serviceSource,
+      contains('Future<WeeklySummaryJob?> enqueue({String? languageCode})'),
+    );
+    expect(serviceSource, contains("'language_code': languageCode"));
+    expect(
+      enqueueSource,
+      contains('const languageCode = toText(body?.language_code);'),
+    );
+    expect(
+      enqueueSource,
+      contains(
+        'body: JSON.stringify({ user_id: userId, language_code: languageCode })',
+      ),
+    );
+    expect(functionSource, contains('language_code'));
+    expect(functionSource, contains('Weekly Adventure Report'));
+    expect(functionSource, contains('【Weekly Summary】'));
+  });
 }
