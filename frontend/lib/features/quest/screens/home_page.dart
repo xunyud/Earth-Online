@@ -67,6 +67,7 @@ class _GuideTurnResponse {
   final GuideChatResult result;
   final Future<void> Function()? postAction;
   final bool closeDialogBeforeAction;
+  final bool appendAssistantReply;
   final GuideTaskEditDraft? pendingTaskEditDraft;
   final DateTime? pendingTaskDueDate;
 
@@ -74,6 +75,7 @@ class _GuideTurnResponse {
     required this.result,
     this.postAction,
     this.closeDialogBeforeAction = false,
+    this.appendAssistantReply = true,
     this.pendingTaskEditDraft,
     this.pendingTaskDueDate,
   });
@@ -480,7 +482,7 @@ class _HomePageState extends State<HomePage> {
 
   _AgentRunResult _currentAgentRunResult() {
     String? latestAssistantMessage;
-    for (final item in _guideMessages.reversed) {
+    for (final item in _visibleGuideMessages().reversed) {
       if (item.role == 'assistant' && item.content.trim().isNotEmpty) {
         latestAssistantMessage = item.content.trim();
         break;
@@ -860,17 +862,19 @@ class _HomePageState extends State<HomePage> {
     final proxyUrl = AppConfig.agentChatProxyUrl.trim();
     if (proxyUrl.isNotEmpty) {
       try {
-        final response = await http.post(
-          Uri.parse(proxyUrl),
-          headers: const <String, String>{
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode(<String, dynamic>{
-            'message': sourceText,
-            'model': AppConfig.openaiChatModel,
-            'systemPrompt': _buildDirectFreeformChatSystemPrompt(),
-          }),
-        ).timeout(const Duration(seconds: 5));
+        final response = await http
+            .post(
+              Uri.parse(proxyUrl),
+              headers: const <String, String>{
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode(<String, dynamic>{
+                'message': sourceText,
+                'model': AppConfig.openaiChatModel,
+                'systemPrompt': _buildDirectFreeformChatSystemPrompt(),
+              }),
+            )
+            .timeout(const Duration(seconds: 5));
         if (response.statusCode >= 200 && response.statusCode < 300) {
           final decoded = jsonDecode(response.body);
           final reply = '${decoded['reply'] ?? ''}'.trim();
@@ -896,24 +900,26 @@ class _HomePageState extends State<HomePage> {
     if (apiKey.isEmpty) return null;
 
     try {
-      final response = await http.post(
-        _buildOpenAIChatUri(),
-        headers: <String, String>{
-          'Authorization': 'Bearer $apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(<String, dynamic>{
-          'model': AppConfig.openaiChatModel,
-          'temperature': 0.4,
-          'messages': <Map<String, String>>[
-            <String, String>{
-              'role': 'system',
-              'content': _buildDirectFreeformChatSystemPrompt(),
+      final response = await http
+          .post(
+            _buildOpenAIChatUri(),
+            headers: <String, String>{
+              'Authorization': 'Bearer $apiKey',
+              'Content-Type': 'application/json',
             },
-            <String, String>{'role': 'user', 'content': sourceText},
-          ],
-        }),
-      ).timeout(const Duration(seconds: 8));
+            body: jsonEncode(<String, dynamic>{
+              'model': AppConfig.openaiChatModel,
+              'temperature': 0.4,
+              'messages': <Map<String, String>>[
+                <String, String>{
+                  'role': 'system',
+                  'content': _buildDirectFreeformChatSystemPrompt(),
+                },
+                <String, String>{'role': 'user', 'content': sourceText},
+              ],
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
@@ -1238,6 +1244,12 @@ class _HomePageState extends State<HomePage> {
         _guideMessages.removeRange(0, _guideMessages.length - 60);
       }
     });
+  }
+
+  List<_GuideChatMessage> _visibleGuideMessages() {
+    return _guideMessages
+        .where((message) => message.agentStepId == null)
+        .toList(growable: false);
   }
 
   bool _shouldRouteToAgent(String text) {
@@ -1982,27 +1994,6 @@ class _HomePageState extends State<HomePage> {
     return action;
   }
 
-  GuideDialogInfoMessageCard? _toDialogMessageCard(GuideMessageCard? card) {
-    if (card == null) return null;
-    if (card.label.trim().isEmpty && card.content.trim().isEmpty) return null;
-    return GuideDialogInfoMessageCard(
-      label: card.label,
-      content: card.content,
-    );
-  }
-
-  GuideDialogResultCard? _toDialogResultCard(GuideResultCard? card) {
-    if (card == null) return null;
-    if (card.title.trim().isEmpty && card.description.trim().isEmpty) {
-      return null;
-    }
-    return GuideDialogResultCard(
-      label: card.label,
-      title: card.title,
-      description: card.description,
-    );
-  }
-
   String _guideCompanionReply(String text) {
     final normalized = text.trim();
     if (normalized.contains('不开心') || normalized.contains('难过')) {
@@ -2077,25 +2068,6 @@ class _HomePageState extends State<HomePage> {
       _guideText('陪我聊聊开会前的压力', 'Talk with me about the pre-meeting pressure'),
       _guideText('最难的是开场那一块', 'The hardest part is the opening'),
     ];
-  }
-
-  GuideDialogInfoMessageCard _buildGuideModeExamplesCard(String action) {
-    if (action == context.tr('guide.mode.generate_task')) {
-      return GuideDialogInfoMessageCard(
-        label: context.tr('guide.examples.title'),
-        content: context.tr('guide.examples.generate'),
-      );
-    }
-    if (action == context.tr('guide.mode.modify_task')) {
-      return GuideDialogInfoMessageCard(
-        label: context.tr('guide.examples.title'),
-        content: context.tr('guide.examples.modify'),
-      );
-    }
-    return GuideDialogInfoMessageCard(
-      label: context.tr('guide.examples.title'),
-      content: context.tr('guide.examples.companion'),
-    );
   }
 
   String _buildGuideInputHint(String guideName, {String? action}) {
@@ -3694,6 +3666,7 @@ class _HomePageState extends State<HomePage> {
           result: result,
           pendingTaskEditDraft: result.taskEditDraft,
           closeDialogBeforeAction: navigationTarget.isNotEmpty,
+          appendAssistantReply: guideChatResult != null,
           postAction: navigationTarget.isEmpty
               ? null
               : () => _performAgentNavigation(navigationTarget),
@@ -3773,11 +3746,9 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    final messages = List<_GuideChatMessage>.from(_guideMessages);
+    final messages = List<_GuideChatMessage>.from(_visibleGuideMessages());
     final input = TextEditingController();
     final entryActions = _buildGuideEntryQuickActions();
-    GuideDialogInfoMessageCard? currentMessageCard;
-    GuideDialogResultCard? currentResultCard;
     List<String> currentExamplePrompts = const <String>[];
     var currentInputHint = _buildGuideInputHint(_guideName);
     var latestUserText = '';
@@ -3800,7 +3771,6 @@ class _HomePageState extends State<HomePage> {
       if (shownText.isEmpty || text.isEmpty || sending) return;
       setModalState(() {
         sending = true;
-        currentResultCard = null;
         messages.add(_GuideChatMessage(role: 'user', content: shownText));
       });
       latestUserText = shownText;
@@ -3817,26 +3787,36 @@ class _HomePageState extends State<HomePage> {
             ? result.reply
             : context.tr('guide.fallback.reply');
         setState(() => _guideStatus = _GuideConnectionStatus.ready);
-        setModalState(() {
-          messages.add(
-            _GuideChatMessage(
-              role: 'assistant',
-              content: reply,
-              memoryRefCount: result.memoryRefs.length,
-            ),
+        if (turn.appendAssistantReply) {
+          setModalState(() {
+            messages.add(
+              _GuideChatMessage(
+                role: 'assistant',
+                content: reply,
+                memoryRefCount: result.memoryRefs.length,
+              ),
+            );
+            currentExamplePrompts = result.quickActions.isNotEmpty
+                ? result.quickActions.take(3).toList()
+                : _buildGuideQuickActions(result.intent);
+            sending = false;
+          });
+          _appendGuideMessage(
+            'assistant',
+            reply,
+            memoryRefs: result.memoryRefs,
           );
-          currentExamplePrompts = result.quickActions.isNotEmpty
-              ? result.quickActions.take(3).toList()
-              : _buildGuideQuickActions(result.intent);
-          currentMessageCard = _toDialogMessageCard(result.messageCard);
-          currentResultCard = _toDialogResultCard(result.resultCard);
-          sending = false;
-        });
-        _appendGuideMessage(
-          'assistant',
-          reply,
-          memoryRefs: result.memoryRefs,
-        );
+        } else {
+          setModalState(() {
+            messages
+              ..clear()
+              ..addAll(_visibleGuideMessages());
+            currentExamplePrompts = result.quickActions.isNotEmpty
+                ? result.quickActions.take(3).toList()
+                : _buildGuideQuickActions(result.intent);
+            sending = false;
+          });
+        }
         if (turn.closeDialogBeforeAction) {
           if (!dialogContext.mounted) return;
           if (Navigator.of(dialogContext).canPop()) {
@@ -3852,7 +3832,6 @@ class _HomePageState extends State<HomePage> {
         setState(() => _guideStatus = _statusFromError(e));
         final fallback = context.tr('guide.network_fallback');
         setModalState(() {
-          currentMessageCard = null;
           messages.add(_GuideChatMessage(role: 'assistant', content: fallback));
           sending = false;
         });
@@ -3864,8 +3843,8 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setModalState) {
-          final agentState = _currentAgentRunResult();
           final guideName = _guideName;
+
           return GuidePanelDialog(
             title: guideName,
             guideName: guideName,
@@ -3904,18 +3883,12 @@ class _HomePageState extends State<HomePage> {
                 .toList(),
             quickActions: entryActions,
             examplePrompts: currentExamplePrompts,
-            currentMessageCard: currentMessageCard,
-            currentResultCard: currentResultCard,
             inputController: input,
             inputHintText: currentInputHint,
             sendLabel: context.tr('common.send'),
             retryLabel: context.tr('common.retry'),
             closeLabel: context.tr('common.close'),
             sending: sending,
-            agentRun: agentState.run,
-            agentSteps: agentState.steps,
-            onApproveAgentStep: () => _approveLatestAgentStep(),
-            onRejectAgentStep: () => _rejectLatestAgentStep(),
             memoryRefsLabelBuilder: (count) => context.tr(
               'guide.memory.refs',
               params: {'count': '$count'},
@@ -3940,8 +3913,6 @@ class _HomePageState extends State<HomePage> {
             onQuickActionTap: (action) {
               setModalState(() {
                 currentExamplePrompts = _buildGuideModeExamples(action);
-                currentMessageCard = _buildGuideModeExamplesCard(action);
-                currentResultCard = null;
                 currentInputHint = _buildGuideInputHint(
                   guideName,
                   action: action,

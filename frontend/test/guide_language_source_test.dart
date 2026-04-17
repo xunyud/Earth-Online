@@ -18,8 +18,10 @@ void main() {
 
     expect(source, contains("Future<GuideBootstrapResult> bootstrap({"));
     expect(source, contains("body['client_context'] = clientContext;"));
-    expect(source,
-        contains("final data = await _invoke('guide-chat', body: body);"));
+    expect(
+      source,
+      contains("final data = await _invoke('guide-chat', body: body);"),
+    );
   });
 
   test('QuickAddBar speech locale follows current app language', () async {
@@ -34,27 +36,38 @@ void main() {
         await File('lib/features/quest/screens/home_page.dart').readAsString();
 
     expect(source, contains('_localAgentStepResults'));
-    expect(source, contains('return _waitForLocalAgentStepResult(pendingStepId);'));
-    expect(source, contains("final cachedResult = _localAgentStepResults[step.id];"));
+    expect(
+      source,
+      contains('return _waitForLocalAgentStepResult(pendingStepId);'),
+    );
+    expect(
+      source,
+      contains("final cachedResult = _localAgentStepResults[step.id];"),
+    );
   });
 
-  test('HomePage prefers local step output before previous assistant text', () async {
+  test('HomePage prefers local step output before previous assistant text',
+      () async {
     final source =
         await File('lib/features/quest/screens/home_page.dart').readAsString();
 
-    expect(source, contains("final localOutput = localResult?.outputText.trim() ?? '';"));
+    expect(
+      source,
+      contains("final localOutput = localResult?.outputText.trim() ?? '';"),
+    );
     expect(source, contains('reply: localOutput.isNotEmpty'));
     expect(source, contains(": (latest ?? fallbackReply),"));
   });
 
-  test('GuidePanelDialog does not render agent execution timeline or status cards',
-      () async {
+  test('GuidePanelDialog does not render process bubbles', () async {
     final source =
         await File('lib/features/quest/widgets/guide_panel_dialog.dart')
             .readAsString();
 
     expect(source, isNot(contains('AgentStepTimeline(')));
     expect(source, isNot(contains('AgentApprovalCard(')));
-    expect(source, isNot(contains("label: 'Agent 状态'")));
+    expect(source, isNot(contains('_GuideAgentTimelineCard(')));
+    expect(source, isNot(contains('_GuideInfoMessageCard(')));
+    expect(source, isNot(contains('_GuideResultStatusCard(')));
   });
 }

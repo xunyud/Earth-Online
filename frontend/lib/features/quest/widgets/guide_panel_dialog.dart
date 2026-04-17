@@ -6,8 +6,6 @@ import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/theme/quest_theme.dart';
-import '../models/agent_run.dart';
-import '../models/agent_step.dart';
 
 enum GuideDialogRole {
   assistant,
@@ -26,28 +24,6 @@ class GuideDialogMessage {
   });
 }
 
-class GuideDialogInfoMessageCard {
-  final String label;
-  final String content;
-
-  const GuideDialogInfoMessageCard({
-    required this.label,
-    required this.content,
-  });
-}
-
-class GuideDialogResultCard {
-  final String label;
-  final String title;
-  final String description;
-
-  const GuideDialogResultCard({
-    required this.label,
-    required this.title,
-    required this.description,
-  });
-}
-
 class GuidePanelDialog extends StatelessWidget {
   final String title;
   final String guideName;
@@ -62,18 +38,12 @@ class GuidePanelDialog extends StatelessWidget {
   final List<GuideDialogMessage> messages;
   final List<String> quickActions;
   final List<String> examplePrompts;
-  final GuideDialogInfoMessageCard? currentMessageCard;
-  final GuideDialogResultCard? currentResultCard;
   final TextEditingController inputController;
   final String inputHintText;
   final String sendLabel;
   final String retryLabel;
   final String closeLabel;
   final bool sending;
-  final AgentRun? agentRun;
-  final List<AgentStep> agentSteps;
-  final VoidCallback? onApproveAgentStep;
-  final VoidCallback? onRejectAgentStep;
   final String Function(int count) memoryRefsLabelBuilder;
   final VoidCallback? onRetry;
   final ValueChanged<String> onSubmit;
@@ -97,18 +67,12 @@ class GuidePanelDialog extends StatelessWidget {
     required this.messages,
     required this.quickActions,
     required this.examplePrompts,
-    required this.currentMessageCard,
-    required this.currentResultCard,
     required this.inputController,
     required this.inputHintText,
     required this.sendLabel,
     required this.retryLabel,
     required this.closeLabel,
     required this.sending,
-    required this.agentRun,
-    required this.agentSteps,
-    required this.onApproveAgentStep,
-    required this.onRejectAgentStep,
     required this.memoryRefsLabelBuilder,
     required this.onRetry,
     required this.onSubmit,
@@ -162,7 +126,6 @@ class GuidePanelDialog extends StatelessWidget {
               children: [
                 _GuideHeader(
                   title: title,
-                  guideName: guideName,
                   subtitle: subtitle,
                   statusText: statusText,
                   editNameLabel: editNameLabel,
@@ -191,15 +154,9 @@ class GuidePanelDialog extends StatelessWidget {
                           summary: guideMemorySummary,
                           signals: guideMemorySignals,
                         ),
-                        if (currentMessageCard != null) ...[
-                          const SizedBox(height: 14),
-                          _GuideInfoMessageCard(
-                            card: currentMessageCard!,
-                          ),
-                        ],
-                        const SizedBox(height: 14),
-                        ...messages.map((message) {
-                          return Padding(
+                        if (messages.isNotEmpty) const SizedBox(height: 14),
+                        ...messages.map(
+                          (message) => Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _GuideMessageBubble(
                               message: message,
@@ -208,15 +165,8 @@ class GuidePanelDialog extends StatelessWidget {
                               ),
                               theme: theme,
                             ),
-                          );
-                        }),
-                        if (currentResultCard != null) ...[
-                          const SizedBox(height: 4),
-                          _GuideResultStatusCard(
-                            key: const ValueKey('guide-current-result-card'),
-                            card: currentResultCard!,
                           ),
-                        ],
+                        ),
                         if (quickActions.isNotEmpty) ...[
                           const SizedBox(height: 14),
                           Container(
@@ -263,8 +213,7 @@ class GuidePanelDialog extends StatelessWidget {
                                         size: 16,
                                         color: Color(0xFF4A6B49),
                                       ),
-                                      backgroundColor:
-                                          const Color(0xFFF6FBEA),
+                                      backgroundColor: const Color(0xFFF6FBEA),
                                       side: const BorderSide(
                                         color: Color(0x22547250),
                                       ),
@@ -313,58 +262,8 @@ class GuidePanelDialog extends StatelessWidget {
   }
 }
 
-class _GuideInfoMessageCard extends StatelessWidget {
-  final GuideDialogInfoMessageCard card;
-
-  const _GuideInfoMessageCard({
-    required this.card,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFFFFCF4),
-            Color(0xFFF7F9ED),
-          ],
-        ),
-        border: Border.all(color: const Color(0x204B7D4D)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              card.label,
-              style: AppTextStyles.caption.copyWith(
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF4F724D),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              card.content,
-              style: AppTextStyles.body.copyWith(
-                height: 1.55,
-                color: const Color(0xFF314132),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _GuideHeader extends StatelessWidget {
   final String title;
-  final String guideName;
   final String subtitle;
   final String statusText;
   final String editNameLabel;
@@ -379,7 +278,6 @@ class _GuideHeader extends StatelessWidget {
 
   const _GuideHeader({
     required this.title,
-    required this.guideName,
     required this.subtitle,
     required this.statusText,
     required this.editNameLabel,
@@ -434,7 +332,7 @@ class _GuideHeader extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      guideName.characters.first,
+                      title.characters.first,
                       style: AppTextStyles.heading2.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -716,67 +614,6 @@ class _GuideMessageBubble extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GuideResultStatusCard extends StatelessWidget {
-  final GuideDialogResultCard card;
-
-  const _GuideResultStatusCard({
-    super.key,
-    required this.card,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFF6FDEB),
-            Color(0xFFF8F5E8),
-          ],
-        ),
-        border: Border.all(color: const Color(0x255B8A58)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              card.label,
-              style: AppTextStyles.caption.copyWith(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF4E6F4F),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              card.title,
-              style: AppTextStyles.heading2.copyWith(
-                fontSize: 22,
-                color: const Color(0xFF243826),
-              ),
-            ),
-            if (card.description.trim().isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(
-                card.description,
-                style: AppTextStyles.body.copyWith(
-                  height: 1.5,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ],
         ),
       ),
     );
