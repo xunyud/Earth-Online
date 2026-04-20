@@ -259,6 +259,7 @@ export async function updateAgentStepStatus(
     errorText?: string | null;
     startedAt?: string | null;
     finishedAt?: string | null;
+    needsConfirmation?: boolean | null;
   } = {},
 ): Promise<SerializedAgentRunStep> {
   const payload: Record<string, unknown> = {
@@ -270,6 +271,9 @@ export async function updateAgentStepStatus(
   if (extras.errorText !== undefined) payload.error_text = extras.errorText;
   if (extras.startedAt !== undefined) payload.started_at = extras.startedAt;
   if (extras.finishedAt !== undefined) payload.finished_at = extras.finishedAt;
+  if (extras.needsConfirmation !== undefined) {
+    payload.needs_confirmation = extras.needsConfirmation;
+  }
   const { data, error } = await supabase
     .from("agent_run_steps")
     .update(payload)

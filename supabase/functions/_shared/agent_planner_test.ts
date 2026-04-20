@@ -29,6 +29,21 @@ Deno.test("planAgentGoal 为任务创建意图生成 app.quest.create 步骤", (
   assertStringIncludes(`${result.summary}`, "任务");
 });
 
+Deno.test("planAgentGoal 会把生成听歌任务识别为 app.quest.create", () => {
+  const result = planAgentGoal("生成听歌任务");
+
+  assertEquals(result.steps.length, 1);
+  assertEquals(result.steps[0].kind, "tool_call");
+  if (result.steps[0].kind !== "tool_call") {
+    throw new Error("expected tool_call step");
+  }
+  assertEquals(result.steps[0].tool_name, "app.quest.create");
+  assertEquals(
+    toolArguments(result.steps[0].arguments_json)["title"],
+    "听歌",
+  );
+});
+
 Deno.test("planAgentGoal 为任务修改意图生成 app.quest.update 步骤", () => {
   const result = planAgentGoal("把“准备周会”改成明晚截止");
 

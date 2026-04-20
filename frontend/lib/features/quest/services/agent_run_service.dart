@@ -67,6 +67,9 @@ class AgentRunService extends ChangeNotifier {
       final snapshot = await _agentService.pollRunStatus(runId: runId);
       _applySnapshot(snapshot);
       return snapshot;
+    } catch (_) {
+      _stopPolling();
+      return null;
     } finally {
       _refreshing = false;
     }

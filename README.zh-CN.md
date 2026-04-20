@@ -157,7 +157,7 @@ flutter run -d chrome
 - `SUPABASE_KEY`
 - `REDIS_URL`
 - `OPENAI_API_KEY`
-- `OPENAI_BASE_URL`
+- `OPENAI_BASE_URL` (`https://api.86gamestore.com`)
 - `PORT`
 
 然后启动服务：
@@ -187,7 +187,10 @@ supabase start
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL` (`https://api.86gamestore.com`)
+- `DEEPSEEK_API_KEY`（兼容旧配置时可选）
+- `DEEPSEEK_BASE_URL`（兼容旧配置时可选）
 - `EVERMEMOS_API_URL`
 - `EVERMEMOS_API_KEY`
 - `EVERMEMOS_SYNC_TIMEOUT_MS`
@@ -195,6 +198,27 @@ supabase start
 - `POLLINATIONS_API_KEY`
 - `WECHAT_APP_ID`
 - `WECHAT_APP_SECRET`
+
+### 3.5. 项目内置 Codex 多代理角色
+
+当前仓库已经在 `.codex/` 中提供项目级 Codex 多代理配置：
+
+- `.codex/config.toml` 已启用 `features.multi_agent = true`
+- `.codex/agents/explorer.toml` 用于只读探索与证据收集
+- `.codex/agents/reviewer.toml` 用于正确性、回归风险与测试导向审查
+- `.codex/agents/docs-researcher.toml` 用于文档、API 与 release note 核对
+
+根配置会直接引用这些项目内角色文件，而不是只依赖 `everything-claude-code/` 中 vendored 的示例配置。
+
+密钥请通过环境变量或 Supabase Secrets 管理，不要把真实密钥提交进仓库。当前项目的 OpenAI 兼容链路默认使用：
+
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL` (`https://api.86gamestore.com`)
+
+如果你仍需要兼容较早的 DeepSeek 本地配置，Supabase Functions 也支持：
+
+- `DEEPSEEK_API_KEY`
+- `DEEPSEEK_BASE_URL`
 
 ### 4. 渲染演示资源
 
@@ -227,7 +251,27 @@ npm run still:zh
 
 目前仅保留海报图片用于 README 预览，其余渲染生成的视频输出物不纳入版本控制，如有需要可在 `promo-video/` 中重新生成。
 
-## 最近更新 (v1.2.0 - 2026-03-27)
+## 最近更新 (v1.3.0 - 2026-04-15)
+
+完整版本记录见 [CHANGELOG.md](./CHANGELOG.md)。
+
+### 业务型 Agent 聊天与执行链路
+- 新增 `agent-turn`、`agent-run-status`、`agent-step-approve`、`agent-step-complete` 四条 Supabase Functions，支持一次对话拆解为可追踪的执行步骤。
+- 新增 `agent_runs`、`agent_run_steps`、`agent_step_approvals` 三张表及对应状态流转，用于记录 agent run、步骤轨迹和确认结果。
+- 前端新增本地 `LocalAgentRuntimeService`、执行轨迹时间线与确认卡片，把自由聊天、创建任务、修改任务、拆分任务、跳转页面、兑换奖励与周报生成统一收束到业务型 agent 入口。
+- 新增本地后端代理接口 `POST /agent/free-chat`，并补上 OpenAI 兼容 `base URL` 归一化逻辑，修复自由聊天链路与 `/v1` 地址兼容问题。
+
+### 国际化与界面文案补齐
+- 为快速创建任务、回收站、夜间反思、周报错误提示、成长仪表盘、任务编辑等界面补齐中英文文案键值。
+- Guide 对话、成长画像、统计页、任务板暖心文案和多处按钮/标签已接入当前语言环境，英文模式下不再混入中文文案。
+- 为本轮国际化补充多组源码与服务层测试，覆盖 Guide、周报、奖励、首页认证入口、快速创建与本地 agent runtime。
+
+### 文档与演示资源
+- 英文 README 已更新 OpenAI 兼容环境变量说明，并补充项目级 Codex 多代理角色配置说明；本次中文版已同步。
+- `promo-video/` 新增 `EarthOnlineCompetition`、`EarthOnlineCompetitionZh`、`EverMemOSDemo` 等 Remotion 合成内容，并补充配套音频、视频片段与脚本。
+- 新增 [docs/2026-04-15-agent-chat-fix-summary.md](./docs/2026-04-15-agent-chat-fix-summary.md)，记录 agent 聊天修复背景、根因与验证结果。
+
+## 历史更新 (v1.2.0 - 2026-03-27)
 
 ### 新用户注册与新手引导修复
 - 修复邮箱注册 OTP 类型不匹配导致新用户无法完成注册的问题（注册使用 `OtpType.signup`，登录使用 `OtpType.magiclink`）
@@ -247,7 +291,7 @@ npm run still:zh
 ### 测试维护
 - 更新 4 个过期测试文件以匹配当前 UI：登录页、助手面板、国际化源码检查
 
-## 历史更新 (v1.1.0 - 2026-03-26)
+## 更早更新 (v1.1.0 - 2026-03-26)
 
 ### 成长仪表盘重设计
 - 全面重构统计页面，升级为暖奶油色 / 柔绿 / 低饱和金配色的成长仪表盘

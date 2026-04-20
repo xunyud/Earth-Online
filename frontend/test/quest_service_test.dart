@@ -41,26 +41,25 @@ void main() {
     expect(result.quests.first.title, '整理今天的任务');
   });
 
-  test('parseQuest 在无效响应后不会盲目重试', () async {
+  test('parseQuest 在服务异常时会回退到本地基础解析', () async {
     var attempts = 0;
 
-    await expectLater(
-      () => QuestService.parseQuest(
-        '整理今天的任务',
-        'user_123',
-        accessTokenOverride: 'token',
-        retryDelay: Duration.zero,
-        invoker: ({required accessToken, required body}) async {
-          attempts += 1;
-          return const ParseQuestFunctionResult(
-            status: 500,
-            data: {'error': 'boom'},
-          );
-        },
-      ),
-      throwsException,
+    final result = await QuestService.parseQuest(
+      '整理今天的任务',
+      'user_123',
+      accessTokenOverride: 'token',
+      retryDelay: Duration.zero,
+      invoker: ({required accessToken, required body}) async {
+        attempts += 1;
+        return const ParseQuestFunctionResult(
+          status: 500,
+          data: {'error': 'boom'},
+        );
+      },
     );
 
     expect(attempts, 1);
+    expect(result.quests, hasLength(1));
+    expect(result.quests.first.title, '整理今天的任务');
   });
 }

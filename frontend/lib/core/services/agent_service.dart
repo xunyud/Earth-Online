@@ -1,9 +1,78 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:functions_client/functions_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/quest/models/agent_run.dart';
 import '../../features/quest/models/agent_step.dart';
 import 'guide_service.dart';
 import 'supabase_auth_service.dart';
+
+String _agentInvokeErrorDetailsText(Object? details) {
+  if (details == null) return '';
+  if (details is String) return details;
+  if (details is Map || details is List) {
+    try {
+      return jsonEncode(details);
+    } catch (_) {
+      return '$details';
+    }
+  }
+  return '$details';
+}
+
+@visibleForTesting
+GuideServiceException mapAgentInvokeException({
+  required String functionName,
+  required Object error,
+}) {
+  if (error is FunctionException) {
+    final detailsText = _agentInvokeErrorDetailsText(error.details);
+    final normalizedText =
+        '$detailsText ${error.reasonPhrase ?? ''}'.toLowerCase();
+
+    if (error.status == 404 || normalizedText.contains('not_found')) {
+      return GuideServiceException(
+        type: GuideErrorType.service,
+        message: 'Agent 后端函数未部署：$functionName，请先同步部署再重试。',
+        statusCode: error.status,
+      );
+    }
+
+    if (error.status == 401 || error.status == 403) {
+      final unsupportedEs256 =
+          normalizedText.contains('unauthorized_unsupported_token_algorithm') ||
+              normalizedText.contains('unsupported jwt algorithm es256');
+      if (unsupportedEs256) {
+        return GuideServiceException(
+          type: GuideErrorType.service,
+          message:
+              'Agent 后端配置异常：$functionName 当前不接受匿名 ES256 会话，请重新部署该函数并确认关闭 verify_jwt。',
+          statusCode: error.status,
+        );
+      }
+      return GuideServiceException(
+        type: GuideErrorType.authExpired,
+        message: '用户会话已失效，请重新登录后再试',
+        statusCode: error.status,
+      );
+    }
+
+    return GuideServiceException(
+      type: error.status >= 500
+          ? GuideErrorType.service
+          : GuideErrorType.unknown,
+      message: '$functionName 调用失败: status=${error.status} data=$detailsText',
+      statusCode: error.status,
+    );
+  }
+
+  return GuideServiceException(
+    type: GuideErrorType.unknown,
+    message: '$error',
+  );
+}
 
 abstract class AgentRunClient {
   Future<AgentRunSnapshot> startRun({
@@ -215,10 +284,15 @@ class AgentService implements AgentRunClient {
       );
     } on GuideServiceException {
       rethrow;
+    } on FunctionException catch (error) {
+      throw mapAgentInvokeException(
+        functionName: functionName,
+        error: error,
+      );
     } catch (e) {
-      throw GuideServiceException(
-        type: GuideErrorType.unknown,
-        message: '$e',
+      throw mapAgentInvokeException(
+        functionName: functionName,
+        error: e,
       );
     }
   }

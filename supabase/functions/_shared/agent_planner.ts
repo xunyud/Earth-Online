@@ -71,6 +71,17 @@ function extractRewardTitle(goal: string): string {
 }
 
 function isTaskCreateIntent(loweredGoal: string): boolean {
+  const hasCreateVerb = loweredGoal.includes("创建") ||
+    loweredGoal.includes("生成") ||
+    loweredGoal.includes("新增") ||
+    loweredGoal.includes("安排") ||
+    loweredGoal.includes("添加") ||
+    loweredGoal.includes("create") ||
+    loweredGoal.includes("add") ||
+    loweredGoal.includes("generate");
+  const hasTaskWord = loweredGoal.includes("任务") ||
+    loweredGoal.includes("task");
+
   return loweredGoal.includes("创建任务") ||
     loweredGoal.includes("生成任务") ||
     loweredGoal.includes("新增任务") ||
@@ -78,6 +89,7 @@ function isTaskCreateIntent(loweredGoal: string): boolean {
     loweredGoal.includes("create task") ||
     loweredGoal.includes("add task") ||
     loweredGoal.includes("generate task") ||
+    (hasCreateVerb && hasTaskWord) ||
     (loweredGoal.includes("帮我创建") && loweredGoal.includes("任务")) ||
     (loweredGoal.includes("帮我生成") && loweredGoal.includes("任务"));
 }

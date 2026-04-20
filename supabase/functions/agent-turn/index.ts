@@ -207,7 +207,6 @@ export function createAgentTurnHandler(
         runId: run.id,
         kind: "message",
         summary: `收到目标：${goal}`,
-        outputText: planningContext.memory_digest,
         status: "succeeded",
         resultJson: toAgentJson({
           behavior_signals: planningContext.behavior_signals,

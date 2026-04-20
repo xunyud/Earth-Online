@@ -44,6 +44,7 @@ type AgentStepApproveHandlerDeps = {
       errorText?: string | null;
       startedAt?: string | null;
       finishedAt?: string | null;
+      needsConfirmation?: boolean | null;
     },
   ) => Promise<SerializedAgentRunStep>;
   updateRunStatus: (
@@ -128,7 +129,9 @@ export function createAgentStepApproveHandler(
       });
 
       if (normalizedDecision == "approved") {
-        await deps.updateStepStatus(stepId, "ready");
+        await deps.updateStepStatus(stepId, "ready", {
+          needsConfirmation: false,
+        });
         await deps.updateRunStatus(runId, "waiting_local_execution");
       } else {
         const failureMessage = reason.length === 0 ? "用户拒绝执行该步骤" : reason;

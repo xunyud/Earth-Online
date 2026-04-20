@@ -126,12 +126,32 @@ class QuestService {
       }
     }
 
+    final fallback = _buildFallbackParseQuestResult(text);
+    if (fallback != null) {
+      return fallback;
+    }
+
     if (_shouldRetryParseQuestError(lastError)) {
       throw Exception(AppLocaleController.instance.t('quest.parse.network_retry'));
     }
     throw Exception(
       AppLocaleController.instance
           .t('quest.parse.failed', params: {'error': '$lastError'}),
+    );
+  }
+
+  static ParseQuestResult? _buildFallbackParseQuestResult(String text) {
+    final normalized = text.trim();
+    if (normalized.isEmpty) return null;
+    return ParseQuestResult(
+      quests: <ParseQuestSpec>[
+        ParseQuestSpec(
+          title: normalized,
+          parentIndex: null,
+          xpReward: 20,
+        ),
+      ],
+      cheer: AppLocaleController.instance.t('quest.parse.default_cheer'),
     );
   }
 

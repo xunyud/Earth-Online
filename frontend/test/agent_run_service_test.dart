@@ -168,6 +168,42 @@ void main() {
 
     expect(await first, isNotNull);
   });
+
+  test('AgentRunService 鍦ㄨ疆璇㈠け璐ユ椂浼氬仠姝㈣疆璇㈠苟杩斿洖 null', () async {
+    final timer = _FakePeriodicTimer();
+    final client = _FakeAgentRunClient(
+      startRunSnapshot: _snapshot(
+        runStatus: 'running',
+        steps: <AgentStep>[
+          _step(
+            id: 'step-ready',
+            status: 'ready',
+            toolName: 'file.read_text',
+            summary: '璇诲彇 README.md',
+          ),
+        ],
+      ),
+      pollError: StateError('unsupported token algorithm'),
+    );
+
+    final service = AgentRunService(
+      agentService: client,
+      pollingTimerFactory: (duration, callback) {
+        timer.attach(callback);
+        return timer;
+      },
+    );
+
+    await service.startRun(goal: '璇诲彇 README');
+    expect(timer.isActive, isTrue);
+
+    final snapshot = await service.refresh();
+
+    expect(snapshot, isNull);
+    expect(client.pollRunStatusCallCount, 1);
+    expect(timer.isActive, isFalse);
+    expect(service.currentRun?.status, 'running');
+  });
 }
 
 AgentRunSnapshot _snapshot({
@@ -240,12 +276,14 @@ class _FakeAgentRunClient implements AgentRunClient {
   _FakeAgentRunClient({
     required this.startRunSnapshot,
     Iterable<AgentRunSnapshot> pollSnapshots = const <AgentRunSnapshot>[],
+    this.pollError,
     this.reportSnapshot,
     this.reportFuture,
   }) : _pollSnapshots = Queue<AgentRunSnapshot>.from(pollSnapshots);
 
   final AgentRunSnapshot startRunSnapshot;
   final Queue<AgentRunSnapshot> _pollSnapshots;
+  final Object? pollError;
   final AgentRunSnapshot? reportSnapshot;
   final Future<AgentRunSnapshot>? reportFuture;
 
@@ -266,6 +304,7 @@ class _FakeAgentRunClient implements AgentRunClient {
     required String runId,
   }) async {
     pollRunStatusCallCount += 1;
+    if (pollError != null) throw pollError!;
     return _pollSnapshots.removeFirst();
   }
 

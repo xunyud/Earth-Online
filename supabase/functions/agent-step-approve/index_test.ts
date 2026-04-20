@@ -28,6 +28,8 @@ Deno.test("agent-step-approve 批准后将步骤置为 ready", async () => {
   assertEquals(response.status, 200);
   assertEquals(deps.updatedStepStatuses, ["ready"]);
   assertEquals(deps.updatedRunStatuses, ["waiting_local_execution"]);
+  const payload = await response.json();
+  assertEquals(payload.steps[0].needs_confirmation, false);
 });
 
 Deno.test("agent-step-approve 拒绝后取消 run 并写入错误文案", async () => {
@@ -106,9 +108,18 @@ function createApproveDeps() {
         lastRejectedReason = opts.reason ?? "";
       }
     },
-    updateStepStatus: async (stepId: string, status: string) => {
+    updateStepStatus: async (
+      stepId: string,
+      status: string,
+      extras?: { needsConfirmation?: boolean },
+    ) => {
       updatedStepStatuses.push(status);
-      return { ...step, id: stepId, status } as SerializedAgentRunStep;
+      return {
+        ...step,
+        id: stepId,
+        status,
+        needs_confirmation: extras?.needsConfirmation ?? step.needs_confirmation,
+      } as SerializedAgentRunStep;
     },
     updateRunStatus: async (runId: string, status: "waiting_local_execution" | "cancelled") => {
       updatedRunStatuses.push(status);
@@ -124,6 +135,9 @@ function createApproveDeps() {
           {
             ...step,
             status: (updatedStepStatuses.at(-1) ?? step.status) as SerializedAgentRunStep["status"],
+            needs_confirmation: updatedStepStatuses.at(-1) == "ready"
+              ? false
+              : step.needs_confirmation,
           },
         ],
       } as AgentRunSnapshot),
