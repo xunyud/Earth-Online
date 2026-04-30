@@ -317,6 +317,8 @@ class QuestController extends ChangeNotifier {
     }
   }
 
+  /// 异步写入记忆到 EverMemOS，失败时静默处理。
+  /// [sender] 可选写入源标识，传递到 sync-user-memory 后端。
   void _syncMemoryFireAndForget({
     required String userId,
     required String eventType,
@@ -326,6 +328,7 @@ class QuestController extends ChangeNotifier {
     String? sourceTaskTitle,
     String? sourceStatus,
     String? summary,
+    String? sender,
     Map<String, dynamic>? extra,
   }) {
     final safeContent = content.trim();
@@ -344,6 +347,8 @@ class QuestController extends ChangeNotifier {
         'source_status': sourceStatus.trim(),
       if (summary != null && summary.trim().isNotEmpty)
         'summary': summary.trim(),
+      if (sender != null && sender.trim().isNotEmpty)
+        'sender': sender.trim(),
       if (extra != null && extra.isNotEmpty) 'extra': extra,
     };
     () async {
@@ -354,6 +359,27 @@ class QuestController extends ChangeNotifier {
         );
       } catch (_) {}
     }();
+  }
+
+  /// 公开的记忆写入方法，供外部（如 home_page）在非任务场景下写入记忆。
+  /// 自动获取当前用户 ID，失败时静默处理。
+  void syncMemory({
+    required String eventType,
+    required String content,
+    String? memoryKind,
+    String? summary,
+    String? sender,
+  }) {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) return;
+    _syncMemoryFireAndForget(
+      userId: userId,
+      eventType: eventType,
+      content: content,
+      memoryKind: memoryKind,
+      summary: summary,
+      sender: sender,
+    );
   }
 
   void _syncQuestMemoryBatchFireAndForget({

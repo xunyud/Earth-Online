@@ -119,6 +119,25 @@ class GuideDailyEvent {
   }
 }
 
+/// 小忆建议推荐条目，由 memory-recommender 引擎生成
+/// 每条包含具体可执行的任务标题和基于记忆模式的推荐理由
+class MemoryRecommendation {
+  final String title;
+  final String reason;
+
+  const MemoryRecommendation({
+    required this.title,
+    required this.reason,
+  });
+
+  factory MemoryRecommendation.fromMap(Map<String, dynamic> map) {
+    return MemoryRecommendation(
+      title: (map['title'] as String?)?.trim() ?? '',
+      reason: (map['reason'] as String?)?.trim() ?? '',
+    );
+  }
+}
+
 class GuideBootstrapResult {
   final String proactiveMessage;
   final GuideDailyEvent? dailyEvent;
@@ -126,6 +145,9 @@ class GuideBootstrapResult {
   final String traceId;
   final List<String> behaviorSignals;
   final List<String> memoryRefs;
+  /// 小忆建议推荐列表，由 bootstrap 阶段从 memory-recommender 获取
+  /// 为空时前端不显示建议区域
+  final List<MemoryRecommendation> recommendations;
 
   const GuideBootstrapResult({
     required this.proactiveMessage,
@@ -134,11 +156,13 @@ class GuideBootstrapResult {
     required this.traceId,
     required this.behaviorSignals,
     required this.memoryRefs,
+    this.recommendations = const <MemoryRecommendation>[],
   });
 
   factory GuideBootstrapResult.fromMap(Map<String, dynamic> map) {
     final behaviorRaw = map['behavior_signals'];
     final refsRaw = map['memory_refs'];
+    final recommendationsRaw = map['recommendations'];
     return GuideBootstrapResult(
       proactiveMessage: (map['proactive_message'] as String?)?.trim() ?? '',
       dailyEvent: map['daily_event'] is Map<String, dynamic>
@@ -158,6 +182,13 @@ class GuideBootstrapResult {
               .where((item) => item.isNotEmpty)
               .toList()
           : <String>[],
+      recommendations: recommendationsRaw is List
+          ? recommendationsRaw
+              .whereType<Map<String, dynamic>>()
+              .map(MemoryRecommendation.fromMap)
+              .where((r) => r.title.isNotEmpty)
+              .toList()
+          : const <MemoryRecommendation>[],
     );
   }
 }

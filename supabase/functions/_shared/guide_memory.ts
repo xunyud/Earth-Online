@@ -7,6 +7,8 @@ export type GuideMemoryBundle = {
   recent_context: string[];
   long_term_callbacks: string[];
   behavior_signals: string[];
+  /** agentic 检索结果，仅 scene=agent 时有值，用于 agent 规划感知历史 */
+  agentic_memory_lines: string[];
   memory_refs: string[];
   memory_digest: string;
   packed_context: string;
@@ -28,7 +30,7 @@ type GatherOptions = {
   maxPackedChars?: number;
 };
 
-type GuideStructuredMemoryItem = {
+export type GuideStructuredMemoryItem = {
   ref: string;
   rawText: string;
   displayText: string;
@@ -36,6 +38,8 @@ type GuideStructuredMemoryItem = {
   sourceTaskId: string;
   sourceTaskTitle: string;
   sourceStatus: string;
+  /** 记忆创建时间，支持 ISO 字符串、Unix 毫秒时间戳或 null */
+  createdAt: string | number | null;
 };
 
 function toText(v: unknown) {
@@ -75,7 +79,7 @@ function sameUtcDay(a: string | null, dayStartUtc: Date) {
   );
 }
 
-function normalizeMemoryItems(
+export function normalizeMemoryItems(
   raw: unknown,
 ): Array<Record<string, unknown> | string> {
   if (Array.isArray(raw)) return raw as Array<Record<string, unknown> | string>;
@@ -102,6 +106,28 @@ function normalizeMemoryText(item: Record<string, unknown> | string) {
     toText(item.message) ||
     toText((item.data as Record<string, unknown> | undefined)?.content);
   return txt;
+}
+
+/**
+ * 从原始记忆条目列表中过滤出历史反思记忆，最多返回 3 条文本。
+ * 纯函数，便于属性测试。
+ *
+ * 逻辑：
+ * 1. 仅保留文本中包含 "night_reflection" 的条目
+ * 2. 取前 3 条（最近的 3 条，因为输入已按时间倒序排列）
+ * 3. 提取文本内容，过滤空值
+ */
+export function filterReflectionHistory(
+  items: Array<Record<string, unknown> | string>,
+): string[] {
+  return items
+    .filter((item) => {
+      const text = normalizeMemoryText(item);
+      return text.includes("night_reflection");
+    })
+    .slice(0, 3)
+    .map((item) => normalizeMemoryText(item))
+    .filter(Boolean);
 }
 
 function normalizeMemoryRef(
@@ -195,6 +221,7 @@ function buildBehaviorSignals(opts: {
   longTermCount: number;
   dialogRecallCount: number;
   recentlyDeletedCount: number;
+  structuredMemories?: GuideStructuredMemoryItem[];
 }) {
   const signals: string[] = [];
   if (opts.todayCompletedCount >= 5) {
@@ -225,6 +252,24 @@ function buildBehaviorSignals(opts: {
   if (opts.recentlyDeletedCount > 0) {
     signals.push("最近有任务被移出当前任务板，历史任务记忆应降低优先级。");
   }
+
+  // 注入习惯链信号：检测用户行为习惯链，将高置信度链注入 behavior_signals
+  // 过滤置信度 >= 0.7 的链，按置信度降序取前 2 条
+  // 异常时不影响已构建的原始 signals
+  if (opts.structuredMemories) {
+    try {
+      const chains = detectHabitChains(opts.structuredMemories);
+      const mentionable = filterMentionableChains(chains);
+      for (const chain of mentionable) {
+        signals.push(
+          `habit_chain: ${chain.description}（连续${chain.consecutiveDays}天，置信度${(chain.confidence * 100).toFixed(0)}%）`,
+        );
+      }
+    } catch {
+      // 习惯链检测失败不影响原始信号构建
+    }
+  }
+
   return signals;
 }
 
@@ -243,7 +288,7 @@ function normalizeClientContext(
   };
 }
 
-function normalizeStructuredMemoryItem(
+export function normalizeStructuredMemoryItem(
   prefix: string,
   item: Record<string, unknown> | string,
   idx: number,
@@ -252,6 +297,13 @@ function normalizeStructuredMemoryItem(
   if (!rawText) return null;
   const ref = normalizeMemoryRef(prefix, item, idx);
   const parsed = parseSmartMemoryEnvelope(rawText);
+  // 从原始条目中提取创建时间，兼容 EverMemOS 多种字段名
+  const createdAt = typeof item === "string"
+    ? null
+    : (item.timestamp ?? item.created_at ?? item.createdAt ?? null) as
+        | string
+        | number
+        | null;
   return {
     ref,
     rawText,
@@ -260,10 +312,11 @@ function normalizeStructuredMemoryItem(
     sourceTaskId: parsed?.sourceTaskId || "",
     sourceTaskTitle: parsed?.sourceTaskTitle || "",
     sourceStatus: parsed?.sourceStatus || "active",
+    createdAt,
   };
 }
 
-function shouldKeepStructuredMemoryItem(
+export function shouldKeepStructuredMemoryItem(
   item: GuideStructuredMemoryItem,
   taskState: {
     activeTaskIds: Set<string>;
@@ -290,6 +343,128 @@ function shouldKeepStructuredMemoryItem(
   return true;
 }
 
+/**
+ * 计算记忆条目的时间衰减权重（基于 Ebbinghaus 遗忘曲线简化模型）。
+ *
+ * 权重区间：
+ *   0–7 天 → 1.0（近期记忆，完全保留）
+ *   8–30 天 → 0.6（中期记忆，适度衰减）
+ *   31–90 天 → 0.3（远期记忆，显著衰减）
+ *   91+ 天 → 0.1（历史记忆，大幅衰减）
+ *
+ * 特殊规则：
+ *   - createdAt 为 null 或无效值时返回 0.1
+ *   - memoryKind 为 "semantic_memory" 时始终返回 1.0（提取的行为模式不衰减）
+ *
+ * @param createdAt 记忆创建时间，支持 ISO 字符串、Unix 毫秒时间戳或 null
+ * @param memoryKind 记忆类型，可选；"semantic_memory" 类型不衰减
+ * @param now 当前时间的毫秒时间戳，默认 Date.now()；用于测试时注入固定时间
+ */
+export function computeDecayWeight(
+  createdAt: string | number | null,
+  memoryKind?: string,
+  now?: number,
+): number {
+  // 语义记忆（提取的行为模式）始终保持最高权重，不受时间衰减影响
+  if (memoryKind === "semantic_memory") return 1.0;
+
+  if (!createdAt) return 0.1;
+
+  const created = typeof createdAt === "number"
+    ? createdAt
+    : new Date(createdAt).getTime();
+
+  if (Number.isNaN(created)) return 0.1;
+
+  const currentTime = now ?? Date.now();
+  const daysSinceCreation = (currentTime - created) / (24 * 60 * 60 * 1000);
+
+  if (daysSinceCreation <= 7) return 1.0;
+  if (daysSinceCreation <= 30) return 0.6;
+  if (daysSinceCreation <= 90) return 0.3;
+  return 0.1;
+}
+
+/**
+ * 对检索结果应用时间衰减权重并重排序，截取前 N 条。
+ *
+ * 算法流程：
+ *   1. 对每条记忆计算 finalScore = relevance × decayWeight
+ *   2. 按 finalScore 降序排序
+ *   3. 截取前 maxRawItems 条
+ *   4. 中期记忆兜底：当截取结果中 7 天内的近期记忆不足 3 条，
+ *      且存在未被选中的 8–90 天中期记忆时，用最佳中期记忆替换末位条目
+ *
+ * @param items 待排序的记忆条目列表
+ * @param scores ref → 原始相关性分数的映射；缺失时默认 0.5
+ * @param maxRawItems 最大输出条目数
+ * @param now 当前时间毫秒时间戳，默认 Date.now()；用于测试注入
+ */
+export function applyDecayWeights(
+  items: GuideStructuredMemoryItem[],
+  scores: Map<string, number>,
+  maxRawItems: number,
+  now?: number,
+): GuideStructuredMemoryItem[] {
+  if (items.length === 0 || maxRawItems <= 0) return [];
+
+  const currentTime = now ?? Date.now();
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+  // 为每条记忆计算最终分数并排序
+  const scored = items.map((item) => {
+    const relevance = scores.get(item.ref) ?? 0.5;
+    const decay = computeDecayWeight(item.createdAt, item.memoryKind, currentTime);
+    return { item, finalScore: relevance * decay };
+  });
+  scored.sort((a, b) => b.finalScore - a.finalScore);
+
+  // 截取前 N 条
+  const selected = scored.slice(0, maxRawItems);
+
+  // 辅助函数：计算条目距今天数
+  const daysSince = (createdAt: string | number | null): number => {
+    if (!createdAt) return Infinity;
+    const created = typeof createdAt === "number"
+      ? createdAt
+      : new Date(createdAt).getTime();
+    if (Number.isNaN(created)) return Infinity;
+    return (currentTime - created) / MS_PER_DAY;
+  };
+
+  // 统计已选中条目中 7 天内的近期记忆数量
+  const recentCount = selected.filter(
+    (entry) => daysSince(entry.item.createdAt) <= 7,
+  ).length;
+
+  // 中期记忆兜底：近期不足 3 条时，保证至少保留 1 条 8–90 天的中期记忆
+  if (recentCount < 3 && selected.length > 0) {
+    const selectedRefs = new Set(selected.map((e) => e.item.ref));
+
+    // 已选中的条目中是否已包含中期记忆
+    const hasMidTermInSelected = selected.some((entry) => {
+      const days = daysSince(entry.item.createdAt);
+      return days >= 8 && days <= 90;
+    });
+
+    if (!hasMidTermInSelected) {
+      // 从未被选中的条目中找最佳中期记忆（finalScore 最高的）
+      const midTermCandidates = scored.filter((entry) => {
+        if (selectedRefs.has(entry.item.ref)) return false;
+        const days = daysSince(entry.item.createdAt);
+        return days >= 8 && days <= 90;
+      });
+
+      if (midTermCandidates.length > 0) {
+        // 用最佳中期记忆替换已选中列表的末位条目
+        selected[selected.length - 1] = midTermCandidates[0];
+      }
+    }
+  }
+
+  return selected.map((entry) => entry.item);
+}
+
 function buildCurrentTaskFactLines(args: {
   clientContext: GuideClientContext;
   activeTaskTitles: string[];
@@ -311,6 +486,424 @@ function buildCurrentTaskFactLines(args: {
   }
   return lines;
 }
+
+// ─── 习惯链检测（纯函数，无副作用） ───
+
+/** 习惯链类型：时段习惯 | 周期习惯 | 推进-恢复节奏 */
+export type HabitChainType = "time_slot" | "weekly_cycle" | "push_recover";
+
+/** 习惯链结构，描述用户检测到的重复行为模式 */
+export type HabitChain = {
+  type: HabitChainType;
+  /** 人类可读描述，如"每天约 8 点完成任务" */
+  description: string;
+  /** 连续天数（time_slot/weekly_cycle）或出现次数（push_recover） */
+  consecutiveDays: number;
+  /** 置信度 0.0–1.0 */
+  confidence: number;
+};
+
+/**
+ * 将 createdAt 解析为 Date 对象，无效值返回 null。
+ * 兼容 ISO 字符串和 Unix 毫秒时间戳。
+ */
+function parseCreatedAt(createdAt: string | number | null): Date | null {
+  if (createdAt == null) return null;
+  const d = typeof createdAt === "number"
+    ? new Date(createdAt)
+    : new Date(createdAt);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * 判断两个 YYYY-MM-DD 日期字符串是否为相邻的连续日期。
+ */
+function isConsecutiveDay(dayA: string, dayB: string): boolean {
+  const a = new Date(dayA + "T00:00:00Z");
+  const b = new Date(dayB + "T00:00:00Z");
+  const diffMs = b.getTime() - a.getTime();
+  return diffMs === 24 * 60 * 60 * 1000;
+}
+
+/**
+ * 从习惯链列表中筛选可注入 behavior_signals 的链。
+ * 规则：仅保留置信度 >= 0.7 的链，按置信度降序排列，最多取前 2 条。
+ *
+ * 此函数为纯函数，从 buildBehaviorSignals 中提取以便属性测试。
+ */
+export function filterMentionableChains(chains: HabitChain[]): HabitChain[] {
+  return chains
+    .filter((c) => c.confidence >= 0.7)
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 2);
+}
+
+/**
+ * 检测时段习惯链：连续 N 天（N >= 5）在相同时段（±2h）完成任务。
+ *
+ * 算法：
+ * 1. 按 UTC 日期分组，提取每天最早的任务完成小时
+ * 2. 从最早日期向后扫描连续天数，检查相邻天的完成小时差 <= 2
+ * 3. 连续天数 >= 5 时生成习惯链，置信度 = min(consecutiveDays / 10, 1.0)
+ */
+export function detectTimeSlotChains(
+  memories: GuideStructuredMemoryItem[],
+  _now: Date,
+): HabitChain[] {
+  // 按 UTC 日期分组，记录每天最早的完成小时
+  const dayHourMap = new Map<string, number>();
+
+  for (const mem of memories) {
+    const d = parseCreatedAt(mem.createdAt);
+    if (!d) continue;
+    const key = dateId(d);
+    const hour = d.getUTCHours();
+    const existing = dayHourMap.get(key);
+    // 取每天最早的完成小时
+    if (existing === undefined || hour < existing) {
+      dayHourMap.set(key, hour);
+    }
+  }
+
+  if (dayHourMap.size < 5) return [];
+
+  // 按日期排序（升序）
+  const sortedDays = [...dayHourMap.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+  // 扫描连续天数中完成小时在 ±2h 范围内的最长序列
+  const chains: HabitChain[] = [];
+  let streakStart = 0;
+
+  for (let i = 1; i <= sortedDays.length; i++) {
+    // 检查是否连续日期且小时差 <= 2
+    const shouldContinue = i < sortedDays.length &&
+      isConsecutiveDay(sortedDays[i - 1][0], sortedDays[i][0]) &&
+      Math.abs(sortedDays[i][1] - sortedDays[i - 1][1]) <= 2;
+
+    if (!shouldContinue) {
+      const streakLen = i - streakStart;
+      if (streakLen >= 5) {
+        // 计算该序列的平均完成小时，用于描述
+        let totalHour = 0;
+        for (let j = streakStart; j < i; j++) {
+          totalHour += sortedDays[j][1];
+        }
+        const avgHour = Math.round(totalHour / streakLen);
+        const confidence = Math.min(streakLen / 10, 1.0);
+        chains.push({
+          type: "time_slot",
+          description: `每天约 ${avgHour} 点完成任务`,
+          consecutiveDays: streakLen,
+          confidence,
+        });
+      }
+      streakStart = i;
+    }
+  }
+
+  return chains;
+}
+
+/**
+ * 检测周期习惯链：连续 3 个相同星期几完成特定类型任务。
+ *
+ * 算法：
+ * 1. 按 (星期几, memoryKind) 分组，记录每组出现的周编号
+ * 2. 检查连续周编号 >= 3 时生成习惯链
+ * 3. 置信度 = min(consecutiveWeeks / 6, 1.0)
+ */
+export function detectWeeklyCycleChains(
+  memories: GuideStructuredMemoryItem[],
+  _now: Date,
+): HabitChain[] {
+  // 星期几名称映射
+  const weekdayNames = ["日", "一", "二", "三", "四", "五", "六"];
+
+  // 按 (weekday, memoryKind) 分组，收集出现的 ISO 周编号
+  const groupWeeks = new Map<string, Set<number>>();
+
+  for (const mem of memories) {
+    const d = parseCreatedAt(mem.createdAt);
+    if (!d) continue;
+    const weekday = d.getUTCDay(); // 0=Sunday, 6=Saturday
+    const kind = mem.memoryKind || "generic";
+    const key = `${weekday}:${kind}`;
+    // 计算周编号：用距 epoch 的天数除以 7
+    const epochDays = Math.floor(d.getTime() / (24 * 60 * 60 * 1000));
+    const weekNum = Math.floor(epochDays / 7);
+
+    if (!groupWeeks.has(key)) {
+      groupWeeks.set(key, new Set());
+    }
+    groupWeeks.get(key)!.add(weekNum);
+  }
+
+  const chains: HabitChain[] = [];
+
+  for (const [key, weekSet] of groupWeeks) {
+    if (weekSet.size < 3) continue;
+
+    // 排序周编号，找最长连续序列
+    const sortedWeeks = [...weekSet].sort((a, b) => a - b);
+    let maxConsecutive = 1;
+    let currentConsecutive = 1;
+
+    for (let i = 1; i < sortedWeeks.length; i++) {
+      if (sortedWeeks[i] === sortedWeeks[i - 1] + 1) {
+        currentConsecutive++;
+        if (currentConsecutive > maxConsecutive) {
+          maxConsecutive = currentConsecutive;
+        }
+      } else {
+        currentConsecutive = 1;
+      }
+    }
+
+    if (maxConsecutive >= 3) {
+      const [weekdayStr, kind] = key.split(":");
+      const weekday = parseInt(weekdayStr, 10);
+      const confidence = Math.min(maxConsecutive / 6, 1.0);
+      chains.push({
+        type: "weekly_cycle",
+        description: `每周${weekdayNames[weekday]}完成 ${kind} 类型任务`,
+        consecutiveDays: maxConsecutive * 7,
+        confidence,
+      });
+    }
+  }
+
+  return chains;
+}
+
+/**
+ * 检测推进-恢复节奏：高强度任务后 24h 内完成恢复类任务达 3 次。
+ *
+ * 算法：
+ * 1. 识别高强度任务：memoryKind === "task_event"
+ * 2. 识别恢复类任务：memoryKind === "dialog_event" 或 "generic"
+ * 3. 对每个高强度任务，检查其后 24h 内是否有恢复类任务
+ * 4. 统计匹配次数 >= 3 时生成习惯链
+ * 5. 置信度 = min(occurrences / 5, 1.0)
+ */
+export function detectPushRecoverChains(
+  memories: GuideStructuredMemoryItem[],
+  _now: Date,
+): HabitChain[] {
+  const MS_24H = 24 * 60 * 60 * 1000;
+
+  // 分离高强度任务和恢复类任务
+  const highIntensity: Date[] = [];
+  const recovery: Date[] = [];
+
+  for (const mem of memories) {
+    const d = parseCreatedAt(mem.createdAt);
+    if (!d) continue;
+
+    if (mem.memoryKind === "task_event") {
+      highIntensity.push(d);
+    } else if (
+      mem.memoryKind === "dialog_event" || mem.memoryKind === "generic"
+    ) {
+      recovery.push(d);
+    }
+  }
+
+  if (highIntensity.length === 0 || recovery.length === 0) return [];
+
+  // 按时间升序排序
+  highIntensity.sort((a, b) => a.getTime() - b.getTime());
+  recovery.sort((a, b) => a.getTime() - b.getTime());
+
+  // 统计"高强度任务后 24h 内有恢复任务"的次数
+  let occurrences = 0;
+  for (const hiTime of highIntensity) {
+    const hiMs = hiTime.getTime();
+    // 在恢复任务中查找 24h 内且在高强度任务之后的条目
+    const hasRecovery = recovery.some((recTime) => {
+      const recMs = recTime.getTime();
+      return recMs > hiMs && recMs - hiMs <= MS_24H;
+    });
+    if (hasRecovery) {
+      occurrences++;
+    }
+  }
+
+  if (occurrences < 3) return [];
+
+  const confidence = Math.min(occurrences / 5, 1.0);
+  return [{
+    type: "push_recover",
+    description: "高强度任务后 24h 内完成恢复活动",
+    consecutiveDays: occurrences,
+    confidence,
+  }];
+}
+
+/**
+ * 检测用户习惯链（纯函数）。
+ *
+ * 基于最近 30 天的结构化记忆数据，检测三种行为模式：
+ * 1. 时段习惯链：连续 5 天在相同时段（±2h）完成任务
+ * 2. 周期习惯链：连续 3 个相同星期几完成特定类型任务
+ * 3. 推进-恢复节奏：高强度任务后 24h 内完成恢复类任务达 3 次
+ *
+ * @param memories 用户最近 30 天的结构化记忆条目
+ * @param nowDate 当前时间，默认 new Date()；用于测试注入
+ * @returns 检测到的习惯链列表，空输入返回空列表
+ */
+export function detectHabitChains(
+  memories: GuideStructuredMemoryItem[],
+  nowDate?: Date,
+): HabitChain[] {
+  if (!memories || memories.length === 0) return [];
+
+  const chains: HabitChain[] = [];
+  const now = nowDate ?? new Date();
+
+  const timeSlotChains = detectTimeSlotChains(memories, now);
+  chains.push(...timeSlotChains);
+
+  const weeklyCycleChains = detectWeeklyCycleChains(memories, now);
+  chains.push(...weeklyCycleChains);
+
+  const pushRecoverChains = detectPushRecoverChains(memories, now);
+  chains.push(...pushRecoverChains);
+
+  return chains;
+}
+
+/**
+ * 判断习惯链是否即将断裂（预期时间窗口内无匹配行为）。
+ *
+ * 根据习惯链类型判断预期时间窗口：
+ * - time_slot: 当天预期时段已过 2h 但无匹配记忆
+ * - weekly_cycle: 当天是预期星期几但无匹配记忆
+ * - push_recover: 最近一次高强度任务后 24h 内无恢复类记忆
+ *
+ * 纯函数，便于属性测试。
+ *
+ * @param chain 待检查的习惯链
+ * @param memories 用户最近的结构化记忆条目
+ * @param nowDate 当前时间，默认 new Date()；用于测试注入
+ * @returns true 表示习惯链即将断裂，false 表示正常延续
+ */
+export function isChainBreaking(
+  chain: HabitChain,
+  memories: GuideStructuredMemoryItem[],
+  nowDate?: Date,
+): boolean {
+  const now = nowDate ?? new Date();
+  const todayStr = dateId(now);
+  const currentHour = now.getUTCHours();
+
+  // 收集今天的记忆条目
+  const todayMemories = memories.filter((mem) => {
+    const d = parseCreatedAt(mem.createdAt);
+    return d != null && dateId(d) === todayStr;
+  });
+
+  if (chain.type === "time_slot") {
+    // 从描述中提取预期小时，格式："每天约 N 点完成任务"
+    const hourMatch = chain.description.match(/约\s*(\d+)\s*点/);
+    if (!hourMatch) return false;
+    const expectedHour = parseInt(hourMatch[1], 10);
+    // 预期时段已过 2h 才判定为断裂（给用户缓冲时间）
+    if (currentHour < expectedHour + 2) return false;
+    // 检查今天是否有在预期时段 ±2h 内完成的记忆
+    const hasMatch = todayMemories.some((mem) => {
+      const d = parseCreatedAt(mem.createdAt);
+      if (!d) return false;
+      return Math.abs(d.getUTCHours() - expectedHour) <= 2;
+    });
+    return !hasMatch;
+  }
+
+  if (chain.type === "weekly_cycle") {
+    // 从描述中提取预期星期几，格式："每周X完成 ... 类型任务"
+    const weekdayNames = ["日", "一", "二", "三", "四", "五", "六"];
+    const weekdayMatch = chain.description.match(/每周([\u4e00-\u9fa5])/);
+    if (!weekdayMatch) return false;
+    const expectedWeekday = weekdayNames.indexOf(weekdayMatch[1]);
+    if (expectedWeekday < 0) return false;
+    // 仅在当天是预期星期几时才检测
+    if (now.getUTCDay() !== expectedWeekday) return false;
+    // 检查今天是否有匹配的记忆
+    return todayMemories.length === 0;
+  }
+
+  if (chain.type === "push_recover") {
+    // 查找最近一次高强度任务（task_event），检查其后 24h 内是否有恢复类记忆
+    const MS_24H = 24 * 60 * 60 * 1000;
+    const highIntensityTimes: Date[] = [];
+    for (const mem of memories) {
+      const d = parseCreatedAt(mem.createdAt);
+      if (d && mem.memoryKind === "task_event") {
+        highIntensityTimes.push(d);
+      }
+    }
+    if (highIntensityTimes.length === 0) return false;
+    // 取最近一次高强度任务
+    highIntensityTimes.sort((a, b) => b.getTime() - a.getTime());
+    const latestHi = highIntensityTimes[0];
+    const elapsed = now.getTime() - latestHi.getTime();
+    // 仅在高强度任务后 24h 窗口内检测
+    if (elapsed > MS_24H || elapsed < 0) return false;
+    // 检查高强度任务之后是否有恢复类记忆
+    const hasRecovery = memories.some((mem) => {
+      const d = parseCreatedAt(mem.createdAt);
+      if (!d) return false;
+      if (mem.memoryKind !== "dialog_event" && mem.memoryKind !== "generic") {
+        return false;
+      }
+      const recMs = d.getTime();
+      return recMs > latestHi.getTime() && recMs <= now.getTime();
+    });
+    return !hasRecovery;
+  }
+
+  return false;
+}
+
+// ─── XP 倍率计算（纯函数，无副作用） ───
+
+/**
+ * 基于用户行为模式计算 XP 倍率。
+ *
+ * 规则：
+ *   - 断签（currentStreak = 0）→ 0.8x
+ *   - 恢复激励（previousStreak = 0 且 currentStreak = 1）→ 1.3x
+ *   - 连续推进（currentStreak >= 3）→ 1.0 + 0.1 × min(currentStreak - 2, 5)，最高 1.5x
+ *   - 其他情况 → 1.0x
+ *   - 负数输入视为 0
+ *
+ * @param currentStreak 当前连续天数（非负整数，负数视为 0）
+ * @param previousStreak 上一次连续天数（非负整数，负数视为 0）
+ * @returns XP 倍率，范围 [0.8, 1.5]
+ */
+export function computeXpMultiplier(
+  currentStreak: number,
+  previousStreak: number,
+): number {
+  // 负数输入视为 0
+  const current = Math.max(0, Math.floor(currentStreak));
+  const previous = Math.max(0, Math.floor(previousStreak));
+
+  // 断签状态
+  if (current === 0) return 0.8;
+
+  // 恢复激励：从断签中恢复
+  if (previous === 0 && current === 1) return 1.3;
+
+  // 连续推进：current >= 3，倍率递增，最高 1.5x
+  if (current >= 3) {
+    return 1.0 + 0.1 * Math.min(current - 2, 5);
+  }
+
+  // 默认倍率
+  return 1.0;
+}
+
 
 export async function gatherGuideMemoryBundle(
   supabase: any,
@@ -344,6 +937,7 @@ export async function gatherGuideMemoryBundle(
     dailyLogsResp,
     profileResp,
     dialogResp,
+    portraitResp,
   ] = await Promise.all([
     supabase
       .from("quest_nodes")
@@ -382,6 +976,14 @@ export async function gatherGuideMemoryBundle(
       .gte("created_at", threeDaysAgo.toISOString())
       .order("created_at", { ascending: false })
       .limit(40),
+    // 查询最近一次画像记录，用于注入对话上下文
+    supabase
+      .from("guide_portraits")
+      .select("summary,style,model,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const questStateRows = Array.isArray(questStateResp.data)
@@ -509,6 +1111,7 @@ export async function gatherGuideMemoryBundle(
 
   let recentMemItems: GuideStructuredMemoryItem[] = [];
   let longMemItems: GuideStructuredMemoryItem[] = [];
+  let agenticMemLines: string[] = [];
   try {
     const everMem = new EverMemOSClient();
     const recentMemRaw = await everMem.searchMemories({
@@ -539,10 +1142,95 @@ export async function gatherGuideMemoryBundle(
       .filter((item): item is GuideStructuredMemoryItem => item != null)
       .filter((item) => shouldKeepStructuredMemoryItem(item, taskState))
       .slice(0, 8);
+
+    // 方向4：跨任务记忆关联
+    // 基于近期完成任务标题做 group scope 检索，把跨任务历史关联注入长期回调
+    if (todayCompletedRows.length > 0 || activeTaskTitles.length > 0) {
+      try {
+        const crossTaskQuery = compactLines([
+          ...todayCompletedRows.slice(0, 4).map((r) => toText(r.title)),
+          ...activeTaskTitles.slice(0, 4),
+        ], 6).join(" ");
+        if (crossTaskQuery.trim()) {
+          const crossTaskRaw = await everMem.searchMemories({
+            userId,
+            query: crossTaskQuery,
+            memoryTypes: ["episodic_memory", "semantic_memory"],
+            retrieveMethod: "hybrid",
+            limit: 6,
+          });
+          const crossTaskItems = normalizeMemoryItems(crossTaskRaw)
+            .map((item, idx) =>
+              normalizeStructuredMemoryItem("mem_cross", item, idx)
+            )
+            .filter((item): item is GuideStructuredMemoryItem => item != null)
+            .filter((item) => shouldKeepStructuredMemoryItem(item, taskState))
+            // 过滤掉已在 recentMemItems 中出现的 ref，避免重复
+            .filter((item) =>
+              !recentMemItems.some((r) => r.ref === item.ref)
+            )
+            .slice(0, 6);
+          for (const item of crossTaskItems) {
+            memoryRefs.push(item.ref);
+            longMemItems.push({
+              ...item,
+              displayText: `[跨任务关联] ${item.displayText}`,
+            });
+          }
+        }
+      } catch {
+        // 跨任务检索失败不影响主流程
+      }
+    }
+    if (scene === "agent" && userMessage) {
+      try {
+        const agenticRaw = await everMem.agenticSearch({
+          userId,
+          query: userMessage,
+          limit: 8,
+        });
+        const agenticItems = normalizeMemoryItems(agenticRaw)
+          .map((item, idx) => normalizeStructuredMemoryItem("mem_agentic", item, idx))
+          .filter((item): item is GuideStructuredMemoryItem => item != null)
+          .filter((item) => shouldKeepStructuredMemoryItem(item, taskState))
+          .slice(0, 8);
+        agenticMemLines = agenticItems.map((item) => {
+          memoryRefs.push(item.ref);
+          return `[agentic] ${capText(item.displayText, 100)}`;
+        });
+      } catch {
+        // agentic 检索失败不影响主流程
+      }
+    }
   } catch {
     recentMemItems = [];
     longMemItems = [];
   }
+
+  // 对检索结果应用时间衰减权重重排序，提升近期记忆优先级
+  // EverMemOS 不返回显式相关性分数，按结果顺序递减赋分（排名越靠前分数越高）
+  const buildPositionalScores = (
+    items: GuideStructuredMemoryItem[],
+  ): Map<string, number> => {
+    const scores = new Map<string, number>();
+    const total = items.length;
+    for (let i = 0; i < total; i++) {
+      // 从 1.0 线性递减到 0.5，保证所有条目都有合理的基础分数
+      scores.set(items[i].ref, 1.0 - (i / Math.max(total, 1)) * 0.5);
+    }
+    return scores;
+  };
+
+  recentMemItems = applyDecayWeights(
+    recentMemItems,
+    buildPositionalScores(recentMemItems),
+    maxRawItems,
+  );
+  longMemItems = applyDecayWeights(
+    longMemItems,
+    buildPositionalScores(longMemItems),
+    Math.max(10, Math.floor(maxRawItems / 2)),
+  );
 
   const recentMemLines = recentMemItems.map((item) => {
     memoryRefs.push(item.ref);
@@ -559,6 +1247,8 @@ export async function gatherGuideMemoryBundle(
       ...todayContextLines,
       ...logLines,
       ...recentMemLines,
+      // agentic 检索结果优先插入，让 agent 规划时能感知最相关历史
+      ...agenticMemLines,
       profileSummary,
       ...dialogLines,
     ],
@@ -592,11 +1282,26 @@ export async function gatherGuideMemoryBundle(
     longTermCount: longMemLines.length,
     dialogRecallCount: dialogLines.length,
     recentlyDeletedCount: recentlyDeletedTaskTitles.length,
+    structuredMemories: [...recentMemItems, ...longMemItems],
   });
 
   const recentContext = allRecent.length > 0
     ? allRecent
     : ["今天尚无已完成任务记录。"];
+
+  // 注入最近一次画像摘要，让助手对话时能引用画像生成逻辑
+  const portraitRow = portraitResp?.data as Record<string, unknown> | null;
+  if (portraitRow) {
+    const portraitSummary = toText(portraitRow.summary);
+    const portraitStyle = toText(portraitRow.style) || "pencil_sketch";
+    const portraitTime = toText(portraitRow.created_at);
+    if (portraitSummary) {
+      recentContext.push(
+        `[记忆画像] 最近一次画像(${portraitStyle})生成于${portraitTime ? new Date(portraitTime).toLocaleDateString("zh-CN") : "近期"}，画像依据：${capText(portraitSummary, 120)}`,
+      );
+    }
+  }
+
   const longTermCallbacks = allLong.length > 0
     ? allLong
     : ["历史记忆样本暂时偏少，建议继续积累今日行动片段。"];
@@ -621,12 +1326,33 @@ export async function gatherGuideMemoryBundle(
     );
   }
 
-  const packedContext = buildPackedContext(
+  let packedContext = buildPackedContext(
     recentContext.slice(0, 30),
     longTermCallbacks.slice(0, 20),
     finalSignals.slice(0, 10),
     maxPackedChars,
   );
+
+  // 夜间反思场景：检索最近 7 天的历史反思记忆，注入 packed_context
+  if (scene === "night_reflection") {
+    try {
+      const everMem = new EverMemOSClient();
+      const reflections = await everMem.searchMemories({
+        userId,
+        query: "夜间反思",
+        memoryTypes: ["episodic_memory"],
+        limit: 5,
+      });
+      const reflectionHistory = filterReflectionHistory(
+        normalizeMemoryItems(reflections),
+      );
+      if (reflectionHistory.length > 0) {
+        packedContext += `\n\n--- 近期反思记录 ---\n${reflectionHistory.join("\n")}`;
+      }
+    } catch {
+      // 历史反思检索失败不影响正常流程
+    }
+  }
 
   const memoryDigest = capText(
     [
@@ -644,6 +1370,7 @@ export async function gatherGuideMemoryBundle(
     recent_context: recentContext.slice(0, 30),
     long_term_callbacks: longTermCallbacks.slice(0, 20),
     behavior_signals: finalSignals.slice(0, 10),
+    agentic_memory_lines: agenticMemLines,
     memory_refs: uniqueRefs,
     memory_digest: memoryDigest,
     packed_context: packedContext,

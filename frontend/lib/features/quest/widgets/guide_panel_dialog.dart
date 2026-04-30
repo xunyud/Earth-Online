@@ -16,11 +16,14 @@ class GuideDialogMessage {
   final GuideDialogRole role;
   final String content;
   final int memoryRefCount;
+  /// 本条回复引用的记忆片段 ID 列表，用于记忆可见性展示
+  final List<String> memoryRefs;
 
   const GuideDialogMessage({
     required this.role,
     required this.content,
     this.memoryRefCount = 0,
+    this.memoryRefs = const <String>[],
   });
 }
 
@@ -39,13 +42,16 @@ class GuidePanelDialog extends StatelessWidget {
   final List<String> quickActions;
   final List<String> examplePrompts;
   final TextEditingController inputController;
+  final List<String> messageHistory;
   final String inputHintText;
   final String sendLabel;
   final String retryLabel;
   final String closeLabel;
+  final String copyMessageTooltip;
   final bool sending;
   final String Function(int count) memoryRefsLabelBuilder;
   final VoidCallback? onRetry;
+  final ValueChanged<String>? onCopyMessage;
   final ValueChanged<String> onSubmit;
   final ValueChanged<String> onQuickActionTap;
   final ValueChanged<String> onExamplePromptTap;
@@ -68,13 +74,16 @@ class GuidePanelDialog extends StatelessWidget {
     required this.quickActions,
     required this.examplePrompts,
     required this.inputController,
+    this.messageHistory = const <String>[],
     required this.inputHintText,
     required this.sendLabel,
     required this.retryLabel,
     required this.closeLabel,
+    this.copyMessageTooltip = '',
     required this.sending,
     required this.memoryRefsLabelBuilder,
     required this.onRetry,
+    this.onCopyMessage,
     required this.onSubmit,
     required this.onQuickActionTap,
     required this.onExamplePromptTap,
@@ -163,6 +172,8 @@ class GuidePanelDialog extends StatelessWidget {
                               memoryRefsLabel: memoryRefsLabelBuilder(
                                 message.memoryRefCount,
                               ),
+                              copyMessageTooltip: copyMessageTooltip,
+                              onCopyMessage: onCopyMessage,
                               theme: theme,
                             ),
                           ),
@@ -238,6 +249,7 @@ class GuidePanelDialog extends StatelessWidget {
                 const SizedBox(height: 14),
                 _GuideComposer(
                   controller: inputController,
+                  messageHistory: messageHistory,
                   hintText: inputHintText,
                   sendLabel: sendLabel,
                   sending: sending,
@@ -538,90 +550,225 @@ class _GuideMemoryCard extends StatelessWidget {
   }
 }
 
-class _GuideMessageBubble extends StatelessWidget {
+/// 对话气泡组件
+/// 长按气泡可复制整条消息；SelectableText 支持选中部分文字后通过系统菜单复制。
+/// 复制按钮不再常驻，避免气泡臃肿。
+/// 助手消息底部显示记忆引用标签，点击可展开查看引用的记忆片段 ID。
+class _GuideMessageBubble extends StatefulWidget {
   final GuideDialogMessage message;
   final String memoryRefsLabel;
+  final String copyMessageTooltip;
+  final ValueChanged<String>? onCopyMessage;
   final QuestTheme theme;
 
   const _GuideMessageBubble({
     required this.message,
     required this.memoryRefsLabel,
+    required this.copyMessageTooltip,
+    required this.onCopyMessage,
     required this.theme,
   });
 
   @override
+  State<_GuideMessageBubble> createState() => _GuideMessageBubbleState();
+}
+
+class _GuideMessageBubbleState extends State<_GuideMessageBubble> {
+  /// 长按后短暂高亮，给用户视觉反馈
+  bool _pressed = false;
+  /// 记忆片段列表是否展开
+  bool _memoryExpanded = false;
+
+  void _handleLongPress() {
+    final handler = widget.onCopyMessage;
+    if (handler == null) return;
+    handler(widget.message.content);
+    setState(() => _pressed = true);
+    Future<void>.delayed(const Duration(milliseconds: 320), () {
+      if (mounted) setState(() => _pressed = false);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isUser = message.role == GuideDialogRole.user;
+    final isUser = widget.message.role == GuideDialogRole.user;
+    final canCopy = widget.onCopyMessage != null;
+    final refs = widget.message.memoryRefs;
+    final hasMemory = !isUser && refs.isNotEmpty;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(26),
-            gradient: isUser
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.primaryAccentColor,
-                      theme.mainQuestColor,
-                    ],
-                  )
-                : const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white,
-                      Color(0xFFF9F7F1),
-                    ],
-                  ),
-            border: Border.all(
-              color: isUser ? Colors.transparent : const Color(0x1F4B7D4D),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  message.content,
-                  style: AppTextStyles.body.copyWith(
-                    height: 1.55,
-                    color: isUser ? Colors.white : const Color(0xFF233124),
-                  ),
-                ),
-                if (!isUser && message.memoryRefCount > 0) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F6E2),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      memoryRefsLabel,
-                      style: AppTextStyles.caption.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF4B694A),
+        child: GestureDetector(
+          key: ValueKey('bubble-${widget.message.role.name}-${widget.message.content.hashCode}'),
+          onLongPress: canCopy ? _handleLongPress : null,
+          child: AnimatedOpacity(
+            // 长按时短暂降低不透明度作为反馈
+            opacity: _pressed ? 0.65 : 1.0,
+            duration: const Duration(milliseconds: 120),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(26),
+                gradient: isUser
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          widget.theme.primaryAccentColor,
+                          widget.theme.mainQuestColor,
+                        ],
+                      )
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white,
+                          Color(0xFFF9F7F1),
+                        ],
                       ),
+                border: Border.all(
+                  color:
+                      isUser ? Colors.transparent : const Color(0x1F4B7D4D),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SelectableText(
+                      widget.message.content,
+                      style: AppTextStyles.body.copyWith(
+                        height: 1.55,
+                        color:
+                            isUser ? Colors.white : const Color(0xFF233124),
+                      ),
+                      contextMenuBuilder: (context, editableTextState) {
+                        return AdaptiveTextSelectionToolbar.editableText(
+                          editableTextState: editableTextState,
+                        );
+                      },
                     ),
-                  ),
-                ],
-              ],
+                    // 记忆引用标签：可点击展开查看具体片段
+                    if (hasMemory) ...[
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => setState(() => _memoryExpanded = !_memoryExpanded),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0F6E2),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.memory_rounded,
+                                size: 13,
+                                color: Color(0xFF4B694A),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                widget.memoryRefsLabel,
+                                style: AppTextStyles.caption.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF4B694A),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                _memoryExpanded
+                                    ? Icons.expand_less_rounded
+                                    : Icons.expand_more_rounded,
+                                size: 13,
+                                color: const Color(0xFF4B694A),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // 展开后显示记忆片段 ID 列表
+                      if (_memoryExpanded) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF7FCF0),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0x225B8A58)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: refs.take(8).map((ref) {
+                              // 把 ref 格式化为可读标签：mem_recent:uuid → 近期记忆
+                              final label = _formatMemoryRef(ref);
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '·',
+                                      style: TextStyle(
+                                        color: Color(0xFF4B694A),
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        label,
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: const Color(0xFF5A7654),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  /// 把内部 ref 格式转换为用户可读标签
+  String _formatMemoryRef(String ref) {
+    if (ref.startsWith('mem_agentic:')) return '🎯 智能关联记忆';
+    if (ref.startsWith('mem_recent:')) return '📅 近期记忆片段';
+    if (ref.startsWith('mem_long:')) return '🗂 长期历史回调';
+    if (ref.startsWith('mem_cross:')) return '🔗 跨任务关联';
+    if (ref.startsWith('quest:')) {
+      final id = ref.replaceFirst('quest:', '');
+      return '✅ 任务记录 $id';
+    }
+    if (ref.startsWith('daily_log:')) {
+      final date = ref.split(':').elementAtOrNull(1) ?? '';
+      return '📊 日志 $date';
+    }
+    if (ref.startsWith('dialog:')) return '💬 对话历史';
+    return ref;
+  }
 }
 
-class _GuideComposer extends StatelessWidget {
+class _GuideComposer extends StatefulWidget {
   final TextEditingController controller;
+  final List<String> messageHistory;
   final String hintText;
   final String sendLabel;
   final bool sending;
@@ -629,11 +776,129 @@ class _GuideComposer extends StatelessWidget {
 
   const _GuideComposer({
     required this.controller,
+    required this.messageHistory,
     required this.hintText,
     required this.sendLabel,
     required this.sending,
     required this.onSubmit,
   });
+
+  @override
+  State<_GuideComposer> createState() => _GuideComposerState();
+}
+
+class _GuideComposerState extends State<_GuideComposer> {
+  bool _applyingHistoryValue = false;
+  int? _historyIndex;
+  String _draftText = '';
+
+  List<String> get _history => widget.messageHistory
+      .map((item) => item.trim())
+      .where((item) => item.isNotEmpty)
+      .toList(growable: false);
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_handleControllerChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _GuideComposer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleControllerChanged);
+      widget.controller.addListener(_handleControllerChanged);
+    }
+    if (_historyIndex != null && _history.isEmpty) {
+      _historyIndex = null;
+      _draftText = '';
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleControllerChanged);
+    super.dispose();
+  }
+
+  void _handleControllerChanged() {
+    if (_applyingHistoryValue || _historyIndex == null) return;
+    _historyIndex = null;
+    _draftText = widget.controller.text;
+  }
+
+  bool _isSingleLineInput() => !widget.controller.text.contains('\n');
+
+  bool _canRecallPreviousMessage() {
+    final selection = widget.controller.selection;
+    if (!selection.isValid || !selection.isCollapsed) return false;
+    return _isSingleLineInput() || selection.baseOffset <= 0;
+  }
+
+  bool _canRecallNextMessage() {
+    final selection = widget.controller.selection;
+    if (!selection.isValid || !selection.isCollapsed) return false;
+    return _isSingleLineInput() ||
+        selection.baseOffset >= widget.controller.text.length;
+  }
+
+  void _applyComposerText(String text) {
+    _applyingHistoryValue = true;
+    widget.controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    _applyingHistoryValue = false;
+  }
+
+  KeyEventResult _handleKeyEvent(KeyEvent event) {
+    if (widget.sending) return KeyEventResult.ignored;
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.enter &&
+        !HardwareKeyboard.instance.isShiftPressed) {
+      final text = widget.controller.text.trim();
+      if (text.isNotEmpty) {
+        widget.onSubmit(text);
+      }
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      final history = _history;
+      if (history.isEmpty || !_canRecallPreviousMessage()) {
+        return KeyEventResult.ignored;
+      }
+      if (_historyIndex == null) {
+        _draftText = widget.controller.text;
+        _historyIndex = history.length - 1;
+      } else if (_historyIndex! > 0) {
+        _historyIndex = _historyIndex! - 1;
+      }
+      _applyComposerText(history[_historyIndex!]);
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      final history = _history;
+      if (history.isEmpty ||
+          _historyIndex == null ||
+          !_canRecallNextMessage()) {
+        return KeyEventResult.ignored;
+      }
+      if (_historyIndex! < history.length - 1) {
+        _historyIndex = _historyIndex! + 1;
+        _applyComposerText(history[_historyIndex!]);
+        return KeyEventResult.handled;
+      }
+      _historyIndex = null;
+      _applyComposerText(_draftText);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -644,25 +909,16 @@ class _GuideComposer extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: KeyboardListener(
-            focusNode: FocusNode(),
-            onKeyEvent: (event) {
-              if (sending) return;
-              if (event is KeyDownEvent &&
-                  event.logicalKey == LogicalKeyboardKey.enter &&
-                  !HardwareKeyboard.instance.isShiftPressed) {
-                final text = controller.text.trim();
-                if (text.isNotEmpty) onSubmit(text);
-              }
-            },
+          child: Focus(
+            onKeyEvent: (_, event) => _handleKeyEvent(event),
             child: TextField(
-              controller: controller,
+              controller: widget.controller,
               minLines: 1,
               maxLines: 3,
               cursorColor: accent,
               textInputAction: TextInputAction.newline,
               decoration: InputDecoration(
-                hintText: hintText,
+                hintText: widget.hintText,
                 hintStyle: AppTextStyles.body.copyWith(
                   color: AppColors.textHint,
                 ),
@@ -697,7 +953,9 @@ class _GuideComposer extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         FilledButton(
-          onPressed: sending ? null : () => onSubmit(controller.text),
+          onPressed: widget.sending
+              ? null
+              : () => widget.onSubmit(widget.controller.text),
           style: FilledButton.styleFrom(
             backgroundColor: accent,
             foregroundColor: Colors.white,
@@ -707,7 +965,7 @@ class _GuideComposer extends StatelessWidget {
               borderRadius: BorderRadius.circular(22),
             ),
           ),
-          child: sending
+          child: widget.sending
               ? const SizedBox(
                   width: 18,
                   height: 18,
@@ -716,7 +974,7 @@ class _GuideComposer extends StatelessWidget {
                     color: Colors.white,
                   ),
                 )
-              : Text(sendLabel),
+              : Text(widget.sendLabel),
         ),
       ],
     );

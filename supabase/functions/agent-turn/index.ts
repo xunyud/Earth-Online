@@ -8,6 +8,7 @@ import {
   createAgentRun,
   inferRunStatusFromSteps,
   loadAgentRunSnapshot,
+  syncAgentEventToMemory,
   type AgentRunSnapshot,
   type SerializedAgentRun,
   type SerializedAgentRunStep,
@@ -57,6 +58,7 @@ type AgentTurnHandlerDeps = {
     memory_digest: string;
     behavior_signals: unknown;
     memory_refs: unknown;
+    agentic_memory_lines?: string[];
   }>;
   createRun: (opts: {
     userId: string;
@@ -203,6 +205,18 @@ export function createAgentTurnHandler(
       });
       const startedAt = deps.now();
 
+      // 把用户目标写入 EverMemOS 记忆，供后续 agent 规划时检索历史
+      syncAgentEventToMemory(
+        user.id,
+        "agent_goal",
+        goal,
+        {
+          sourceTaskId: run.id,
+          summary: `用户发起 agent 目标：${goal.slice(0, 60)}`,
+          extra: { channel, run_id: run.id },
+        },
+      );
+
       await deps.appendStep({
         runId: run.id,
         kind: "message",
@@ -216,7 +230,11 @@ export function createAgentTurnHandler(
         riskLevel: "low",
       });
 
-      const plan = deps.planGoal(goal, clientContext);
+      const plan = deps.planGoal(goal, {
+        ...clientContext,
+        // 把 agentic 记忆上下文注入，供 planAgentGoal 感知用户历史
+        _agentic_memory_lines: planningContext.agentic_memory_lines ?? [],
+      });
       for (const draft of plan.steps) {
         await appendPlannedStep(deps, run.id, draft);
       }

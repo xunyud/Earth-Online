@@ -1,23 +1,29 @@
+import 'dart:io';
 import 'dart:ui';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/i18n/app_locale_controller.dart';
+import '../../../core/services/memory_service.dart';
 import '../../../core/theme/quest_theme.dart';
 
 class QuickAddBar extends StatefulWidget {
   final Function(String) onSubmitted;
   final VoidCallback? onPlusTap;
   final bool isLoading;
+  /// 图片识别成功且含任务标题时回调，将标题预填到任务创建流程
+  final Function(String)? onImageTaskRecognized;
 
   const QuickAddBar({
     Key? key,
     required this.onSubmitted,
     this.onPlusTap,
     this.isLoading = false,
+    this.onImageTaskRecognized,
   }) : super(key: key);
 
   @override
@@ -35,6 +41,8 @@ class _QuickAddBarState extends State<QuickAddBar>
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   bool _speechAvailable = false;
+  /// 图片识别进行中标记
+  bool _imageRecognizing = false;
 
   @override
   void initState() {
@@ -120,6 +128,76 @@ class _QuickAddBarState extends State<QuickAddBar>
         listenMode: stt.ListenMode.dictation,
       ),
     );
+  }
+
+  /// 选择图片并调用后端多模态 LLM 识别
+  ///
+  /// 流程：
+  /// 1. 用户通过 file_picker 选择图片（拍照/图库）
+  /// 2. 上传到 Supabase Storage image-memories bucket
+  /// 3. 调用后端识别 API，返回 ImageRecognitionResult
+  /// 4. 含任务标题时预填到任务创建流程（复用 simulateAIParsing）
+  /// 5. 将识别结果写入 EverMemOS
+  /// 6. 识别失败时显示错误提示，允许用户手动输入
+  Future<void> pickAndRecognizeImage() async {
+    if (_imageRecognizing || widget.isLoading) return;
+
+    // 1. 选择图片
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final filePath = result.files.single.path;
+    if (filePath == null) return;
+
+    final imageFile = File(filePath);
+    if (!imageFile.existsSync()) return;
+
+    setState(() => _imageRecognizing = true);
+
+    try {
+      // 2-5. 上传 + 识别 + 写入记忆
+      final service = MemoryService();
+      final recognition = await service.recognizeImage(imageFile);
+
+      if (!mounted) return;
+
+      if (recognition == null) {
+        // 6. 识别失败：显示错误提示，允许手动输入
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.tr('memory.image.recognize_failed')),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // 4. 含任务标题时预填到任务创建流程
+      if (recognition.suggestedTaskTitle.isNotEmpty) {
+        if (widget.onImageTaskRecognized != null) {
+          widget.onImageTaskRecognized!(recognition.suggestedTaskTitle);
+        } else {
+          // 降级：将标题填入输入框
+          _controller.text = recognition.suggestedTaskTitle;
+          _controller.selection = TextSelection.fromPosition(
+            TextPosition(offset: _controller.text.length),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.tr('memory.image.recognize_failed')),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _imageRecognizing = false);
+    }
   }
 
   @override

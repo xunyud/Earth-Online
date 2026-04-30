@@ -8,11 +8,14 @@ type QueryResult = {
 };
 
 function buildQuery(result: QueryResult) {
-  return {
+  const chain = {
     select() {
       return this;
     },
     eq() {
+      return this;
+    },
+    neq() {
       return this;
     },
     gte() {
@@ -22,12 +25,20 @@ function buildQuery(result: QueryResult) {
       return this;
     },
     limit() {
-      return Promise.resolve(result);
+      // limit 后可能还会链式调用 maybeSingle，所以返回 thenable 对象而非纯 Promise
+      return {
+        then: (resolve: (v: QueryResult) => void, reject?: (e: unknown) => void) =>
+          Promise.resolve(result).then(resolve, reject),
+        maybeSingle() {
+          return Promise.resolve(result);
+        },
+      };
     },
     maybeSingle() {
       return Promise.resolve(result);
     },
   };
+  return chain;
 }
 
 Deno.test("gatherGuideMemoryBundle excludes completed tasks from active titles and strips generated encouragement", async () => {
@@ -103,6 +114,11 @@ Deno.test("gatherGuideMemoryBundle excludes completed tasks from active titles a
         case "guide_dialog_logs":
           return buildQuery({
             data: [],
+            error: null,
+          });
+        case "guide_portraits":
+          return buildQuery({
+            data: null,
             error: null,
           });
         default:

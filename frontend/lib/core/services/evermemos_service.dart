@@ -198,14 +198,17 @@ class EvermemosService {
 
     final content = _buildMemoryContent(unsyncedTodayCompleted);
     final uri = Uri.parse('${AppConfig.evermemosBaseUrl}/memories');
+    // EverMemOS v1 API 要求 user_id + messages 格式，每条 message 必须带 timestamp（Unix 毫秒）
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
     final payload = <String, dynamic>{
-      'content': content,
-      'message_id': _generateMessageId(),
-      'create_time': _createTimeIso8601(),
-      'sender': userId,
-      // group_id acts as namespace to isolate memories per user.
-      'group_id': 'quest-log:$userId',
-      'group_name': 'Quest Log - $userId',
+      'user_id': userId,
+      'messages': [
+        {
+          'role': 'user',
+          'content': content,
+          'timestamp': nowMs,
+        },
+      ],
     };
     debugPrint('🧠 发送的Payload: ${jsonEncode(payload)}');
 

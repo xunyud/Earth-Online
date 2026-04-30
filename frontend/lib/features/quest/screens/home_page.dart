@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:confetti/confetti.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +15,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/i18n/app_locale_controller.dart';
 import '../../../core/services/evermemos_service.dart';
 import '../../../core/services/guide_service.dart';
+import '../../../core/services/memory_service.dart';
 import '../../../core/services/preferences_service.dart';
 import '../../../core/services/supabase_auth_service.dart';
 import '../../../core/services/local_agent_runtime_service.dart';
@@ -150,6 +153,8 @@ class _HomePageState extends State<HomePage> {
 
   final List<_GuideChatMessage> _guideMessages = <_GuideChatMessage>[];
   GuideDailyEvent? _latestDailyEvent;
+  /// 小忆建议推荐列表，每次 bootstrap 刷新时更新，不缓存过期推荐
+  List<MemoryRecommendation> _recommendations = const <MemoryRecommendation>[];
   String? _guideDisplayName;
   String? _profileDisplayName;
   String _guideMemoryDigest = '';
@@ -1120,7 +1125,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<LocalToolResult?> _waitForLocalAgentStepResult(
     String stepId, {
-    Duration timeout = const Duration(seconds: 5),
+    Duration timeout = const Duration(seconds: 12),
   }) async {
     final deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline)) {
@@ -1128,7 +1133,15 @@ class _HomePageState extends State<HomePage> {
       if (result != null) return result;
       await Future<void>.delayed(const Duration(milliseconds: 120));
     }
-    return _localAgentStepResults[stepId];
+    // 超时后仍检查一次，避免最后一帧刚好写入的情况
+    final result = _localAgentStepResults[stepId];
+    if (result != null) return result;
+    // 返回带超时标记的失败结果，供调用方展示 UI 提示
+    return const LocalToolResult(
+      success: false,
+      outputText: '',
+      errorText: '_agentTimeout',
+    );
   }
 
   void _appendAgentMessagesFromSteps(List<AgentStep> steps) {
@@ -1237,6 +1250,7 @@ class _HomePageState extends State<HomePage> {
           role: role,
           content: text,
           memoryRefCount: memoryRefs.length,
+          memoryRefs: memoryRefs,
           agentStepId: agentStepId,
         ),
       );
@@ -1244,6 +1258,14 @@ class _HomePageState extends State<HomePage> {
         _guideMessages.removeRange(0, _guideMessages.length - 60);
       }
     });
+  }
+
+  Future<void> _copyGuideMessage(String content) async {
+    final text = content.trim();
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    showForestSnackBar(context, context.tr('guide.message.copied'));
   }
 
   List<_GuideChatMessage> _visibleGuideMessages() {
@@ -1297,6 +1319,8 @@ class _HomePageState extends State<HomePage> {
         _guideStatus = _GuideConnectionStatus.ready;
         _guideMemoryDigest = result.memoryDigest.trim();
         _guideBehaviorSignals = result.behaviorSignals.take(3).toList();
+        // 每次 bootstrap 刷新时更新推荐内容，不缓存过期推荐
+        _recommendations = result.recommendations;
       });
       await PreferencesService.setGuideLastBootstrapDate(today);
       if (!mounted) return;
@@ -3642,6 +3666,10 @@ class _HomePageState extends State<HomePage> {
       final fallbackReply = context.tr('guide.fallback.reply');
       try {
         final localResult = await _startAgentRunFromGuideInput(text);
+        // 超时标记：_waitForLocalAgentStepResult 超时时返回 errorText == '_agentTimeout'
+        if (localResult?.errorText == '_agentTimeout' && mounted) {
+          showForestSnackBar(context, context.tr('agent.timeout'));
+        }
         final guideChatResult = _extractGuideChatResultFromAgentLocalResult(
           localResult,
         );
@@ -3794,6 +3822,7 @@ class _HomePageState extends State<HomePage> {
                 role: 'assistant',
                 content: reply,
                 memoryRefCount: result.memoryRefs.length,
+                memoryRefs: result.memoryRefs,
               ),
             );
             currentExamplePrompts = result.quickActions.isNotEmpty
@@ -3878,12 +3907,18 @@ class _HomePageState extends State<HomePage> {
                         : GuideDialogRole.assistant,
                     content: item.content,
                     memoryRefCount: item.memoryRefCount,
+                    memoryRefs: item.memoryRefs,
                   ),
                 )
                 .toList(),
+            copyMessageTooltip: context.tr('common.copy'),
             quickActions: entryActions,
             examplePrompts: currentExamplePrompts,
             inputController: input,
+            messageHistory: messages
+                .where((item) => item.role == 'user')
+                .map((item) => item.content)
+                .toList(growable: false),
             inputHintText: currentInputHint,
             sendLabel: context.tr('common.send'),
             retryLabel: context.tr('common.retry'),
@@ -3909,6 +3944,7 @@ class _HomePageState extends State<HomePage> {
                               '$latestUserText I want to keep talking.',
                             ),
                     ),
+            onCopyMessage: (value) => unawaited(_copyGuideMessage(value)),
             onSubmit: (value) => send(dialogContext, setModalState, value),
             onQuickActionTap: (action) {
               setModalState(() {
@@ -3979,7 +4015,7 @@ class _HomePageState extends State<HomePage> {
     _appendGuideMessage(
         'assistant', '${result.opening}\n${result.followUpQuestion}');
     if (!mounted) return;
-    final addTask = await showQuestDialog<bool>(
+    final dialogResult = await showQuestDialog<NightReflectionDialogResult>(
       context: context,
       barrierLabel: 'night_reflection_dialog',
       builder: (dialogContext) => NightReflectionDialog(
@@ -3990,12 +4026,23 @@ class _HomePageState extends State<HomePage> {
         xpReward: result.suggestedTask.xpReward,
         keepOnlyLabel: nightKeepOnly,
         addTomorrowLabel: nightAddTomorrow,
-        onKeepOnly: () => Navigator.of(dialogContext).pop(false),
-        onAddTomorrow: () => Navigator.of(dialogContext).pop(true),
       ),
     );
 
-    if (addTask == true) {
+    // 用户回复 follow_up_question 后，将回复写入 EverMemOS（静默失败）
+    final replyText = dialogResult?.replyText ?? '';
+    if (replyText.isNotEmpty) {
+      final dayId = _localDateId();
+      _controller.syncMemory(
+        eventType: 'night_reflection_reply',
+        content: replyText,
+        memoryKind: 'dialog_event',
+        summary: '$dayId 夜间反思回复',
+        sender: 'user-manual',
+      );
+    }
+
+    if (dialogResult?.addTask == true) {
       final inserted = await _controller.addGuideSuggestedTask(
         title: result.suggestedTask.title,
         description: result.suggestedTask.description,
@@ -4005,7 +4052,7 @@ class _HomePageState extends State<HomePage> {
       if (inserted != null && mounted) {
         showForestSnackBar(context, nightAddTomorrow);
       }
-    } else if (addTask == false) {
+    } else if (dialogResult?.addTask == false) {
       unawaited(
         _guideService.chat(
           message: nightRecordOnlyMessage,
@@ -4057,29 +4104,9 @@ class _HomePageState extends State<HomePage> {
                   color: const Color(0xFFFFB74D),
                   title: context.tr('quick_add.menu.image'),
                   subtitle: context.tr('quick_add.menu.image_desc'),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.textHint.withAlpha(25),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      context.tr('quick_add.menu.coming_soon'),
-                      style: AppTextStyles.caption.copyWith(
-                        fontSize: 10,
-                        color: AppColors.textHint,
-                      ),
-                    ),
-                  ),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    showForestSnackBar(
-                      context,
-                      context.tr('quick_add.menu.coming_soon'),
-                    );
+                    _handleImageRecognition();
                   },
                 ),
               ],
@@ -4088,6 +4115,59 @@ class _HomePageState extends State<HomePage> {
         );
       },
     );
+  }
+
+  /// 处理图片识别流程
+  ///
+  /// 从 plus 菜单触发：选择图片 → 上传 → 识别 → 预填任务标题
+  /// 识别失败时显示错误提示，允许用户手动输入
+  Future<void> _handleImageRecognition() async {
+    // 1. 选择图片
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+    if (result == null || result.files.isEmpty || !mounted) return;
+    final filePath = result.files.single.path;
+    if (filePath == null) return;
+
+    final imageFile = File(filePath);
+    if (!imageFile.existsSync()) return;
+
+    // 显示识别中提示
+    if (mounted) {
+      showForestSnackBar(
+        context,
+        context.tr('memory.image.recognizing'),
+      );
+    }
+
+    try {
+      final service = MemoryService();
+      final recognition = await service.recognizeImage(imageFile);
+
+      if (!mounted) return;
+
+      if (recognition == null) {
+        showForestSnackBar(
+          context,
+          context.tr('memory.image.recognize_failed'),
+        );
+        return;
+      }
+
+      // 含任务标题时预填到任务创建流程（复用 simulateAIParsing）
+      if (recognition.suggestedTaskTitle.isNotEmpty) {
+        _controller.simulateAIParsing(recognition.suggestedTaskTitle);
+      }
+    } catch (_) {
+      if (mounted) {
+        showForestSnackBar(
+          context,
+          context.tr('memory.image.recognize_failed'),
+        );
+      }
+    }
   }
 
   Future<void> _showQuickCreateDialog() async {
@@ -4221,16 +4301,19 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _generateUserProfile() async {
+  Future<void> _generateUserProfile({bool forceRefresh = false}) async {
     if (_isGeneratingProfile || !mounted) return;
     setState(() => _isGeneratingProfile = true);
     try {
       final portrait = await _guideService.generatePortrait(
         scene: 'profile',
         style: 'pencil_sketch',
-        forceRefresh: true,
+        forceRefresh: forceRefresh,
       );
       if (!mounted) return;
+      // 用可变变量在对话框内部追踪状态
+      var currentPortrait = portrait;
+      var isRegenerating = false;
       await showDialog<void>(
         context: context,
         barrierColor: Colors.black.withAlpha(120),
@@ -4239,117 +4322,185 @@ class _HomePageState extends State<HomePage> {
           final dialogSize = MediaQuery.of(dialogContext).size;
           final dialogWidth = (dialogSize.width - 48).clamp(320.0, 620.0);
           final dialogHeight = (dialogSize.height - 48).clamp(480.0, 760.0);
-          final insight = _PortraitInsightData.fromPortrait(
-            portrait,
-            _guideName,
-          );
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: SizedBox(
-              width: dialogWidth.toDouble(),
-              height: dialogHeight.toDouble(),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(22, 18, 22, 16),
-                decoration: BoxDecoration(
-                  color: localTheme.surfaceColor,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(35),
-                      blurRadius: 30,
-                      offset: const Offset(0, 16),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          context.tr(
-                            'profile.title',
-                            params: {'name': _guideName},
-                          ),
-                          style: AppTextStyles.heading2.copyWith(
-                            color: localTheme.primaryAccentColor,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          icon: const Icon(Icons.close_rounded),
-                          color: AppColors.textSecondary,
+          return StatefulBuilder(
+            builder: (dialogContext, setDialogState) {
+              final insight = _PortraitInsightData.fromPortrait(
+                currentPortrait,
+                _guideName,
+              );
+              return Dialog(
+                backgroundColor: Colors.transparent,
+                insetPadding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                child: SizedBox(
+                  width: dialogWidth.toDouble(),
+                  height: dialogHeight.toDouble(),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(22, 18, 22, 16),
+                    decoration: BoxDecoration(
+                      color: localTheme.surfaceColor,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(35),
+                          blurRadius: 30,
+                          offset: const Offset(0, 16),
                         ),
                       ],
                     ),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.softBlue.withAlpha(105),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            context.tr('profile.source_label'),
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            context.tr('profile.analysis_notice'),
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            _PortraitEvaluationSection(
-                              insight: insight,
-                              theme: localTheme,
-                              guideName: _guideName,
+                            Text(
+                              context.tr(
+                                'profile.title',
+                                params: {'name': _guideName},
+                              ),
+                              style: AppTextStyles.heading2.copyWith(
+                                color: localTheme.primaryAccentColor,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                            const SizedBox(height: 16),
-                            _PortraitInsightChart(
-                              insight: insight,
-                              theme: localTheme,
-                            ),
-                            const SizedBox(height: 16),
-                            _PortraitReadableMetricGrid(
-                              insight: insight,
-                              theme: localTheme,
+                            const Spacer(),
+                            IconButton(
+                              onPressed: () => Navigator.of(dialogContext).pop(),
+                              icon: const Icon(Icons.close_rounded),
+                              color: AppColors.textSecondary,
                             ),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 14),
+                        Expanded(
+                          child: isRegenerating
+                              ? Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const CircularProgressIndicator(),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        context.tr('profile.loading'),
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : SingleChildScrollView(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.softBlue.withAlpha(105),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              context.tr('profile.source_label'),
+                                              style: AppTextStyles.caption.copyWith(
+                                                color: AppColors.textSecondary,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            if (currentPortrait.imageUrl.isNotEmpty) ...[
+                                              const SizedBox(height: 8),
+                                              ClipRRect(
+                                                borderRadius: BorderRadius.circular(12),
+                                                child: ConstrainedBox(
+                                                  constraints: BoxConstraints(
+                                                    maxHeight: dialogHeight * 0.45,
+                                                  ),
+                                                  child: Image.network(
+                                                    currentPortrait.imageUrl,
+                                                    width: double.infinity,
+                                                    fit: BoxFit.contain,
+                                                    errorBuilder: (_, __, ___) => Text(
+                                                      context.tr('profile.analysis_notice'),
+                                                      style: AppTextStyles.caption.copyWith(
+                                                        color: AppColors.textSecondary,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ] else
+                                              Text(
+                                                context.tr('profile.analysis_notice'),
+                                                style: AppTextStyles.caption.copyWith(
+                                                  color: AppColors.textSecondary,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 14),
+                                      _PortraitEvaluationSection(
+                                        insight: insight,
+                                        theme: localTheme,
+                                        guideName: _guideName,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _PortraitInsightChart(
+                                        insight: insight,
+                                        theme: localTheme,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _PortraitReadableMetricGrid(
+                                        insight: insight,
+                                        theme: localTheme,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // 重新生成按钮：在对话框内部原地刷新
+                            TextButton.icon(
+                              onPressed: isRegenerating
+                                  ? null
+                                  : () async {
+                                      setDialogState(() => isRegenerating = true);
+                                      try {
+                                        final newPortrait = await _guideService.generatePortrait(
+                                          scene: 'profile',
+                                          style: 'pencil_sketch',
+                                          forceRefresh: true,
+                                        );
+                                        setDialogState(() {
+                                          currentPortrait = newPortrait;
+                                          isRegenerating = false;
+                                        });
+                                      } catch (_) {
+                                        setDialogState(() => isRegenerating = false);
+                                      }
+                                    },
+                              icon: const Icon(Icons.refresh_rounded, size: 18),
+                              label: Text(context.tr('profile.regenerate')),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(dialogContext).pop(),
+                              child: Text(context.tr('common.close')),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        child: Text(context.tr('common.close')),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           );
         },
       );
@@ -5048,16 +5199,31 @@ class _HomePageState extends State<HomePage> {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                child: KeyedSubtree(
-                  key: _coachKeyQuickAdd,
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, _) => QuickAddBar(
-                      isLoading: _controller.isAnalyzing,
-                      onSubmitted: _controller.simulateAIParsing,
-                      onPlusTap: _showPlusMenu,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 小忆建议卡片区域：仅当推荐列表非空时显示
+                    if (_recommendations.isNotEmpty)
+                      _MemoryRecommendationCards(
+                        recommendations: _recommendations,
+                        onTap: (title) =>
+                            _controller.simulateAIParsing(title),
+                      ),
+                    KeyedSubtree(
+                      key: _coachKeyQuickAdd,
+                      child: AnimatedBuilder(
+                        animation: _controller,
+                        builder: (context, _) => QuickAddBar(
+                          isLoading: _controller.isAnalyzing,
+                          onSubmitted: _controller.simulateAIParsing,
+                          onPlusTap: _showPlusMenu,
+                          onImageTaskRecognized: (title) {
+                            _controller.simulateAIParsing(title);
+                          },
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ],
@@ -6852,16 +7018,142 @@ class _SettingsChoicePill extends StatelessWidget {
   }
 }
 
+/// 小忆建议卡片区域
+/// 在 QuickAddBar 上方展示记忆驱动的任务推荐，仅当推荐列表非空时显示
+/// 点击卡片将 title 预填到任务创建流程
+class _MemoryRecommendationCards extends StatelessWidget {
+  final List<MemoryRecommendation> recommendations;
+  final ValueChanged<String> onTap;
+
+  const _MemoryRecommendationCards({
+    required this.recommendations,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (recommendations.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context).extension<QuestTheme>()!;
+    return Container(
+      color: theme.backgroundColor,
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 6),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 14,
+                  color: theme.primaryAccentColor,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  context.tr('home.recommendations.title'),
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.primaryAccentColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 68,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: recommendations.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final rec = recommendations[index];
+                return _MemoryRecommendationChip(
+                  title: rec.title,
+                  reason: rec.reason,
+                  accentColor: theme.primaryAccentColor,
+                  onTap: () => onTap(rec.title),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 单张小忆建议卡片
+class _MemoryRecommendationChip extends StatelessWidget {
+  final String title;
+  final String reason;
+  final Color accentColor;
+  final VoidCallback onTap;
+
+  const _MemoryRecommendationChip({
+    required this.title,
+    required this.reason,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 200,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: accentColor.withAlpha(14),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: accentColor.withAlpha(30)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              reason,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.caption.copyWith(
+                fontSize: 11,
+                height: 1.3,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _GuideChatMessage {
   final String role;
   final String content;
   final int memoryRefCount;
+  /// 实际记忆片段 ID 列表，用于前端记忆可见性展示
+  final List<String> memoryRefs;
   final String? agentStepId;
 
   const _GuideChatMessage({
     required this.role,
     required this.content,
     this.memoryRefCount = 0,
+    this.memoryRefs = const <String>[],
     this.agentStepId,
   });
 }

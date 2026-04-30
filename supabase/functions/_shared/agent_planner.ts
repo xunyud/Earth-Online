@@ -209,6 +209,13 @@ export function planAgentGoal(
   const prefersEnglish = languageCode.startsWith("en") ||
     clientContext?.is_english === true;
 
+  // 从 clientContext 中提取 agentic 记忆上下文，供 freeform 路径注入
+  const agenticMemoryLines: string[] = Array.isArray(clientContext?._agentic_memory_lines)
+    ? (clientContext._agentic_memory_lines as unknown[])
+        .map((x) => toText(x))
+        .filter(Boolean)
+    : [];
+
   if (isStatsOpenIntent(loweredGoal)) {
     return {
       summary: localized(prefersEnglish, "打开统计页", "Open the stats view"),
@@ -372,23 +379,6 @@ export function planAgentGoal(
     };
   }
 
-  if (normalizedGoal.length > 0) {
-    return {
-      summary: localized(prefersEnglish, "自由聊天", "Free chat"),
-      steps: [{
-        kind: "tool_call",
-        tool_name: "app.chat.freeform.respond",
-        arguments_json: { source_text: normalizedGoal },
-        summary: localized(prefersEnglish, "继续聊天", "Continue chat"),
-        output_text: localized(
-          prefersEnglish,
-          "Preparing a context-aware companion reply.",
-          "准备生成基于上下文的陪伴式回复。",
-        ),
-      }],
-    };
-  }
-
   if (isFileIntent(loweredGoal)) {
     const path = extractReferencedPath(normalizedGoal);
     return {
@@ -425,6 +415,29 @@ export function planAgentGoal(
         output_text: prefersEnglish
           ? "Collecting terminal output for the next summary step."
           : "先收集终端结果，再继续总结。",
+      }],
+    };
+  }
+
+  if (normalizedGoal.length > 0) {
+    return {
+      summary: localized(prefersEnglish, "自由聊天", "Free chat"),
+      steps: [{
+        kind: "tool_call",
+        tool_name: "app.chat.freeform.respond",
+        arguments_json: {
+          source_text: normalizedGoal,
+          // 注入 agentic 记忆上下文，让 freeform 回复能感知用户历史
+          ...(agenticMemoryLines.length > 0
+            ? { memory_context: agenticMemoryLines.join("\n") }
+            : {}),
+        },
+        summary: localized(prefersEnglish, "继续聊天", "Continue chat"),
+        output_text: localized(
+          prefersEnglish,
+          "Preparing a context-aware companion reply.",
+          "准备生成基于上下文的陪伴式回复。",
+        ),
       }],
     };
   }

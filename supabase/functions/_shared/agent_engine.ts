@@ -18,6 +18,7 @@ import {
   requiresAgentConfirmation,
 } from "./agent_policy.ts";
 import { gatherGuideMemoryBundle } from "./guide_memory.ts";
+import { EverMemOSClient } from "./evermemos_client.ts";
 
 export const agentCorsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -334,6 +335,56 @@ export async function loadAgentRunSnapshot(
   return { run, steps };
 }
 
+/**
+ * 把 agent 事件异步写入 EverMemOS 记忆，fire-and-forget 不阻塞主流程。
+ * 写入失败只打 warn 日志，不影响 agent 执行。
+ *
+ * @param userId  用户 ID，作为 EverMemOS 的 personal scope 标识
+ * @param eventType  事件类型，如 "agent_goal"、"agent_tool_result"、"agent_run_complete"
+ * @param content  记忆内容正文
+ * @param metadata  附加元数据（任务标题、工具名等）
+ */
+export function syncAgentEventToMemory(
+  userId: string,
+  eventType: string,
+  content: string,
+  metadata?: {
+    sourceTaskId?: string;
+    sourceTaskTitle?: string;
+    summary?: string;
+    extra?: Record<string, unknown>;
+  },
+): void {
+  // 非阻塞：不 await，让记忆写入在后台完成
+  (async () => {
+    try {
+      const client = new EverMemOSClient();
+      await client.createMemory(
+        {
+          userId,
+          eventType,
+          content,
+          metadata: {
+            memoryKind: "task_event",
+            sourceTaskId: metadata?.sourceTaskId ?? "",
+            sourceTaskTitle: metadata?.sourceTaskTitle ?? "",
+            sourceStatus: "active",
+            summary: metadata?.summary ?? content.slice(0, 80),
+            extra: metadata?.extra ?? {},
+          },
+        },
+        AbortSignal.timeout(2000),
+      );
+    } catch (err) {
+      // 记忆写入失败不影响 agent 主流程，只打 warn
+      console.warn(
+        "syncAgentEventToMemory skipped:",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  })();
+}
+
 export async function buildAgentPlanningContext(
   supabase: any,
   userId: string,
@@ -352,6 +403,8 @@ export async function buildAgentPlanningContext(
     memory_digest: memory.memory_digest,
     memory_refs: memory.memory_refs,
     behavior_signals: memory.behavior_signals,
+    // agentic 检索结果，供 planAgentGoal 感知用户历史
+    agentic_memory_lines: memory.agentic_memory_lines,
     packed_context: memory.packed_context,
   };
 }

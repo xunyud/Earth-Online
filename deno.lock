@@ -10,9 +10,14 @@
   },
   "redirects": {
     "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.99.1",
-    "https://esm.sh/iceberg-js@^0.8.1?target=denonext": "https://esm.sh/iceberg-js@0.8.1?target=denonext"
+    "https://esm.sh/iceberg-js@^0.8.1?target=denonext": "https://esm.sh/iceberg-js@0.8.1?target=denonext",
+    "https://esm.sh/pure-rand@^6.0.0?target=denonext": "https://esm.sh/pure-rand@6.1.0?target=denonext"
   },
   "remote": {
+    "https://deno.land/std@0.168.0/fmt/colors.ts": "03ad95e543d2808bc43c17a3dd29d25b43d0f16287fe562a0be89bf632454a12",
+    "https://deno.land/std@0.168.0/testing/_diff.ts": "a23e7fc2b4d8daa3e158fa06856bedf5334ce2a2831e8bf9e509717f455adb2c",
+    "https://deno.land/std@0.168.0/testing/_format.ts": "cd11136e1797791045e639e9f0f4640d5b4166148796cad37e6ef75f7d7f3832",
+    "https://deno.land/std@0.168.0/testing/asserts.ts": "51353e79437361d4b02d8e32f3fc83b22231bc8f8d4c841d86fd32b0b0afe940",
     "https://deno.land/std@0.224.0/assert/_constants.ts": "a271e8ef5a573f1df8e822a6eb9d09df064ad66a4390f21b3e31f820a38e0975",
     "https://deno.land/std@0.224.0/assert/assert.ts": "09d30564c09de846855b7b071e62b5974b001bb72a4b797958fe0660e7849834",
     "https://deno.land/std@0.224.0/assert/assert_almost_equals.ts": "9e416114322012c9a21fa68e187637ce2d7df25bcbdbfd957cd639e65d3cf293",
@@ -53,13 +58,18 @@
     "https://esm.sh/@supabase/storage-js@2.99.1/denonext/storage-js.mjs": "db1d7acb3bf6f75cd30670e01e17f930df6a4a1b4ae1f805a8e06d7ebe591843",
     "https://esm.sh/@supabase/supabase-js@2.99.1": "b9af3c549dd42b12e1be07c340d8efa1552a6748ab70e5b9c483bbe8ad3dc3b3",
     "https://esm.sh/@supabase/supabase-js@2.99.1/denonext/supabase-js.mjs": "bfa94aa7bcb1609a88c40dfff7d729a4369c85dcba8d8f662f45367819238ee4",
+    "https://esm.sh/fast-check@3.15.0": "81dd48396995234e445ebd70b5c3a72ea06613d3b2245881f78fff296cf70b94",
+    "https://esm.sh/fast-check@3.15.0/denonext/fast-check.mjs": "28dd2d64d3db648180e8c0b83c7ff2f17d50d3a515d7f5f6ce075bbc8144c801",
     "https://esm.sh/iceberg-js@0.8.1/denonext/iceberg-js.mjs": "d839d81a2e3966500ca2cdd0c1cb458e9608bacfc91f7bb67a69b2e878dcdb4f",
     "https://esm.sh/iceberg-js@0.8.1?target=denonext": "58c849d7fe2bf4eca4a84eb501e83c161a7d8c34ca1bec15a962b3bec3062633",
+    "https://esm.sh/pure-rand@6.1.0/denonext/pure-rand.mjs": "7da8ca2c2af243dd17b5513288aa8476e6b49f2083d5d2b7b3450234df3a7e0d",
+    "https://esm.sh/pure-rand@6.1.0?target=denonext": "dbac353f1ab92cbf4ab45354600000d309495e7b88a679b8fc5ef3e0cdf9ad6c",
     "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs": "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9"
   },
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:openai@^4.52.5",
         "npm:pptxgenjs@^4.0.1"
       ]
     }

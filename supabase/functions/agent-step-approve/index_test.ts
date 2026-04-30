@@ -103,7 +103,14 @@ function createApproveDeps() {
     },
     authenticate: async (accessToken: string) =>
       accessToken == "valid-token" ? { id: "user-1" } : null,
-    recordApproval: async (opts: { reason?: string; decision: "approved" | "rejected" }) => {
+    recordApproval: async (
+      opts: {
+        stepId: string;
+        userId: string;
+        reason?: string;
+        decision: "approved" | "rejected";
+      },
+    ) => {
       if (opts.decision == "rejected") {
         lastRejectedReason = opts.reason ?? "";
       }
@@ -111,19 +118,46 @@ function createApproveDeps() {
     updateStepStatus: async (
       stepId: string,
       status: string,
-      extras?: { needsConfirmation?: boolean },
+      extras?: {
+        outputText?: string | null;
+        errorText?: string | null;
+        startedAt?: string | null;
+        finishedAt?: string | null;
+        needsConfirmation?: boolean | null;
+      },
     ) => {
       updatedStepStatuses.push(status);
       return {
         ...step,
         id: stepId,
         status,
+        output_text: extras?.outputText ?? step.output_text,
+        error_text: extras?.errorText ?? step.error_text,
+        started_at: extras?.startedAt ?? step.started_at,
+        finished_at: extras?.finishedAt ?? step.finished_at,
         needs_confirmation: extras?.needsConfirmation ?? step.needs_confirmation,
       } as SerializedAgentRunStep;
     },
-    updateRunStatus: async (runId: string, status: "waiting_local_execution" | "cancelled") => {
+    updateRunStatus: async (
+      runId: string,
+      status: "waiting_local_execution" | "cancelled",
+      extras?: {
+        summary?: string | null;
+        lastError?: string | null;
+        startedAt?: string | null;
+        finishedAt?: string | null;
+      },
+    ) => {
       updatedRunStatuses.push(status);
-      return { ...run, id: runId, status } as SerializedAgentRun;
+      return {
+        ...run,
+        id: runId,
+        status,
+        summary: extras?.summary ?? run.summary,
+        last_error: extras?.lastError ?? run.last_error,
+        started_at: extras?.startedAt ?? run.started_at,
+        finished_at: extras?.finishedAt ?? run.finished_at,
+      } as SerializedAgentRun;
     },
     loadSnapshot: async () =>
       ({

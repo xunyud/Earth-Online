@@ -6,6 +6,10 @@ import {
   generateProactiveMessage,
   type GuideSuggestedTask,
 } from "./guide_ai.ts";
+import {
+  EverMemOSClient,
+  type EverMemCreateMemoryInput,
+} from "./evermemos_client.ts";
 
 export type GuideDialogExtraPayload = {
   channel?: string;
@@ -291,6 +295,46 @@ export async function writeGuideDialogLog(
   }
 }
 
+/** 推荐条目结构：title 为具体可执行的小动作，reason 为推荐理由 */
+type Recommendation = { title: string; reason: string };
+
+/**
+ * 调用 memory-recommender Edge Function 获取个性化任务推荐。
+ * 使用 8 秒超时，任何失败（网络、非 200、解析异常）均返回空数组，
+ * 确保不影响 bootstrap 主流程。
+ */
+async function fetchRecommendations(
+  userId: string,
+  clientContext: Record<string, unknown>,
+): Promise<Recommendation[]> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!supabaseUrl || !serviceRoleKey) return [];
+
+    const resp = await fetch(
+      `${supabaseUrl}/functions/v1/memory-recommender`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({ user_id: userId, client_context: clientContext }),
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!resp.ok) return [];
+
+    const data = await resp.json();
+    return Array.isArray(data?.recommendations) ? data.recommendations : [];
+  } catch {
+    // 推荐失败不影响 bootstrap 主流程
+    return [];
+  }
+}
+
+
 export async function buildGuideBootstrapPayload(
   supabase: any,
   userId: string,
@@ -315,6 +359,9 @@ export async function buildGuideBootstrapPayload(
     maxPackedChars: 14000,
   });
 
+  // 调用 memory-recommender 获取个性化任务推荐（8s 超时，失败不影响主流程）
+  const recommendations = await fetchRecommendations(userId, nextClientContext);
+
   if (!enabled) {
     return {
       proactive_message: "",
@@ -324,6 +371,7 @@ export async function buildGuideBootstrapPayload(
       trace_id: crypto.randomUUID(),
       behavior_signals: memory.behavior_signals.slice(0, 8),
       guide_display_name: guideDisplayName,
+      recommendations,
     };
   }
 
@@ -353,6 +401,7 @@ export async function buildGuideBootstrapPayload(
     trace_id: crypto.randomUUID(),
     behavior_signals: memory.behavior_signals.slice(0, 8),
     guide_display_name: guideDisplayName,
+    recommendations,
   };
 }
 
@@ -551,6 +600,21 @@ export async function buildNightReflectionPayload(
     content: `${draft.opening}\n${draft.follow_up_question}`,
     memoryRefs: memory.memory_refs,
   });
+
+  // 将反思内容写入 EverMemOS，形成夜间反思记忆闭环
+  try {
+    const client = new EverMemOSClient();
+    const writePayload = buildNightReflectionWritePayload(
+      userId,
+      draft.opening,
+      draft.follow_up_question,
+      dayId,
+    );
+    await client.createMemory(writePayload, AbortSignal.timeout(3000));
+  } catch (err) {
+    console.warn("night-reflection: 反思写入记忆失败，不影响正常流程", err);
+  }
+
   return {
     opening: draft.opening,
     follow_up_question: draft.follow_up_question,
@@ -558,6 +622,30 @@ export async function buildNightReflectionPayload(
     memory_refs: memory.memory_refs.slice(0, 80),
   };
 }
+
+/**
+ * 构建夜间反思记忆写入载荷（纯函数，便于属性测试）。
+ * 从 opening、follow_up_question、dayId 构造写入 EverMemOS 的完整参数。
+ */
+export function buildNightReflectionWritePayload(
+  userId: string,
+  opening: string,
+  followUpQuestion: string,
+  dayId: string,
+): EverMemCreateMemoryInput & { sender: string } {
+  return {
+    userId,
+    eventType: "night_reflection",
+    content: `${opening}\n\n${followUpQuestion}`,
+    metadata: {
+      memoryKind: "dialog_event",
+      summary: `${dayId} 夜间反思`,
+      sourceStatus: "active",
+    },
+    sender: "guide-assistant",
+  };
+}
+
 
 export function normalizeSuggestedTask(raw: unknown): GuideSuggestedTask {
   const map = (raw && typeof raw === "object")

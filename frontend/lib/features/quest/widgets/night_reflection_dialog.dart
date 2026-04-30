@@ -5,7 +5,21 @@ import '../../../core/i18n/app_locale_controller.dart';
 import '../../../core/theme/quest_theme.dart';
 import '../../../shared/widgets/quest_dialog_shell.dart';
 
-class NightReflectionDialog extends StatelessWidget {
+/// 夜间反思对话框返回结果，携带用户选择和可选的回复文本。
+class NightReflectionDialogResult {
+  /// true = 加入明日任务，false = 仅记录
+  final bool addTask;
+
+  /// 用户对 follow_up_question 的回复文本（可为空）
+  final String replyText;
+
+  const NightReflectionDialogResult({
+    required this.addTask,
+    this.replyText = '',
+  });
+}
+
+class NightReflectionDialog extends StatefulWidget {
   final String title;
   final String opening;
   final String followUpQuestion;
@@ -13,8 +27,6 @@ class NightReflectionDialog extends StatelessWidget {
   final int xpReward;
   final String keepOnlyLabel;
   final String addTomorrowLabel;
-  final VoidCallback onKeepOnly;
-  final VoidCallback onAddTomorrow;
 
   const NightReflectionDialog({
     super.key,
@@ -25,9 +37,29 @@ class NightReflectionDialog extends StatelessWidget {
     required this.xpReward,
     required this.keepOnlyLabel,
     required this.addTomorrowLabel,
-    required this.onKeepOnly,
-    required this.onAddTomorrow,
   });
+
+  @override
+  State<NightReflectionDialog> createState() => _NightReflectionDialogState();
+}
+
+class _NightReflectionDialogState extends State<NightReflectionDialog> {
+  final TextEditingController _replyController = TextEditingController();
+
+  @override
+  void dispose() {
+    _replyController.dispose();
+    super.dispose();
+  }
+
+  void _pop(bool addTask) {
+    Navigator.of(context).pop(
+      NightReflectionDialogResult(
+        addTask: addTask,
+        replyText: _replyController.text.trim(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +68,7 @@ class NightReflectionDialog extends StatelessWidget {
     const accent = Color(0xFF7762C5);
 
     return QuestDialogShell(
-      title: title,
+      title: widget.title,
       subtitle: context.tr('night.dialog.subtitle'),
       maxWidth: 980,
       scrollable: true,
@@ -45,17 +77,17 @@ class NightReflectionDialog extends StatelessWidget {
         icon: Icons.nights_stay_rounded,
         accentColor: Color(0xFF7762C5),
       ),
-      onClose: onKeepOnly,
+      onClose: () => _pop(false),
       actions: [
         QuestDialogSecondaryButton(
-          label: keepOnlyLabel,
+          label: widget.keepOnlyLabel,
           icon: Icons.bookmark_border_rounded,
-          onPressed: onKeepOnly,
+          onPressed: () => _pop(false),
         ),
         QuestDialogPrimaryButton(
-          label: addTomorrowLabel,
+          label: widget.addTomorrowLabel,
           icon: Icons.arrow_forward_rounded,
-          onPressed: onAddTomorrow,
+          onPressed: () => _pop(true),
         ),
       ],
       child: Column(
@@ -67,7 +99,7 @@ class NightReflectionDialog extends StatelessWidget {
             icon: Icons.local_fire_department_rounded,
             accentColor: accent,
             child: Text(
-              opening,
+              widget.opening,
               style: AppTextStyles.body.copyWith(
                 height: 1.65,
                 color: const Color(0xFF322B45),
@@ -91,12 +123,44 @@ class NightReflectionDialog extends StatelessWidget {
               border: Border.all(color: accent.withAlpha(36)),
             ),
             child: Text(
-              followUpQuestion,
+              widget.followUpQuestion,
               style: AppTextStyles.heading2.copyWith(
                 fontSize: 22,
                 height: 1.45,
                 color: const Color(0xFF29203D),
                 fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // 用户回复输入框：回复 follow_up_question
+          TextField(
+            controller: _replyController,
+            maxLines: 3,
+            minLines: 1,
+            textInputAction: TextInputAction.done,
+            decoration: InputDecoration(
+              hintText: context.tr('night.dialog.reply_hint'),
+              hintStyle: AppTextStyles.body.copyWith(
+                color: const Color(0xFF9E95B0),
+              ),
+              filled: true,
+              fillColor: Colors.white.withAlpha(180),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 14,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(color: accent.withAlpha(34)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(color: accent.withAlpha(34)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(color: accent, width: 1.6),
               ),
             ),
           ),
@@ -109,7 +173,7 @@ class NightReflectionDialog extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  suggestedTaskTitle,
+                  widget.suggestedTaskTitle,
                   style: AppTextStyles.heading2.copyWith(
                     fontSize: 20,
                     color: const Color(0xFF2E2640),
@@ -128,7 +192,7 @@ class NightReflectionDialog extends StatelessWidget {
                     border: Border.all(color: accent.withAlpha(28)),
                   ),
                   child: Text(
-                    '+$xpReward XP',
+                    '+${widget.xpReward} XP',
                     style: AppTextStyles.caption.copyWith(
                       fontWeight: FontWeight.w800,
                       color: accent,

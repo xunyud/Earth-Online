@@ -6,6 +6,7 @@ import {
   buildLocalToolStepDraft,
   inferRunStatusFromSteps,
   loadAgentRunSnapshot,
+  syncAgentEventToMemory,
   type AgentRunSnapshot,
   type SerializedAgentRun,
   type SerializedAgentRunStep,
@@ -238,6 +239,28 @@ export function createAgentStepCompleteHandler(
         return json(404, { success: false, error: "Step not found" });
       }
 
+      // 把工具执行结果写入 EverMemOS 记忆，让 agent 后续规划能感知历史操作
+      if (completedStep.tool_name) {
+        const toolSummary = outputText.length > 0
+          ? outputText.slice(0, 120)
+          : `工具 ${completedStep.tool_name} 执行完成`;
+        syncAgentEventToMemory(
+          user.id,
+          "agent_tool_result",
+          `[工具执行] ${completedStep.tool_name}：${toolSummary}`,
+          {
+            sourceTaskId: runId,
+            sourceTaskTitle: snapshotAfterTool.run.goal.slice(0, 60),
+            summary: toolSummary,
+            extra: {
+              tool_name: completedStep.tool_name,
+              step_id: stepId,
+              run_id: runId,
+            },
+          },
+        );
+      }
+
       const continuationDrafts = deps.continueRun(
         snapshotAfterTool.run.goal,
         completedStep,
@@ -255,6 +278,21 @@ export function createAgentStepCompleteHandler(
         lastError: null,
         finishedAt: isAgentRunTerminalStatus(runStatus) ? deps.now() : null,
       });
+
+      // run 进入终态时写入完成记忆
+      if (isAgentRunTerminalStatus(runStatus) && snapshotAfterTool.run.goal) {
+        syncAgentEventToMemory(
+          user.id,
+          "agent_run_complete",
+          `[agent完成] ${snapshotAfterTool.run.goal.slice(0, 80)}，状态：${runStatus}`,
+          {
+            sourceTaskId: runId,
+            sourceTaskTitle: snapshotAfterTool.run.goal.slice(0, 60),
+            summary: `agent run ${runStatus}：${snapshotAfterTool.run.goal.slice(0, 60)}`,
+            extra: { run_id: runId, status: runStatus },
+          },
+        );
+      }
 
       const updatedSnapshot = await deps.loadSnapshot(runId, user.id);
       return json(200, { success: true, ...updatedSnapshot });

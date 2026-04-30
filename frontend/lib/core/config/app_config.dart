@@ -8,7 +8,7 @@ class AppConfig {
 
   static const String evermemosBaseUrl = String.fromEnvironment(
     'EVERMEMOS_BASE_URL',
-    defaultValue: 'https://api.evermind.ai/api/v0',
+    defaultValue: 'https://api.evermind.ai/api/v1',
   );
 
   static const String evermemosSender = String.fromEnvironment(

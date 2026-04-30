@@ -48,6 +48,7 @@ Without EverMemOS, the assistant would have no persistent memory between session
 - Preserve recent quests, diary entries, behavior signals, and guide dialogue as usable context.
 - Let users revisit what happened recently instead of treating each day as a blank page.
 - Support recovery after interruptions through continuity rather than repeated re-entry.
+- Provide a dedicated memory panel with search, source filters, portrait history, voice memories, image-recognition memories, and pin/mute controls.
 
 ### 3. Memory-Driven Guidance
 
@@ -107,7 +108,7 @@ The `frontend/` app is the main interaction surface. It contains the quest board
 
 ### Supabase Layer
 
-The `supabase/` directory carries database migrations and Edge Functions such as `parse-quest`, `guide-bootstrap`, `guide-chat`, `guide-event-generate`, `guide-event-accept`, `sync-user-memory`, `weekly-summary`, and related background jobs. This layer handles most of the product logic around task parsing, memory-aware guidance, event generation, and summary workflows.
+The `supabase/` directory carries database migrations and Edge Functions such as `parse-quest`, `guide-bootstrap`, `guide-chat`, `guide-event-generate`, `guide-event-accept`, `sync-user-memory`, `memory-recommender`, `memory-patrol`, `knowledge-extraction`, `weekly-summary`, and related background jobs. This layer handles most of the product logic around task parsing, memory-aware guidance, event generation, memory evolution, and summary workflows.
 
 ### Lightweight Backend
 
@@ -136,6 +137,7 @@ This is the core system idea behind the product's "memory-aware" claim.
 - `frontend/`: Flutter app
 - `backend/`: lightweight Node.js / Express service
 - `supabase/`: migrations and Edge Functions
+- `docs/`: project documentation, changelog, PRDs, plans, and verification notes
 - `promo-video/`: Remotion-based demo video project
 
 ### 1. Run the Flutter Client
@@ -188,10 +190,13 @@ The current repo contains Edge Functions for parsing quests, guide chat, event g
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `OPENAI_API_KEY`
 - `OPENAI_BASE_URL` (`https://api.86gamestore.com`)
+- `OPENAI_IMAGE_API_KEY` (optional dedicated image-generation key)
+- `OPENAI_IMAGE_BASE_URL` (optional dedicated image-generation endpoint)
 - `DEEPSEEK_API_KEY` (optional compatibility fallback)
 - `DEEPSEEK_BASE_URL` (optional compatibility fallback)
 - `EVERMEMOS_API_URL`
 - `EVERMEMOS_API_KEY`
+- `EVERMEMOS_AUTH_TOKEN` (legacy compatibility fallback)
 - `EVERMEMOS_SYNC_TIMEOUT_MS`
 - `POLLINATIONS_MODEL`
 - `POLLINATIONS_API_KEY`
@@ -237,6 +242,12 @@ npm run still:zh
 - `EVERMEMOS_API_KEY`
 - `EVERMEMOS_BASE_URL`
 - `EVERMEMOS_SENDER`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `OPENAI_CHAT_MODEL`
+- `AGENT_CHAT_PROXY_URL`
+
+The Flutter memory panel reads EverMemOS directly, so pass `EVERMEMOS_API_KEY` through `--dart-define` for local builds that need memory search, pin/mute, voice memory, or image memory flows.
 
 ## Screenshots / Preview Assets
 
@@ -250,27 +261,36 @@ Preview links:
 
 Only the poster images stay in version control for README preview. Other rendered video outputs can be regenerated from `promo-video/` when needed.
 
-## Recent Updates (v1.2.0 - 2026-03-27)
+## Recent Updates (v1.6.0 - 2026-04-27)
 
-### New User Registration & Onboarding Fix
-- Fixed OTP type mismatch that caused new user email signup to fail (signup uses `OtpType.signup`, login uses `OtpType.magiclink`)
-- Fixed race condition where onboarding tutorial data check ran before controller initialization completed
-- Coach marks overlay moved to full-screen layer above AppBar so highlight targets align correctly with their actual UI positions
-- Highlight areas now pass through taps to underlying widgets, allowing users to interact with the app during the tutorial
-- Added automatic skip-forward when a coach mark target is not found, preventing the overlay from locking the app
-- Added "User Guide" entry in the app drawer for replaying the onboarding tutorial at any time
+Full version history now lives in [docs/changelog/CHANGELOG.md](./docs/changelog/CHANGELOG.md).
 
-### Guide Assistant Improvements
-- Chat input now supports Enter to send and Shift+Enter for newline (previously Enter did nothing in multiline mode)
-- Fixed false "referenced N recent memories" display for new users by correcting local fallback paths that incorrectly used behavior signals as memory refs
+### Memory System Evolution
+- Added memory decay weighting and semantic knowledge extraction so recent evidence is prioritized while durable behavior patterns can still surface.
+- Added `knowledge-extraction`, `memory-recommender`, and `memory-patrol` Edge Functions for weekly EverMemOS flushes, personalized task recommendations, and proactive nudges.
+- Added anonymous collective memory for milestones such as 7-day streaks, first board clears, and recovery from breaks.
 
-### Stats Navigation
-- Level bar area (level, XP, gold, streak, progress bar) in the home page top bar is now tappable and navigates to the Stats page
+### Memory Visibility
+- Added the Flutter "My Memories" panel with search, sender filters, card expansion, source labels, pin/mute actions, voice memory capture, image-recognition memories, and portrait timeline browsing.
+- Guide memory references now expose concrete snippets instead of vague counts, making it clearer why a suggestion was made.
+- Portrait generation now tracks ISO-week epochs and can show a user portrait timeline.
 
-### Test Suite Maintenance
-- Updated 4 stale test files to match current UI: login screen, guide panel dialog, i18n source checks
+### Memory Achievements And Tests
+- Added memory-oriented achievement conditions and profile counters for total memory count, memory streak days, and Guide memory references.
+- Added property and unit coverage for memory decay, recommendations, collective wisdom, sender registration, multimodal memory, pin/mute behavior, voice input, and round-trip serialization.
 
-## Previous Updates (v1.1.0 - 2026-03-26)
+## Previous Updates (v1.3.0 - 2026-04-15)
+
+### Business Agent Chat And Execution Flow
+- Added `agent-turn`, `agent-run-status`, `agent-step-approve`, and `agent-step-complete` Supabase Functions for traceable agent execution steps.
+- Added agent run persistence and local runtime UI so chat, quest creation, quest updates, navigation, rewards, and weekly summaries can flow through one business-agent entry point.
+- Added a local `POST /agent/free-chat` proxy and OpenAI-compatible base URL normalization.
+
+### Internationalization And Documentation
+- Expanded Chinese and English copy coverage across quick task creation, recycle bin, nightly reflection, weekly summary errors, growth dashboard, and quest editing.
+- Added project-level Codex role documentation and OpenAI-compatible environment variable guidance.
+
+## Older Updates (v1.1.0 - 2026-03-26)
 
 ### Growth Dashboard Redesign
 - Rebuilt the stats page as an inspiring growth dashboard with warm cream / soft green / desaturated gold palette

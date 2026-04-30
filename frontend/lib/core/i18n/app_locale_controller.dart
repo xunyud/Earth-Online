@@ -63,6 +63,7 @@ const Map<String, Map<String, String>> _localizedTexts =
   'common.skip_today': {'zh': '仅跳过今天', 'en': 'Skip Today'},
   'common.accept_task': {'zh': '接受任务', 'en': 'Accept Quest'},
   'common.add_task': {'zh': '加入任务', 'en': 'Add Quest'},
+  'common.copy': {'zh': '复制', 'en': 'Copy'},
   'common.send': {'zh': '发送', 'en': 'Send'},
   'common.loading': {'zh': '加载中...', 'en': 'Loading...'},
   'common.not_available': {'zh': '暂不可用', 'en': 'Unavailable'},
@@ -195,10 +196,15 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '参考了 {count} 段近期记忆',
     'en': 'Based on {count} recent memories'
   },
+  'guide.message.copied': {'zh': '已复制消息', 'en': 'Message copied'},
   'guide.proposal.title': {'zh': '{name}提案', 'en': '{name} Suggests'},
   'guide.fallback.reply': {
     'zh': '我在。先从今天最小的一步开始吧。',
     'en': 'I am here. Let us start with one tiny step today.'
+  },
+  'agent.timeout': {
+    'zh': '响应超时，请稍后再试。',
+    'en': 'Request timed out. Please try again.'
   },
   'guide.quick.week.prompt': {
     'zh': '帮我回看上周的节奏，并给一个提醒。',
@@ -246,10 +252,7 @@ const Map<String, Map<String, String>> _localizedTexts =
     'en':
         'Your account is still fresh, so this starter set is the fastest way to learn the core features.'
   },
-  'guide.onboarding.step.checkin.title': {
-    'zh': '签到打卡',
-    'en': 'Daily Check-In'
-  },
+  'guide.onboarding.step.checkin.title': {'zh': '签到打卡', 'en': 'Daily Check-In'},
   'guide.onboarding.step.checkin.description': {
     'zh': '打开成长仪表盘，完成今日签到，开始积累连续天数。',
     'en':
@@ -407,6 +410,10 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '夜话复盘：仅记录不加任务',
     'en': 'Night reflection: record only, no task'
   },
+  'night.dialog.reply_hint': {
+    'zh': '想说点什么？（可选）',
+    'en': 'Anything you want to share? (optional)'
+  },
   'profile.title': {'zh': '{name}记忆画像', 'en': '{name} Memory Portrait'},
   'profile.generate_fail': {
     'zh': '画像生成失败，请稍后重试。',
@@ -415,6 +422,7 @@ const Map<String, Map<String, String>> _localizedTexts =
   'profile.generate_latest': {'zh': '生成最新画像', 'en': 'Generate Latest Portrait'},
   'profile.source_label': {'zh': '记忆驱动画像', 'en': 'Memory-Driven Portrait'},
   'profile.loading': {'zh': '正在生成画像...', 'en': 'Generating portrait...'},
+  'profile.regenerate': {'zh': '重新生成', 'en': 'Regenerate'},
   'settings.title': {'zh': '设置中心', 'en': 'Settings'},
   'settings.subtitle': {
     'zh': '把助手、外观和语言整理到一个清爽面板里。',
@@ -481,6 +489,8 @@ const Map<String, Map<String, String>> _localizedTexts =
   },
   'drawer.diary': {'zh': '生活日记', 'en': 'Life Diary'},
   'drawer.diary.desc': {'zh': '记录你的现实副本', 'en': 'Record your real-world run'},
+  'drawer.memory': {'zh': '我的记忆', 'en': 'My Memories'},
+  'drawer.memory.desc': {'zh': '查看 AI 记住的你', 'en': 'See what the AI remembers'},
   'drawer.recycle': {'zh': '回收站', 'en': 'Recycle Bin'},
   'drawer.recycle.desc': {'zh': '查看已删除任务', 'en': 'View deleted quests'},
   'recycle.title': {'zh': '回收站', 'en': 'Recycle Bin'},
@@ -507,7 +517,10 @@ const Map<String, Map<String, String>> _localizedTexts =
   'drawer.binding': {'zh': '微信绑定', 'en': 'WeChat Binding'},
   'drawer.binding.desc': {'zh': '同步微信消息', 'en': 'Sync WeChat messages'},
   'drawer.tutorial': {'zh': '使用说明', 'en': 'User Guide'},
-  'drawer.tutorial.desc': {'zh': '重新查看功能引导', 'en': 'Replay the feature walkthrough'},
+  'drawer.tutorial.desc': {
+    'zh': '重新查看功能引导',
+    'en': 'Replay the feature walkthrough'
+  },
   'drawer.settings': {'zh': '设置中心', 'en': 'Settings'},
   'drawer.settings.desc': {'zh': '个性化配置', 'en': 'Personalize preferences'},
   'drawer.logout': {'zh': '退出登录', 'en': 'Sign Out'},
@@ -519,6 +532,97 @@ const Map<String, Map<String, String>> _localizedTexts =
   },
   'drawer.logout.confirm': {'zh': '退出', 'en': 'Sign Out'},
   'diary.title': {'zh': '人生日记', 'en': 'Life Diary'},
+  'memory.title': {'zh': '我的记忆', 'en': 'My Memories'},
+  'memory.refresh': {'zh': '刷新', 'en': 'Refresh'},
+  'memory.search.hint': {'zh': '搜索记忆片段…', 'en': 'Search memories…'},
+  'memory.loading': {'zh': '正在召唤记忆…', 'en': 'Loading memories…'},
+  'memory.error': {'zh': '记忆加载失败，请检查网络后重试', 'en': 'Failed to load memories. Please retry.'},
+  'memory.retry': {'zh': '重试', 'en': 'Retry'},
+  'memory.empty': {'zh': '还没有记忆片段\n开始使用助手后，记忆会在这里积累', 'en': 'No memories yet.\nStart chatting with your assistant to build memories.'},
+  'memory.kind.task': {'zh': '任务事件', 'en': 'Task Event'},
+  'memory.kind.dialog': {'zh': '对话记录', 'en': 'Dialog'},
+  'memory.kind.profile': {'zh': '用户画像', 'en': 'Profile Signal'},
+  'memory.kind.generic': {'zh': '通用记忆', 'en': 'Memory'},
+  'memory.kind.agent_goal': {'zh': 'Agent 目标', 'en': 'Agent Goal'},
+  'memory.kind.agent_tool': {'zh': 'Agent 工具', 'en': 'Agent Tool'},
+  'memory.kind.agent_run': {'zh': 'Agent 完成', 'en': 'Agent Run'},
+  'memory.kind.patrol': {'zh': '主动提醒', 'en': 'Proactive Nudge'},
+  // 来源过滤标签（Sender filter）
+  'memory.sender.all': {'zh': '全部', 'en': 'All'},
+  'memory.sender.user_manual': {'zh': '我的记录', 'en': 'My Records'},
+  'memory.sender.guide_assistant': {'zh': 'AI 助手', 'en': 'AI Assistant'},
+  'memory.sender.agent_runtime': {'zh': 'Agent', 'en': 'Agent'},
+  'memory.sender.patrol_nudge': {'zh': '巡逻提醒', 'en': 'Patrol Nudge'},
+  'memory.sender.wechat_webhook': {'zh': '微信', 'en': 'WeChat'},
+  // 标记重要 / 忘掉操作（Pin / Mute actions）
+  'memory.action.pin': {'zh': '📌 标记重要', 'en': '📌 Mark Important'},
+  'memory.action.unpin': {'zh': '取消重要', 'en': 'Unmark Important'},
+  'memory.action.mute': {'zh': '🗑️ 忘掉这条', 'en': '🗑️ Forget This'},
+  'memory.action.mute_confirm_title': {'zh': '确认忘掉', 'en': 'Confirm Forget'},
+  'memory.action.mute_confirm_body': {
+    'zh': '忘掉后 Guide 将不再引用这条记忆',
+    'en': 'Guide will no longer reference this memory after forgetting'
+  },
+  'memory.action.mute_confirm_yes': {'zh': '确认忘掉', 'en': 'Confirm'},
+  'memory.action.mute_confirm_cancel': {'zh': '取消', 'en': 'Cancel'},
+  'memory.action.pin_success': {'zh': '已标记为重要', 'en': 'Marked as important'},
+  'memory.action.unpin_success': {'zh': '已取消重要标记', 'en': 'Unmarked'},
+  'memory.action.mute_success': {'zh': '已忘掉这条记忆', 'en': 'Memory forgotten'},
+  'memory.action.operation_failed': {
+    'zh': '操作失败，请稍后重试',
+    'en': 'Operation failed, please try again'
+  },
+
+  // 语音输入（Voice input）
+  'memory.voice.unavailable': {
+    'zh': '语音识别不可用',
+    'en': 'Speech recognition unavailable'
+  },
+  'memory.voice.listening': {'zh': '正在录音…', 'en': 'Recording…'},
+  'memory.voice.upload_success': {
+    'zh': '语音记忆已保存',
+    'en': 'Voice memory saved'
+  },
+  'memory.voice.upload_failed': {
+    'zh': '语音记忆保存失败，请稍后重试',
+    'en': 'Failed to save voice memory, please try again'
+  },
+  'memory.voice.transcribe_failed': {
+    'zh': '语音转文字失败，原始音频已保存',
+    'en': 'Transcription failed, raw audio saved'
+  },
+  'memory.voice.audio_unavailable': {
+    'zh': '音频不可用',
+    'en': 'Audio unavailable'
+  },
+
+  // 图片识别（Image recognition）
+  'memory.image.recognizing': {
+    'zh': '正在识别图片…',
+    'en': 'Recognizing image…'
+  },
+  'memory.image.recognize_failed': {
+    'zh': '图片识别失败，请手动输入',
+    'en': 'Image recognition failed, please enter manually'
+  },
+
+  'memory.portrait_timeline.title': {'zh': '记忆画像', 'en': 'Memory Portrait'},
+  'memory.portrait_timeline.guide_empty': {
+    'zh': '坚持记录，下周将生成你的第一张画像',
+    'en': 'Keep recording, your first portrait will be generated next week'
+  },
+  'memory.portrait_timeline.guide_single': {
+    'zh': '坚持记录，下周将生成你的第一张画像',
+    'en': 'Keep recording, your next portrait will be generated next week'
+  },
+  'memory.portrait_timeline.no_summary': {
+    'zh': '暂无画像摘要',
+    'en': 'No portrait summary yet'
+  },
+  'memory.portrait_timeline.label': {
+    'zh': '记忆驱动画像',
+    'en': 'Memory-Driven Portrait'
+  },
   'diary.load_failed': {'zh': '加载失败', 'en': 'Load Failed'},
   'diary.completed_count': {
     'zh': '完成了 {count} 项任务',
@@ -646,10 +750,7 @@ const Map<String, Map<String, String>> _localizedTexts =
     'en':
         'Keep your current structure and attach a new side quest directly to an existing main quest.'
   },
-  'quick_add.dialog.mode.daily.title': {
-    'zh': '日常任务',
-    'en': 'Daily Quest'
-  },
+  'quick_add.dialog.mode.daily.title': {'zh': '日常任务', 'en': 'Daily Quest'},
   'quick_add.dialog.mode.daily.description': {
     'zh': '维持每天重复执行的节奏，并设置每日截止时刻。',
     'en':
@@ -666,7 +767,10 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '例如：四月作品集冲刺',
     'en': 'For example: April portfolio sprint'
   },
-  'quick_add.dialog.side_drafts_title': {'zh': '支线草稿', 'en': 'Side Quest Drafts'},
+  'quick_add.dialog.side_drafts_title': {
+    'zh': '支线草稿',
+    'en': 'Side Quest Drafts'
+  },
   'quick_add.dialog.side_drafts_description': {
     'zh': '可以先留空，只创建主线；也可以顺手把分支一并搭好。',
     'en':
@@ -743,10 +847,7 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '重新选择时间',
     'en': 'Choose Time Again'
   },
-  'quick_add.dialog.daily_due_clear': {
-    'zh': '清除时间',
-    'en': 'Clear Time'
-  },
+  'quick_add.dialog.daily_due_clear': {'zh': '清除时间', 'en': 'Clear Time'},
   'quick_add.dialog.side_index': {
     'zh': '支线 {index}',
     'en': 'Side Quest {index}'
@@ -872,7 +973,10 @@ const Map<String, Map<String, String>> _localizedTexts =
     'en': 'Start recording your growth journey'
   },
   'stats.hero.total_xp': {'zh': '累计经验', 'en': 'Total XP'},
-  'stats.chart.completion_title': {'zh': '任务完成趋势', 'en': 'Quest Completion Trend'},
+  'stats.chart.completion_title': {
+    'zh': '任务完成趋势',
+    'en': 'Quest Completion Trend'
+  },
   'stats.range.7_days': {'zh': '7天', 'en': '7D'},
   'stats.range.30_days': {'zh': '30天', 'en': '30D'},
   'stats.metric.daily_average': {'zh': '日均', 'en': 'Daily Avg'},
@@ -904,7 +1008,10 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '返回数据异常',
     'en': 'Unexpected response payload'
   },
-  'stats.makeup.failed': {'zh': '补签失败: {error}', 'en': 'Make-up failed: {error}'},
+  'stats.makeup.failed': {
+    'zh': '补签失败: {error}',
+    'en': 'Make-up failed: {error}'
+  },
   'stats.quest_mix_title': {'zh': '任务构成', 'en': 'Quest Mix'},
   'stats.quest_mix_count': {
     'zh': '{count}个 ({percent})',
@@ -926,7 +1033,8 @@ const Map<String, Map<String, String>> _localizedTexts =
   },
   'stats.insight.best_day': {
     'zh': '最佳一天完成了 {count} 个任务。那天的你，真的很棒。',
-    'en': 'Your best day finished {count} quests. That version of you did great.'
+    'en':
+        'Your best day finished {count} quests. That version of you did great.'
   },
   'stats.insight.default': {
     'zh': '每一步成长都值得被记住。继续前进吧。',
@@ -935,7 +1043,10 @@ const Map<String, Map<String, String>> _localizedTexts =
   'stats.milestone.first_quest': {'zh': '首次任务', 'en': 'First Quest'},
   'stats.milestone.streak_7': {'zh': '连续7天', 'en': '7-Day Streak'},
   'stats.milestone.xp_1000': {'zh': 'XP破千', 'en': '1000 XP'},
-  'stats.milestone.perfect_day': {'zh': '完美日 x{count}', 'en': 'Perfect Day x{count}'},
+  'stats.milestone.perfect_day': {
+    'zh': '完美日 x{count}',
+    'en': 'Perfect Day x{count}'
+  },
   'stats.milestones_title': {'zh': '成长里程碑', 'en': 'Growth Milestones'},
   'level.title.apprentice_villager': {
     'zh': '见习村民',
@@ -1030,11 +1141,13 @@ const Map<String, Map<String, String>> _localizedTexts =
   'quest.board.banner_ack': {'zh': '知道了', 'en': 'Got It'},
   'quest.board.warm_quote.1': {
     'zh': '新的一天，地球Online又为你准备了全新的冒险。',
-    'en': 'A new day is here, and Earth Online has a fresh adventure waiting for you.'
+    'en':
+        'A new day is here, and Earth Online has a fresh adventure waiting for you.'
   },
   'quest.board.warm_quote.2': {
     'zh': '慢慢来，所有的伟大都是由日常的琐碎构成的。',
-    'en': 'Take it slowly. Everything great is built from ordinary repeated moments.'
+    'en':
+        'Take it slowly. Everything great is built from ordinary repeated moments.'
   },
   'quest.board.warm_quote.3': {
     'zh': '你已经在路上了，这本身就很了不起。',
@@ -1149,10 +1262,7 @@ const Map<String, Map<String, String>> _localizedTexts =
     'zh': '添加任务详情/备注...',
     'en': 'Add quest details or notes...'
   },
-  'quest.edit.daily_due_set': {
-    'zh': '设置每日截止时间',
-    'en': 'Set Daily Deadline'
-  },
+  'quest.edit.daily_due_set': {'zh': '设置每日截止时间', 'en': 'Set Daily Deadline'},
   'quest.edit.daily_due_value': {
     'zh': '每日截止 {time}',
     'en': 'Daily deadline {time}'
@@ -1173,11 +1283,13 @@ const Map<String, Map<String, String>> _localizedTexts =
   },
   'quest.perfect_day.2': {
     'zh': '你做到了。不是靠爆发，而是靠稳定的日常。',
-    'en': 'You did it, not through a burst, but through a steady ordinary rhythm.'
+    'en':
+        'You did it, not through a burst, but through a steady ordinary rhythm.'
   },
   'quest.perfect_day.3': {
     'zh': '今日地球 Online：通关成功。明天也请温柔地继续。',
-    'en': 'Earth Online for today: cleared. Please keep going gently tomorrow too.'
+    'en':
+        'Earth Online for today: cleared. Please keep going gently tomorrow too.'
   },
   'quest.perfect_day.4': {
     'zh': '完成不是终点，是你对自己的承诺又兑现了一次。',
@@ -1189,7 +1301,8 @@ const Map<String, Map<String, String>> _localizedTexts =
   },
   'quest.perfect_day.6': {
     'zh': '厉害！把任务清空的你，已经在悄悄变强。',
-    'en': 'Nicely done. Clearing the board is proof you are getting stronger quietly.'
+    'en':
+        'Nicely done. Clearing the board is proof you are getting stronger quietly.'
   },
   'quest.perfect_day.7': {
     'zh': '今天就到这里吧：你已经很努力了。',
@@ -1223,5 +1336,14 @@ const Map<String, Map<String, String>> _localizedTexts =
   'drawer.profile.progress_hint': {
     'zh': '再获得 {xp} XP 就能继续升级',
     'en': 'Earn {xp} more XP to keep leveling up.'
+  },
+  // 小忆建议（记忆驱动任务推荐）
+  'home.recommendations.title': {
+    'zh': '小忆建议',
+    'en': 'Memory Suggestions'
+  },
+  'home.recommendations.tap_hint': {
+    'zh': '点击可快速创建任务',
+    'en': 'Tap to create a quest'
   },
 };

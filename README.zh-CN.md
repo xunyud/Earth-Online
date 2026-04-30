@@ -49,6 +49,7 @@ Earth Online 的”记忆感知”能力由 [EverMemOS](https://github.com/EverM
 - 把近期任务、日记、行为信号和向导对话沉淀成可复用的上下文。
 - 让用户可以回看最近发生了什么，而不是把每一天都当作空白页重来。
 - 在中断之后通过连续性帮助恢复，而不是反复重新录入。
+- 提供独立“我的记忆”面板，支持搜索、来源过滤、画像时间线、语音记忆、图片识别记忆，以及标记重要/忘掉记忆操作。
 
 ### 3. 记忆驱动的引导
 
@@ -108,7 +109,7 @@ XP、等级、奖励、事件、日记和周报共同让进展具备累积感。
 
 ### Supabase Layer
 
-`supabase/` 目录包含数据库迁移与 Edge Functions，例如 `parse-quest`、`guide-bootstrap`、`guide-chat`、`guide-event-generate`、`guide-event-accept`、`sync-user-memory`、`weekly-summary` 及相关后台任务。这个层负责大部分任务解析、记忆感知引导、事件生成与总结流程的产品逻辑。
+`supabase/` 目录包含数据库迁移与 Edge Functions，例如 `parse-quest`、`guide-bootstrap`、`guide-chat`、`guide-event-generate`、`guide-event-accept`、`sync-user-memory`、`memory-recommender`、`memory-patrol`、`knowledge-extraction`、`weekly-summary` 及相关后台任务。这个层负责大部分任务解析、记忆感知引导、事件生成、记忆演进与总结流程的产品逻辑。
 
 ### Lightweight Backend
 
@@ -137,6 +138,7 @@ Earth Online 把近期行为当作“证据”来使用：
 - `frontend/`：Flutter 应用
 - `backend/`：轻量 Node.js / Express 服务
 - `supabase/`：数据库迁移与 Edge Functions
+- `docs/`：项目文档、版本记录、PRD、实现计划与验证记录
 - `promo-video/`：基于 Remotion 的演示视频项目
 
 ### 1. 运行 Flutter 客户端
@@ -189,10 +191,13 @@ supabase start
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `OPENAI_API_KEY`
 - `OPENAI_BASE_URL` (`https://api.86gamestore.com`)
+- `OPENAI_IMAGE_API_KEY`（可选，独立图像生成 key）
+- `OPENAI_IMAGE_BASE_URL`（可选，独立图像生成端点）
 - `DEEPSEEK_API_KEY`（兼容旧配置时可选）
 - `DEEPSEEK_BASE_URL`（兼容旧配置时可选）
 - `EVERMEMOS_API_URL`
 - `EVERMEMOS_API_KEY`
+- `EVERMEMOS_AUTH_TOKEN`（兼容旧配置时可选）
 - `EVERMEMOS_SYNC_TIMEOUT_MS`
 - `POLLINATIONS_MODEL`
 - `POLLINATIONS_API_KEY`
@@ -238,6 +243,12 @@ npm run still:zh
 - `EVERMEMOS_API_KEY`
 - `EVERMEMOS_BASE_URL`
 - `EVERMEMOS_SENDER`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `OPENAI_CHAT_MODEL`
+- `AGENT_CHAT_PROXY_URL`
+
+Flutter 端“我的记忆”面板会直接读取 EverMemOS。本地构建如需使用记忆搜索、标记重要、忘掉记忆、语音记忆或图片记忆流程，请通过 `--dart-define` 传入 `EVERMEMOS_API_KEY`。
 
 ## 界面预览 / Preview Assets
 
@@ -251,25 +262,34 @@ npm run still:zh
 
 目前仅保留海报图片用于 README 预览，其余渲染生成的视频输出物不纳入版本控制，如有需要可在 `promo-video/` 中重新生成。
 
-## 最近更新 (v1.3.0 - 2026-04-15)
+## 最近更新 (v1.6.0 - 2026-04-27)
 
-完整版本记录见 [CHANGELOG.md](./CHANGELOG.md)。
+完整版本记录见 [docs/changelog/CHANGELOG.md](./docs/changelog/CHANGELOG.md)。
+
+### 记忆系统演进
+- 新增记忆衰减权重与知识提取，让近期证据优先，同时保留可长期复用的行为模式。
+- 新增 `knowledge-extraction`、`memory-recommender`、`memory-patrol` Edge Functions，支持每周 EverMemOS flush、个性化任务推荐与主动提醒。
+- 新增匿名群体记忆，用于沉淀 7 天 streak、首次清空任务板、断档后恢复等里程碑经验。
+
+### 记忆可见性
+- 新增 Flutter “我的记忆”面板，支持搜索、来源过滤、卡片展开、来源标签、标记重要、忘掉记忆、语音记忆、图片识别记忆与画像时间线。
+- Guide 记忆引用现在展示具体片段，不再只是模糊的引用数量，方便用户理解建议来源。
+- 画像生成接入 ISO 周 epoch，可形成用户画像时间线。
+
+### 记忆成就与测试
+- 新增记忆类成就条件与 profile 统计列，覆盖累计记忆数、连续记忆天数和 Guide 引用次数。
+- 补充记忆衰减、推荐、群体智慧、sender 注册、多模态记忆、pin/mute、语音输入、round-trip 序列化等属性测试与单元测试。
+
+## 历史更新 (v1.3.0 - 2026-04-15)
 
 ### 业务型 Agent 聊天与执行链路
 - 新增 `agent-turn`、`agent-run-status`、`agent-step-approve`、`agent-step-complete` 四条 Supabase Functions，支持一次对话拆解为可追踪的执行步骤。
-- 新增 `agent_runs`、`agent_run_steps`、`agent_step_approvals` 三张表及对应状态流转，用于记录 agent run、步骤轨迹和确认结果。
-- 前端新增本地 `LocalAgentRuntimeService`、执行轨迹时间线与确认卡片，把自由聊天、创建任务、修改任务、拆分任务、跳转页面、兑换奖励与周报生成统一收束到业务型 agent 入口。
-- 新增本地后端代理接口 `POST /agent/free-chat`，并补上 OpenAI 兼容 `base URL` 归一化逻辑，修复自由聊天链路与 `/v1` 地址兼容问题。
+- 前端新增本地运行时、执行轨迹时间线与确认卡片，把自由聊天、任务操作、页面跳转、奖励兑换与周报生成统一收束到业务型 agent 入口。
+- 新增本地后端代理接口 `POST /agent/free-chat`，并补上 OpenAI 兼容 `base URL` 归一化逻辑。
 
-### 国际化与界面文案补齐
+### 国际化与文档
 - 为快速创建任务、回收站、夜间反思、周报错误提示、成长仪表盘、任务编辑等界面补齐中英文文案键值。
-- Guide 对话、成长画像、统计页、任务板暖心文案和多处按钮/标签已接入当前语言环境，英文模式下不再混入中文文案。
-- 为本轮国际化补充多组源码与服务层测试，覆盖 Guide、周报、奖励、首页认证入口、快速创建与本地 agent runtime。
-
-### 文档与演示资源
-- 英文 README 已更新 OpenAI 兼容环境变量说明，并补充项目级 Codex 多代理角色配置说明；本次中文版已同步。
-- `promo-video/` 新增 `EarthOnlineCompetition`、`EarthOnlineCompetitionZh`、`EverMemOSDemo` 等 Remotion 合成内容，并补充配套音频、视频片段与脚本。
-- 新增 [docs/2026-04-15-agent-chat-fix-summary.md](./docs/2026-04-15-agent-chat-fix-summary.md)，记录 agent 聊天修复背景、根因与验证结果。
+- 补充项目级 Codex 多代理角色配置说明与 OpenAI 兼容环境变量说明。
 
 ## 历史更新 (v1.2.0 - 2026-03-27)
 

@@ -112,6 +112,78 @@ async function callJsonLLM<T>(
   }
 }
 
+/**
+ * 多模态输入内容类型，支持文本和图片 URL 两种格式。
+ * 用于 callMultimodalLLM 的 contents 参数。
+ */
+export type MultimodalContent =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+/**
+ * 图片识别返回结构，包含识别文本、建议任务标题和场景描述。
+ */
+export type ImageRecognitionResult = {
+  text_content: string;
+  suggested_task_title: string;
+  scene_description: string;
+};
+
+/**
+ * 统一多模态 LLM 调用函数，支持文本和图片输入。
+ * 复用现有 OPENAI_API_KEY 和 OPENAI_BASE_URL 配置。
+ * 默认超时 15 秒（图片/音频处理需要更长时间）。
+ * 任何失败（HTTP 错误、超时、JSON 解析失败）均返回 fallback 值，不抛异常。
+ */
+export async function callMultimodalLLM<T>(
+  contents: MultimodalContent[],
+  systemPrompt: string,
+  fallback: T,
+  opts?: { timeoutMs?: number },
+): Promise<T> {
+  const apiKey = getApiKey();
+  if (!apiKey) return fallback;
+
+  const timeoutMs = opts?.timeoutMs ?? 15000;
+
+  try {
+    const resp = await fetch(
+      `${getApiBaseUrl().replace(/\/+$/, "")}/chat/completions`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: Deno.env.get("OPENAI_MODEL") || "deepseek-chat",
+          temperature: 0.3,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: contents },
+          ],
+          response_format: { type: "json_object" },
+        }),
+        signal: AbortSignal.timeout(timeoutMs),
+      },
+    );
+
+    if (!resp.ok) {
+      console.warn("callMultimodalLLM: HTTP", resp.status);
+      return fallback;
+    }
+
+    const data = await resp.json();
+    const raw = toText(data?.choices?.[0]?.message?.content);
+    if (!raw) return fallback;
+    return JSON.parse(stripJsonFence(raw)) as T;
+  } catch (err) {
+    console.warn("callMultimodalLLM: 调用失败，返回 fallback", err);
+    return fallback;
+  }
+}
+
+
 function pickLine(lines: string[], fallback: string) {
   return lines.length > 0 ? lines[0] : fallback;
 }
@@ -373,6 +445,32 @@ export function buildNightReflectionFallback(
   };
 }
 
+/**
+ * 从 packed_context 中提取行为信号区域作为行为模式摘要。
+ * 解析【行为信号】区域的内容，返回拼接后的摘要文本。
+ * packed_context 为空或不含行为信号区域时返回空字符串。
+ */
+export function extractBehaviorSummary(packedContext: string): string {
+  if (!packedContext) return "";
+  // 匹配【行为信号】区域，提取到下一个【...】区域或字符串末尾
+  const match = packedContext.match(/【行为信号】\n([\s\S]*?)(?=\n【|$)/);
+  if (!match || !match[1]) return "";
+  const lines = match[1].trim().split("\n").filter((l) => l.trim());
+  if (lines.length === 0) return "";
+  // 去掉序号前缀（如 "1. "），拼接为摘要
+  return lines.map((l) => l.replace(/^\d+\.\s*/, "").trim()).filter(Boolean)
+    .join("；");
+}
+
+/**
+ * 判断是否应使用 fallback（随机生成）路径。
+ * 当结构化记忆条数不足 3 条时降级为随机生成。
+ */
+export function shouldUseFallback(structuredMemoryCount: number): boolean {
+  return structuredMemoryCount < 3;
+}
+
+
 export async function generateProactiveMessage(
   memory: GuideMemoryBundle,
   clientContext?: Record<string, unknown>,
@@ -415,9 +513,24 @@ export async function generateDailyEvent(
 ) {
   const language = resolveGuideLanguage(memory, { clientContext });
   const fallback = buildEventFallback(memory, clientContext);
+
+  // 记忆不足 3 条时降级为随机生成模式（基于 recent_context 条数判断记忆丰富度）
+  if (shouldUseFallback(memory.recent_context.length)) {
+    return fallback;
+  }
+
+  // 从 packed_context 中提取行为模式摘要，注入 LLM prompt 引导个性化生成
+  const behaviorSummary = extractBehaviorSummary(memory.packed_context);
+
+  const behaviorInjection = behaviorSummary
+    ? language === "en"
+      ? `\nRecent behavior patterns: ${behaviorSummary}\nPlease generate a personalized challenge based on the user's actual behavior patterns.`
+      : `\n用户近期行为模式：${behaviorSummary}\n请基于用户的实际行为模式生成个性化挑战。`
+    : "";
+
   const systemPrompt = language === "en"
-    ? "You are the game master for Earth Online. Generate one small, concrete daily event task from the user's recent and long-term memory. The title must be a specific action the user can do right now. Avoid abstract wording and fictional world-building. Output JSON only."
-    : "你是地球Online的游戏DM。请根据用户近期与长期记忆生成一个每日突发事件任务。Title必须是一个具体的、马上能做的小动作，禁止抽象描述，禁止虚构场景。只输出JSON。";
+    ? `You are the game master for Earth Online. Generate one small, concrete daily event task from the user's recent and long-term memory. The title must be a specific action the user can do right now. Avoid abstract wording and fictional world-building. Output JSON only.${behaviorInjection}`
+    : `你是地球Online的游戏DM。请根据用户近期与长期记忆生成一个每日突发事件任务。Title必须是一个具体的、马上能做的小动作，禁止抽象描述，禁止虚构场景。只输出JSON。${behaviorInjection}`;
   const userPrompt = language === "en"
     ? `
 Generate one daily event with this JSON shape:
@@ -462,8 +575,8 @@ export async function generateChat(
   const language = resolveGuideLanguage(memory, { message, clientContext });
   const fallback = buildChatFallback(memory, message, clientContext);
   const systemPrompt = language === "en"
-    ? "You are the user's companion in Earth Online. Reply from remembered context in a short, grounded way. Avoid generic therapy language. Give practical next-step guidance. If you suggest a task, the title must be a concrete action the user can do immediately. Avoid abstract wording and fictional world-building. Output JSON only."
-    : "你是地球Online专属向导。请基于用户记忆回复，不要模板化安慰。保持短句，给出可执行建议。如果建议任务，title必须是一个具体的、马上能做的小动作，禁止抽象描述，禁止虚构场景。只输出JSON。";
+    ? "You are the user's companion in Earth Online. Reply from remembered context in a short, grounded way. Avoid generic therapy language. Give practical next-step guidance. If you suggest a task, the title must be a concrete action the user can do immediately. Avoid abstract wording and fictional world-building. You can generate memory portraits based on the user's recent actions and long-term patterns — if the context includes [记忆画像] data, you may reference it naturally to explain what shaped the portrait. Output JSON only."
+    : "你是地球Online专属向导。请基于用户记忆回复，不要模板化安慰。保持短句，给出可执行建议。如果建议任务，title必须是一个具体的、马上能做的小动作，禁止抽象描述，禁止虚构场景。你具备记忆画像能力——能根据用户近期行动节奏、长期习惯和行为信号生成专属画像。如果上下文中包含[记忆画像]数据，可以自然地引用它来解释画像的生成依据。只输出JSON。";
   const userPrompt = language === "en"
     ? `
 Scene: ${scene}

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/binding/screens/binding_view.dart';
+import '../../features/memory/screens/memory_page.dart';
 import '../../features/profile/controllers/user_profile_controller.dart';
 import '../../features/profile/services/profile_avatar_picker.dart';
 import '../../features/quest/controllers/quest_controller.dart';
@@ -108,6 +109,22 @@ class _AppDrawerState extends State<AppDrawer> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const LifeDiaryPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildMenuItem(
+                    context,
+                    questTheme: questTheme,
+                    icon: Icons.memory_rounded,
+                    title: context.tr('drawer.memory'),
+                    subtitle: context.tr('drawer.memory.desc'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MemoryPage(),
                         ),
                       );
                     },

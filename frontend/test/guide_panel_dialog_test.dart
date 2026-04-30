@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/core/theme/quest_theme.dart';
 import 'package:frontend/features/quest/widgets/guide_panel_dialog.dart';
@@ -177,5 +178,214 @@ void main() {
     expect(find.text('新建任务'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('发送'), findsOneWidget);
+  });
+
+  testWidgets('GuidePanelDialog 支持复制用户和助手消息', (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(900, 900));
+
+    final controller = TextEditingController();
+    addTearDown(controller.dispose);
+    final copiedMessages = <String>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.light().copyWith(
+          extensions: [QuestTheme.freshBreath()],
+        ),
+        home: Scaffold(
+          body: GuidePanelDialog(
+            title: '小忆',
+            guideName: '小忆',
+            subtitle: '帮你把聊天继续接住。',
+            guideMemoryTitle: '小忆记得',
+            guideMemorySummary: '最近你在验证聊天交互。',
+            guideMemorySignals: const ['需要复制'],
+            statusText: '小忆在线',
+            editNameLabel: '修改名字',
+            closeTooltip: '关闭',
+            statusReady: true,
+            messages: const [
+              GuideDialogMessage(
+                role: GuideDialogRole.assistant,
+                content: '先把这条助手消息复制下来。',
+              ),
+              GuideDialogMessage(
+                role: GuideDialogRole.user,
+                content: '这是一条用户消息。',
+              ),
+            ],
+            quickActions: const [],
+            examplePrompts: const [],
+            inputController: controller,
+            inputHintText: '继续输入',
+            sendLabel: '发送',
+            retryLabel: '重试',
+            closeLabel: '关闭',
+            copyMessageTooltip: '复制',
+            sending: false,
+            memoryRefsLabelBuilder: (count) => '参考了 $count 段记忆',
+            onRetry: () {},
+            onCopyMessage: copiedMessages.add,
+            onSubmit: (_) {},
+            onQuickActionTap: (_) {},
+            onExamplePromptTap: (_) {},
+            onEditGuideName: () {},
+            onClose: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 复制按钮已改为长按气泡触发，不再有常驻 IconButton
+    expect(find.byTooltip('复制'), findsNothing);
+
+    // 验证气泡容器（GestureDetector）存在且绑定了 onLongPress
+    final assistantBubble = find.byKey(
+      ValueKey('bubble-assistant-${'先把这条助手消息复制下来。'.hashCode}'),
+    );
+    expect(assistantBubble, findsOneWidget);
+    final assistantGesture = tester.widget<GestureDetector>(assistantBubble);
+    expect(assistantGesture.onLongPress, isNotNull);
+
+    // 用户气泡同样绑定了 onLongPress（skipOffstage: false 穿透 ListView 懒加载）
+    final userBubble = find.byKey(
+      ValueKey('bubble-user-${'这是一条用户消息。'.hashCode}'),
+      skipOffstage: false,
+    );
+    expect(userBubble, findsOneWidget);
+    final userGesture = tester.widget<GestureDetector>(userBubble);
+    expect(userGesture.onLongPress, isNotNull);
+  });
+
+  testWidgets('GuidePanelDialog 支持上下键回填已发送消息并恢复草稿', (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(900, 620));
+
+    final controller = TextEditingController(text: '临时草稿');
+    controller.selection = TextSelection.collapsed(
+      offset: controller.text.length,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.light().copyWith(
+          extensions: [QuestTheme.freshBreath()],
+        ),
+        home: Scaffold(
+          body: GuidePanelDialog(
+            title: '小忆',
+            guideName: '小忆',
+            subtitle: '帮你找回刚刚发过的话。',
+            guideMemoryTitle: '小忆记得',
+            guideMemorySummary: '最近你在调试输入历史。',
+            guideMemorySignals: const ['命令历史'],
+            statusText: '小忆在线',
+            editNameLabel: '修改名字',
+            closeTooltip: '关闭',
+            statusReady: true,
+            messages: const [],
+            quickActions: const [],
+            examplePrompts: const [],
+            inputController: controller,
+            messageHistory: const ['第一条消息', '第二条消息'],
+            inputHintText: '继续输入',
+            sendLabel: '发送',
+            retryLabel: '重试',
+            closeLabel: '关闭',
+            sending: false,
+            memoryRefsLabelBuilder: (count) => '参考了 $count 段记忆',
+            onRetry: () {},
+            onSubmit: (_) {},
+            onQuickActionTap: (_) {},
+            onExamplePromptTap: (_) {},
+            onEditGuideName: () {},
+            onClose: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(controller.text, '第二条消息');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(controller.text, '第一条消息');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(controller.text, '第二条消息');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(controller.text, '临时草稿');
+  });
+
+  testWidgets('GuidePanelDialog 消息内容支持自由选择复制', (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    // 单条消息场景，不受 ListView 懒加载影响
+    await tester.binding.setSurfaceSize(const Size(900, 900));
+
+    final controller = TextEditingController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.light().copyWith(
+          extensions: [QuestTheme.freshBreath()],
+        ),
+        home: Scaffold(
+          body: GuidePanelDialog(
+            title: '小忆',
+            guideName: '小忆',
+            subtitle: '现在这段聊天应该能被拖选复制。',
+            guideMemoryTitle: '小忆记得',
+            guideMemorySummary: '最近你希望像普通聊天窗口那样自由复制文本。',
+            guideMemorySignals: const ['可选文本'],
+            statusText: '小忆在线',
+            editNameLabel: '修改名字',
+            closeTooltip: '关闭',
+            statusReady: true,
+            messages: const [
+              GuideDialogMessage(
+                role: GuideDialogRole.assistant,
+                content: '这里是一段可以自由选择的助手回复。',
+              ),
+            ],
+            quickActions: const [],
+            examplePrompts: const [],
+            inputController: controller,
+            inputHintText: '继续输入',
+            sendLabel: '发送',
+            retryLabel: '重试',
+            closeLabel: '关闭',
+            copyMessageTooltip: '复制',
+            sending: false,
+            memoryRefsLabelBuilder: (count) => '参考了 $count 段记忆',
+            onRetry: () {},
+            onCopyMessage: (_) {},
+            onSubmit: (_) {},
+            onQuickActionTap: (_) {},
+            onExamplePromptTap: (_) {},
+            onEditGuideName: () {},
+            onClose: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 单条消息，SelectableText 应该可见
+    expect(find.byType(SelectableText), findsOneWidget);
+    // SelectableText 的文本内容可通过 find.text 找到
+    expect(find.text('这里是一段可以自由选择的助手回复。'), findsOneWidget);
   });
 }
