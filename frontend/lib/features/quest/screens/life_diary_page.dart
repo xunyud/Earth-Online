@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/i18n/app_locale_controller.dart';
@@ -285,21 +286,22 @@ class _LifeDiaryPageState extends State<LifeDiaryPage> {
               );
             },
           ),
-          IconButton(
-            tooltip: context.tr('diary.push_wechat.tooltip'),
-            onPressed: _pushingToWechat ? null : _pushToWechat,
-            icon: _pushingToWechat
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: theme.primaryAccentColor,
-                    ),
-                  )
-                : const Icon(Icons.send_rounded),
-            color: theme.primaryAccentColor,
-          ),
+          if (AppConfig.wechatEnabled)
+            IconButton(
+              tooltip: context.tr('diary.push_wechat.tooltip'),
+              onPressed: _pushingToWechat ? null : _pushToWechat,
+              icon: _pushingToWechat
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.primaryAccentColor,
+                      ),
+                    )
+                  : const Icon(Icons.send_rounded),
+              color: theme.primaryAccentColor,
+            ),
           const SizedBox(width: 6),
         ],
       ),

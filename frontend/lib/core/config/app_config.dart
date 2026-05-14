@@ -1,6 +1,16 @@
 class AppConfig {
   const AppConfig._();
 
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://ndbhxjvrgxeuyykrlyxl.supabase.co',
+  );
+
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: 'sb_publishable_oqeYb0IhGpRlPmYCWqLomQ_Jr4yrwT9',
+  );
+
   static const String evermemosApiKey = String.fromEnvironment(
     'EVERMEMOS_API_KEY',
     defaultValue: '',
@@ -16,16 +26,6 @@ class AppConfig {
     defaultValue: 'smart-p-user',
   );
 
-  static const String openaiApiKey = String.fromEnvironment(
-    'OPENAI_API_KEY',
-    defaultValue: '',
-  );
-
-  static const String openaiBaseUrl = String.fromEnvironment(
-    'OPENAI_BASE_URL',
-    defaultValue: 'https://api.86gamestore.com',
-  );
-
   static const String openaiChatModel = String.fromEnvironment(
     'OPENAI_CHAT_MODEL',
     defaultValue: 'deepseek-chat',
@@ -35,4 +35,7 @@ class AppConfig {
     'AGENT_CHAT_PROXY_URL',
     defaultValue: 'http://127.0.0.1:3000/agent/free-chat',
   );
+
+  /// 微信功能开关（暂时隐藏，待安全加固后重新启用）
+  static const bool wechatEnabled = false;
 }

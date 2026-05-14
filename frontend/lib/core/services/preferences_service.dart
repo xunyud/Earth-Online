@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PreferencesService {
+  static const String _keyPrivacyAgreed = 'privacy_agreed';
+  static bool? _cachedPrivacyAgreed;
+
   static const String _keyHideShopDeleteConfirm = 'hide_shop_delete_confirm';
   static bool? _cachedHideShopDeleteConfirm;
 
@@ -35,6 +38,21 @@ class PreferencesService {
 
   static const String _keyProfileAvatarBase64 = 'profile_avatar_base64';
   static String? _cachedProfileAvatarBase64;
+
+  static Future<bool> privacyAgreed() async {
+    final cached = _cachedPrivacyAgreed;
+    if (cached != null) return cached;
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getBool(_keyPrivacyAgreed) ?? false;
+    _cachedPrivacyAgreed = value;
+    return value;
+  }
+
+  static Future<void> setPrivacyAgreed(bool value) async {
+    _cachedPrivacyAgreed = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyPrivacyAgreed, value);
+  }
 
   static Future<bool> hideShopDeleteConfirm() async {
     final cached = _cachedHideShopDeleteConfirm;
@@ -240,6 +258,7 @@ class PreferencesService {
 
   @visibleForTesting
   static void resetCache() {
+    _cachedPrivacyAgreed = null;
     _cachedHideShopDeleteConfirm = null;
     _cachedSelectedTheme = null;
     _cachedAppLocale = null;

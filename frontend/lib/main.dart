@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/config/app_config.dart';
 import 'core/constants/app_text_styles.dart';
 import 'core/constants/app_keys.dart';
 import 'core/i18n/app_locale_controller.dart';
 import 'core/services/preferences_service.dart';
 import 'core/services/supabase_auth_service.dart';
 import 'core/theme/quest_theme.dart';
+import 'core/widgets/privacy_consent_dialog.dart';
 import 'features/auth/screens/forest_login_page.dart';
 import 'features/auth/screens/forest_login_web_page_stub.dart'
     if (dart.library.html) 'features/auth/screens/forest_login_web_page_web.dart';
@@ -23,13 +25,17 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://ndbhxjvrgxeuyykrlyxl.supabase.co',
-    anonKey: 'sb_publishable_oqeYb0IhGpRlPmYCWqLomQ_Jr4yrwT9',
+    url: AppConfig.supabaseUrl,
+    anonKey: AppConfig.supabaseAnonKey,
   );
   try {
     await SupabaseAuthService.instance.ensureActiveSession();
   } catch (_) {
-    // 启动阶段优先恢复会话，网络抖动时交给后续按需重试。
+    // 会话恢复失败（如项目暂停后 token 失效），清除残留会话
+    // 避免后续请求卡在 token 刷新重试循环中
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (_) {}
   }
 
   runApp(const MyApp());
@@ -78,6 +84,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final WeeklySummaryJobService _weeklySummaryJobService =
       WeeklySummaryJobService.instance;
   bool _weeklySummaryDialogOpen = false;
+  bool _privacyChecked = false;
 
   @override
   void initState() {
@@ -86,6 +93,22 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _weeklySummaryJobService.addListener(_handleWeeklySummaryReminder);
     unawaited(_loadLocalPreferences());
     unawaited(WeeklySummaryJobService.instance.initialize());
+    _checkPrivacyConsent();
+  }
+
+  void _checkPrivacyConsent() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final agreed = await PreferencesService.privacyAgreed();
+      if (agreed) {
+        if (mounted) setState(() => _privacyChecked = true);
+        return;
+      }
+      final context = rootNavigatorKey.currentContext;
+      if (context != null && mounted) {
+        await ensurePrivacyConsent(context);
+        if (mounted) setState(() => _privacyChecked = true);
+      }
+    });
   }
 
   @override

@@ -68,19 +68,18 @@ void main() {
   });
 
   group('来源过滤标签行渲染', () {
-    testWidgets('默认选中"全部"标签，所有 6 个过滤标签均可见', (tester) async {
+    testWidgets('默认选中"全部"标签，所有可见过滤标签均可见', (tester) async {
       await tester.pumpWidget(_buildTestApp());
       // 等待首帧渲染完成（HTTP 调用会异步失败，不阻塞 UI）
       await tester.pump();
 
-      // 验证 6 个来源过滤标签文本均存在
-      // i18n 默认中文：全部、我的记录、AI 助手、Agent、巡逻提醒、微信
+      // 验证来源过滤标签文本均存在（微信标签由 AppConfig.wechatEnabled 控制）
+      // i18n 默认中文：全部、我的记录、AI 助手、Agent、巡逻提醒
       expect(find.text('全部'), findsOneWidget);
       expect(find.text('我的记录'), findsOneWidget);
       expect(find.text('AI 助手'), findsOneWidget);
       expect(find.text('Agent'), findsOneWidget);
       expect(find.text('巡逻提醒'), findsOneWidget);
-      expect(find.text('微信'), findsOneWidget);
     });
 
     testWidgets('默认"全部"标签具有选中态样式（白色文字 + 深色背景）', (tester) async {
@@ -126,12 +125,11 @@ void main() {
       await tester.pumpWidget(_buildTestApp());
       await tester.pump();
 
-      // "全部"标签无图标，其余 5 个标签各有对应图标
+      // "全部"标签无图标，其余标签各有对应图标（微信由 wechatEnabled 控制）
       expect(find.byIcon(Icons.edit), findsOneWidget);
       expect(find.byIcon(Icons.smart_toy), findsOneWidget);
       expect(find.byIcon(Icons.settings), findsOneWidget);
       expect(find.byIcon(Icons.notifications), findsOneWidget);
-      expect(find.byIcon(Icons.chat), findsOneWidget);
     });
   });
 

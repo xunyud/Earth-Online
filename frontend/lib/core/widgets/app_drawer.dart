@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/app_config.dart';
 import '../../features/binding/screens/binding_view.dart';
 import '../../features/memory/screens/memory_page.dart';
 import '../../features/profile/controllers/user_profile_controller.dart';
@@ -158,22 +159,23 @@ class _AppDrawerState extends State<AppDrawer> {
                       Future.microtask(widget.onOpenGuide);
                     },
                   ),
-                  _buildMenuItem(
-                    context,
-                    questTheme: questTheme,
-                    icon: Icons.link_rounded,
-                    title: context.tr('drawer.binding'),
-                    subtitle: context.tr('drawer.binding.desc'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const BindingView(),
-                        ),
-                      );
-                    },
-                  ),
+                  if (AppConfig.wechatEnabled)
+                    _buildMenuItem(
+                      context,
+                      questTheme: questTheme,
+                      icon: Icons.link_rounded,
+                      title: context.tr('drawer.binding'),
+                      subtitle: context.tr('drawer.binding.desc'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BindingView(),
+                          ),
+                        );
+                      },
+                    ),
                   if (widget.onOpenTutorial != null)
                     _buildMenuItem(
                       context,
