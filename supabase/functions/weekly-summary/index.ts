@@ -1,11 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { toText, toErrorMessage, corsHeaders } from "../_shared/http.ts"
 import { EverMemOSClient } from "../_shared/evermemos_client.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 type QuestRow = {
   title: string;
@@ -23,21 +18,6 @@ function formatDateId(d: Date) {
   const m = (d.getUTCMonth() + 1).toString().padStart(2, "0");
   const day = d.getUTCDate().toString().padStart(2, "0");
   return `${y}-${m}-${day}`;
-}
-
-function toText(v: unknown) {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
-
-function toErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
 }
 
 function localizedText(language: SummaryLanguage, zh: string, en: string) {

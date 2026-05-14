@@ -19,7 +19,7 @@ void main() {
     );
     expect(
       source,
-      contains("final result = await _guideService.bootstrap("),
+      contains("await _guideController.guideService.bootstrap("),
     );
     expect(
       source,

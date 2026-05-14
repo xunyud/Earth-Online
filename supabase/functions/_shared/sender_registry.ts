@@ -4,6 +4,7 @@
  */
 
 import type { EverMemOSClient } from "./evermemos_client.ts";
+import { toErrorMessage } from "./http.ts"
 
 // ---------- 常量与类型 ----------
 
@@ -22,15 +23,6 @@ export type SenderName = typeof SENDER_NAMES[number];
 export const senderCache = new Map<string, string>();
 
 // ---------- 辅助函数 ----------
-
-function toErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
 
 // ---------- 核心函数 ----------
 

@@ -1,3 +1,4 @@
+import { toText, toErrorMessage } from "./http.ts"
 export const weeklySummaryCorsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -17,20 +18,7 @@ export type WeeklySummaryJobRow = {
   notified_at?: string | null;
 };
 
-export function toText(value: unknown): string {
-  if (typeof value === "string") return value.trim();
-  if (value == null) return "";
-  return String(value).trim();
-}
-
-export function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
+export { toText, toErrorMessage }
 
 export function formatDateId(date: Date): string {
   const y = date.getUTCFullYear().toString().padStart(4, "0");

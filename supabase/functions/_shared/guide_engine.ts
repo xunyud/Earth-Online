@@ -1,4 +1,5 @@
 import { gatherGuideMemoryBundle } from "./guide_memory.ts";
+import { toText, toRecord } from "./http.ts"
 import {
   generateChat,
   generateDailyEvent,
@@ -18,17 +19,6 @@ export type GuideDialogExtraPayload = {
 };
 
 const DEFAULT_GUIDE_DISPLAY_NAME = "Xiaoyi";
-
-function toText(v: unknown) {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
-
-function toRecord(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
 
 function todayDateId() {
   const now = new Date();
@@ -333,7 +323,6 @@ async function fetchRecommendations(
     return [];
   }
 }
-
 
 export async function buildGuideBootstrapPayload(
   supabase: any,
@@ -645,7 +634,6 @@ export function buildNightReflectionWritePayload(
     sender: "guide-assistant",
   };
 }
-
 
 export function normalizeSuggestedTask(raw: unknown): GuideSuggestedTask {
   const map = (raw && typeof raw === "object")

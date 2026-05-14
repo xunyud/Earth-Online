@@ -5,36 +5,9 @@
 // 输出：{ success: boolean, processed: number, errors: string[] }
 
 import "@supabase/functions-js/edge-runtime.d.ts";
+import { toText, toErrorMessage, json, corsHeaders } from "../_shared/http.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { EverMemOSClient } from "../_shared/evermemos_client.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-function toText(v: unknown): string {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
-
-function json(status: number, data: unknown) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 /**
  * 对单个用户执行知识提取（调用 Flush API）。

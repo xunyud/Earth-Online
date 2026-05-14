@@ -1,4 +1,5 @@
 import type { SerializedAgentRunStep } from "./agent_engine.ts";
+import { toText, toRecord } from "./http.ts"
 import { type AgentJson, toAgentJson } from "./agent_types.ts";
 
 export type AgentPlannerStepDraft =
@@ -20,17 +21,6 @@ export type AgentPlanningResult = {
   summary: string;
   steps: AgentPlannerStepDraft[];
 };
-
-function toText(value: unknown): string {
-  if (typeof value === "string") return value.trim();
-  if (value == null) return "";
-  return String(value).trim();
-}
-
-function toRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
 
 function localized(prefersEnglish: boolean, zh: string, en: string): string {
   return prefersEnglish ? en : zh;

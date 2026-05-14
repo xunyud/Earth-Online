@@ -12,32 +12,30 @@ void main() {
         await File('lib/features/quest/controllers/quest_controller.dart')
             .readAsString();
 
+    final quickCreateDialog =
+        await File('lib/features/quest/widgets/quick_create_dialog_content.dart').readAsString();
+
     expect(
-      homePage.contains('enum _QuickCreateMode') &&
-          homePage.contains('_QuickCreateMode.newMainWithSides') &&
-          homePage.contains('_QuickCreateMode.attachToExistingMain') &&
+      quickCreateDialog.contains('enum QuickCreateMode') &&
+          quickCreateDialog.contains('QuickCreateMode.newMainWithSides') &&
+          quickCreateDialog.contains('QuickCreateMode.attachToExistingMain') &&
           homePage.contains('QuickAddBar(') &&
           homePage.contains('onPlusTap: _showPlusMenu') &&
           !homePage.contains("label: '创建策略'") &&
-          homePage.contains('新建主线并添加支线') &&
-          homePage.contains('挂到已有主线') &&
-          homePage.contains('_sideDraftControllers') &&
+          quickCreateDialog.contains('quick_add.dialog.mode.new_main.title') &&
+          quickCreateDialog.contains('quick_add.dialog.mode.attach.title') &&
+          quickCreateDialog.contains('_sideDraftControllers') &&
           homePage.contains('for (final sideTitle in result.sideTitles)') &&
-          homePage.contains(
-            "return _normalizedSideTitles.isEmpty ? '创建主线' : '创建主线和支线';",
-          ) &&
-          homePage.contains("return '创建支线';") &&
-          homePage.contains("return '创建日常任务';") &&
-          !homePage.contains("return '????'") &&
-          !homePage.contains('保留原本的快速支线创建方式') &&
-          !homePage.contains('不再使用系统下拉框') &&
-          homePage.contains('只创建一条支线，并挂到选中的主线上。') &&
-          !homePage.contains('DropdownButtonFormField<String>') &&
-          homePage.contains('_selectedParentMainQuestId') &&
-          homePage.contains('title: _attachSideTitleController.text.trim()') &&
-          !homePage.contains(
-            "mode: _QuickCreateMode.attachToExistingMain,\n            title: _attachSideTitleController.text.trim(),\n            sideTitles:",
-          ) &&
+          quickCreateDialog.contains('quick_add.create.tier_main') &&
+          quickCreateDialog.contains('quick_add.create.tier_side') &&
+          quickCreateDialog.contains('quick_add.dialog.mode.daily.title') &&
+          !quickCreateDialog.contains("return '????'") &&
+          !quickCreateDialog.contains('保留原本的快速支线创建方式') &&
+          !quickCreateDialog.contains('不再使用系统下拉框') &&
+          quickCreateDialog.contains('quick_add.dialog.side_description') &&
+          !quickCreateDialog.contains('DropdownButtonFormField<String>') &&
+          quickCreateDialog.contains('_selectedParentMainQuestId') &&
+          quickCreateDialog.contains('title: _attachSideTitleController.text.trim()') &&
           controller.contains('Future<QuestNode?> createManualQuest(') &&
           controller.contains("'parent_id': normalizedParentId,") &&
           controller.contains("normalizedTier == 'Side_Quest'"),
@@ -58,8 +56,11 @@ void main() {
     final item =
         await File('lib/features/quest/widgets/quest_item.dart').readAsString();
 
+    final quickCreateDialog =
+        await File('lib/features/quest/widgets/quick_create_dialog_content.dart').readAsString();
+
     expect(
-      homePage.contains('showTimePicker(') &&
+      quickCreateDialog.contains('showTimePicker(') &&
           homePage.contains('dailyDueMinutes') &&
           editSheet.contains('showTimePicker(') &&
           editSheet.contains('daily_due_minutes') &&

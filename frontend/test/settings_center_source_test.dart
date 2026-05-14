@@ -10,8 +10,8 @@ void main() {
         await File('lib/core/i18n/app_locale_controller.dart').readAsString();
 
     expect(
-      homePage.contains('_SettingsSectionCard(') &&
-          homePage.contains('_SettingsChoicePill(') &&
+      homePage.contains('SettingsSectionCard(') &&
+          homePage.contains('SettingsChoicePill(') &&
           homePage.contains("['forest_adventure', 'default']") &&
           !homePage.contains("['forest_adventure', 'default', 'dark_souls']") &&
           !localeFile.contains('settings.theme.dark'),

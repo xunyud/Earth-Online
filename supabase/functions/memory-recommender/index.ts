@@ -6,6 +6,7 @@
 // 依赖：EverMemOS API（记忆检索）、DeepSeek LLM（推荐生成）
 
 import "@supabase/functions-js/edge-runtime.d.ts";
+import { toText, toErrorMessage, json, corsHeaders } from "../_shared/http.ts"
 import { EverMemOSClient } from "../_shared/evermemos_client.ts";
 import {
   buildRecommendationPrompt,
@@ -20,38 +21,10 @@ export type { Recommendation };
 
 // ---------- 常量与类型 ----------
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
 /** 整个函数的超时时间（毫秒） */
 const FUNCTION_TIMEOUT_MS = 8_000;
 
 // ---------- 工具函数 ----------
-
-function toText(v: unknown): string {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
-
-function json(status: number, data: unknown) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 // ---------- LLM 调用 ----------
 

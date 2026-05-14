@@ -8,9 +8,9 @@ void main() {
     final content = await file.readAsString();
 
     expect(
-      content.contains('_PortraitInsightChart(') &&
-          content.contains('_PortraitEvaluationSection(') &&
-          content.contains('_PortraitReadableMetricGrid(') &&
+      content.contains('PortraitInsightChart(') &&
+          content.contains('PortraitEvaluationSection(') &&
+          content.contains('PortraitReadableMetricGrid(') &&
           !content.contains("profile.meta.model") &&
           !content.contains("profile.meta.seed") &&
           !content.contains("profile.meta.style") &&

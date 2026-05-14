@@ -27,7 +27,7 @@ void main() {
 
     expect(
       source,
-      contains("await _guideService.bootstrap("),
+      contains("await _guideController.guideService.bootstrap("),
     );
     expect(
       source,

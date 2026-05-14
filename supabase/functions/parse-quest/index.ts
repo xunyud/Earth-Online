@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeaders, toText, json } from "../_shared/http.ts";
 
 console.log("Function 'parse-quest' up and running!");
 
@@ -26,19 +26,6 @@ type ParseQuestHandlerDeps = {
   ) => Promise<AuthenticatedParseQuestUser | null>;
   callLlm: (text: string) => Promise<ParseQuestPayload | null>;
 };
-
-function json(status: number, data: unknown) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
-function toText(value: unknown): string {
-  if (typeof value === "string") return value.trim();
-  if (value == null) return "";
-  return String(value).trim();
-}
 
 function buildFallbackParseQuestPayload(text: string): ParseQuestPayload {
   const title = toText(text);

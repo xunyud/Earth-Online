@@ -1,26 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { corsHeaders } from "../_shared/cors.ts"
+import { corsHeaders, toText, toBool, json } from "../_shared/http.ts"
 import { acceptOrDismissDailyEvent } from "../_shared/guide_engine.ts"
-
-function toText(v: unknown) {
-  if (typeof v === "string") return v.trim()
-  if (v == null) return ""
-  return String(v).trim()
-}
-
-function toBool(v: unknown, fallback = false) {
-  if (typeof v === "boolean") return v
-  if (typeof v === "string") return v.toLowerCase() === "true"
-  return fallback
-}
-
-function json(status: number, data: unknown) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  })
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders })

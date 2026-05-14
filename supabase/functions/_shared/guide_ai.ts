@@ -1,4 +1,5 @@
 import type { GuideMemoryBundle } from "./guide_memory.ts";
+import { toText, toRecord } from "./http.ts"
 
 export type GuideSuggestedTask = {
   title: string;
@@ -28,12 +29,6 @@ export type GuideNightReflectionDraft = {
 };
 
 type GuideLanguage = "zh" | "en";
-
-function toText(v: unknown) {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
 
 function toInt(v: unknown, fallback: number, min: number, max: number) {
   const n = Number(v);
@@ -183,14 +178,8 @@ export async function callMultimodalLLM<T>(
   }
 }
 
-
 function pickLine(lines: string[], fallback: string) {
   return lines.length > 0 ? lines[0] : fallback;
-}
-
-function toRecord(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
 }
 
 function hasAny(text: string, pattern: RegExp) {
@@ -469,7 +458,6 @@ export function extractBehaviorSummary(packedContext: string): string {
 export function shouldUseFallback(structuredMemoryCount: number): boolean {
   return structuredMemoryCount < 3;
 }
-
 
 export async function generateProactiveMessage(
   memory: GuideMemoryBundle,

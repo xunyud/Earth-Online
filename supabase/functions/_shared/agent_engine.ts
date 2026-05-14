@@ -1,3 +1,5 @@
+import { toRecord, agentCorsHeaders } from "./http.ts"
+export { agentCorsHeaders }
 import {
   isAgentRunTerminalStatus,
   normalizeAgentRiskLevel,
@@ -19,12 +21,6 @@ import {
 } from "./agent_policy.ts";
 import { gatherGuideMemoryBundle } from "./guide_memory.ts";
 import { EverMemOSClient } from "./evermemos_client.ts";
-
-export const agentCorsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 export type AgentToolCallDraft = {
   tool_name: string;
@@ -72,24 +68,10 @@ export type SerializedAgentRunStep = {
   finished_at: string | null;
 };
 
-function toRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
-
 function toStepIndex(value: unknown): number {
   const parsed = Number(value);
   if (Number.isFinite(parsed) && parsed >= 0) return Math.floor(parsed);
   return 0;
-}
-
-export function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
 }
 
 export function serializeAgentRun(row: Partial<AgentRunRow> | null): SerializedAgentRun | null {

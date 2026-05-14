@@ -1,15 +1,5 @@
 import { type AgentJson, type AgentRiskLevel } from "./agent_types.ts";
-
-function toText(value: unknown): string {
-  if (typeof value === "string") return value.trim();
-  if (value == null) return "";
-  return String(value).trim();
-}
-
-function toRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
+import { toText, toRecord } from "./http.ts"
 
 function toStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];

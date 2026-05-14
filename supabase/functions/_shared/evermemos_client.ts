@@ -1,3 +1,4 @@
+import { toText, toRecord } from "./http.ts"
 export type EverMemMemoryType =
   | "episodic_memory"
   | "semantic_memory"
@@ -69,17 +70,6 @@ export type ParsedSmartMemoryEnvelope = {
   /** 是否标记为重要 */
   pinned?: boolean;
 };
-
-function toText(v: unknown): string {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
-
-function toRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
 
 function joinUrl(baseUrl: string, path: string) {
   return `${baseUrl.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;

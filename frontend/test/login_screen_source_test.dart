@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,7 +26,7 @@ void main() {
     expect(
       content.contains("String get signInLabel =>") &&
           content.contains("String get signUpLabel =>") &&
-          content.contains("Welcome to Earth Online"),
+          content.contains("auth.welcome_title"),
       isTrue,
       reason: 'The login screen copy should keep explicit sign-in and sign-up labels plus the welcome title.',
     );
@@ -37,9 +37,9 @@ void main() {
         .readAsString();
 
     expect(
-      content.contains('Create account') && content.contains('Continue'),
+      content.contains("auth.primary_button") && content.contains("auth.send_button"),
       isTrue,
-      reason: 'The auth flow should continue to expose account creation and continue actions.',
+      reason: 'The auth flow should continue to expose account creation and continue actions via i18n keys.',
     );
   });
 }

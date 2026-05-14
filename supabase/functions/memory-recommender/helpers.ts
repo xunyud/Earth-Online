@@ -1,3 +1,4 @@
+import { toText, toErrorMessage } from "../_shared/http.ts"
 // memory-recommender 纯函数模块
 // 提取自 index.ts，便于测试直接导入（不依赖 edge-runtime 和 Deno.serve）
 // 包含：推荐解析、prompt 构建等无副作用的纯逻辑
@@ -14,23 +15,6 @@ export type Recommendation = {
 export const MIN_MEMORY_COUNT = 3;
 
 // ---------- 工具函数 ----------
-
-/** 将任意值转为 trim 后的字符串 */
-function toText(v: unknown): string {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
-
-/** 将错误转为可读字符串 */
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
 
 /** 去除 LLM 返回内容中的 Markdown 代码围栏 */
 function stripJsonFence(text: string): string {

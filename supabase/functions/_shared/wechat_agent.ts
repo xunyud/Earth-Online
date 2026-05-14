@@ -1,10 +1,5 @@
 import type { GuideSuggestedTask } from "./guide_ai.ts";
-
-function toText(value: unknown) {
-  if (typeof value === "string") return value.trim();
-  if (value == null) return "";
-  return String(value).trim();
-}
+import { toText } from "./http.ts"
 
 function matchesAnyPattern(text: string, patterns: RegExp[]) {
   return patterns.some((pattern) => pattern.test(text));

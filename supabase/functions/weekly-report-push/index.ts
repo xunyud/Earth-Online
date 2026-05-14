@@ -3,14 +3,9 @@
 // 触发方式：pg_cron 定时（每周日 20:00 UTC+8）或前端手动调用（传 user_id）
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { toText, toErrorMessage, corsHeaders } from "../_shared/http.ts"
 
 type PushLanguage = "zh" | "en";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 // ---------- 微信 access_token 缓存 ----------
 
@@ -100,21 +95,6 @@ function stripMarkdown(md: string): string {
 }
 
 // ---------- 工具函数 ----------
-
-function toText(v: unknown): string {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
 
 function localizedText(language: PushLanguage, zh: string, en: string) {
   return language === "en" ? en : zh;

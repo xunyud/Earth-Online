@@ -89,27 +89,23 @@ void main() {
 
     expect(
       pageSource,
-      contains(
-        "_weeklySummaryService.enqueue(languageCode: AppLocaleController.instance.locale.languageCode)",
-      ),
+      contains('_weeklySummaryService.enqueue()'),
     );
     expect(
       serviceSource,
-      contains('Future<WeeklySummaryJob?> enqueue({String? languageCode})'),
+      contains('Future<WeeklySummaryJob?> enqueue()'),
     );
-    expect(serviceSource, contains("'language_code': languageCode"));
+    expect(serviceSource, contains("'language_code':"));
     expect(
       enqueueSource,
       contains('const languageCode = toText(body?.language_code);'),
     );
     expect(
       enqueueSource,
-      contains(
-        'body: JSON.stringify({ user_id: userId, language_code: languageCode })',
-      ),
+      contains('user_id: userId, language_code: languageCode'),
     );
     expect(functionSource, contains('language_code'));
-    expect(functionSource, contains('Weekly Adventure Report'));
-    expect(functionSource, contains('【Weekly Summary】'));
+    expect(functionSource, contains('本周冒险周报'));
+    expect(functionSource, contains('WEEKLY_SUMMARY_PREFIX'));
   });
 }

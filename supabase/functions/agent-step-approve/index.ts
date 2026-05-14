@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { toText, json } from "../_shared/http.ts"
 
 import {
   agentCorsHeaders,
@@ -10,19 +11,6 @@ import {
   updateAgentRunStatus,
   updateAgentStepStatus,
 } from "../_shared/agent_engine.ts";
-
-function json(status: number, data: unknown) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...agentCorsHeaders, "Content-Type": "application/json" },
-  });
-}
-
-function toText(value: unknown): string {
-  if (typeof value === "string") return value.trim();
-  if (value == null) return "";
-  return String(value).trim();
-}
 
 type AuthenticatedAgentUser = {
   id: string;

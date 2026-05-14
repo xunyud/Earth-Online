@@ -1,3 +1,4 @@
+import { toText } from "./http.ts"
 import {
   EverMemOSClient,
   parseSmartMemoryEnvelope,
@@ -41,12 +42,6 @@ export type GuideStructuredMemoryItem = {
   /** 记忆创建时间，支持 ISO 字符串、Unix 毫秒时间戳或 null */
   createdAt: string | number | null;
 };
-
-function toText(v: unknown) {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
 
 function toNum(v: unknown, fallback = 0) {
   if (typeof v === "number" && Number.isFinite(v)) return v;
@@ -903,7 +898,6 @@ export function computeXpMultiplier(
   // 默认倍率
   return 1.0;
 }
-
 
 export async function gatherGuideMemoryBundle(
   supabase: any,

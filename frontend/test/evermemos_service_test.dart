@@ -33,14 +33,15 @@ void main() {
       _buildCompletedQuest(),
     ]);
 
-    expect(requestBody['message_id'], isA<String>());
-    expect((requestBody['message_id'] as String).isNotEmpty, isTrue);
-    expect(requestBody['create_time'], isA<String>());
-    final createTime = requestBody['create_time'] as String;
-    expect(createTime, contains(RegExp(r'(Z|[+-]\d{2}:\d{2})$')));
-    expect(requestBody['sender'], 'user_123');
-    expect(requestBody.containsKey('sennder'), isFalse);
-    expect(requestBody['group_id'], 'quest-log:user_123');
+    expect(requestBody['user_id'], 'user_123');
+    expect(requestBody['messages'], isA<List>());
+    final messages = requestBody['messages'] as List;
+    expect(messages.length, 1);
+    final msg = messages[0] as Map<String, dynamic>;
+    expect(msg['role'], 'user');
+    expect(msg['content'], isA<String>());
+    expect((msg['content'] as String).isNotEmpty, isTrue);
+    expect(msg['timestamp'], isA<int>());
   });
 
   test('syncTodayCompletedQuests 会组装所有今日已完成任务', () async {
@@ -60,7 +61,8 @@ void main() {
 
     final result = await service.syncTodayCompletedQuests(quests);
 
-    final content = (requestBody['content'] as String?) ?? '';
+    final messages = requestBody['messages'] as List;
+    final content = (messages[0]['content'] as String?) ?? '';
     expect(content, contains('开发小程序'));
     expect(content, contains('编写100行代码'));
     expect(result.syncedCount, 2);
@@ -84,8 +86,8 @@ void main() {
     final second = await service.syncTodayCompletedQuests([q1, q2, q3]);
 
     expect(postedBodies.length, 2);
-    final firstContent = postedBodies[0]['content'] as String;
-    final secondContent = postedBodies[1]['content'] as String;
+    final firstContent = (postedBodies[0]['messages'] as List)[0]['content'] as String;
+    final secondContent = (postedBodies[1]['messages'] as List)[0]['content'] as String;
     expect(firstContent, contains('任务A'));
     expect(firstContent, contains('任务B'));
     expect(secondContent, contains('任务C'));
@@ -176,7 +178,7 @@ void main() {
 
     final status = await service.checkMemoryStatus('req_1');
 
-    expect(requestedUri.path, '/api/v0/status/request');
+    expect(requestedUri.path, '/api/v1/status/request');
     expect(requestedUri.queryParameters['request_id'], 'req_1');
     expect(status.requestId, 'req_1');
     expect(status.status, 'success');
@@ -240,7 +242,7 @@ void main() {
 
     final result = await service.fetchMemoriesForCurrentUser();
 
-    expect(requestedUri.path, '/api/v0/memories');
+    expect(requestedUri.path, '/api/v1/memories');
     expect(requestedUri.queryParameters['group_ids'], 'quest-log:user_123');
     expect(requestedUri.queryParameters.length, 1);
     expect(requestedUri.queryParameters['sender'], isNull);
@@ -272,9 +274,9 @@ void main() {
     final result = await service.fetchMemoriesForCurrentUser();
 
     expect(requestedUris.length, 2);
-    expect(requestedUris[0].path, '/api/v0/memories');
+    expect(requestedUris[0].path, '/api/v1/memories');
     expect(requestedUris[0].queryParameters['group_ids'], 'quest-log:user_123');
-    expect(requestedUris[1].path, '/api/v0/memories');
+    expect(requestedUris[1].path, '/api/v1/memories');
     expect(requestedUris[1].queryParameters['user_id'], 'user_123');
     expect(result.latestText, 'fallback memory');
   });

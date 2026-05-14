@@ -4,6 +4,7 @@
 // 依赖：EverMemOS API、guide_ai.generateProactiveMessage、微信客服消息 API
 
 import "@supabase/functions-js/edge-runtime.d.ts";
+import { toText, toErrorMessage, corsHeaders } from "../_shared/http.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   detectHabitChains,
@@ -16,27 +17,6 @@ import {
 import type { GuideStructuredMemoryItem } from "../_shared/guide_memory.ts";
 import { EverMemOSClient } from "../_shared/evermemos_client.ts";
 import { searchCollectiveWisdom } from "../_shared/collective_memory.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-function toText(v: unknown): string {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
 
 function toNum(v: unknown, fallback = 0): number {
   if (typeof v === "number" && Number.isFinite(v)) return v;

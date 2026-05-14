@@ -1,31 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeaders, toText, toBool, toErrorMessage, json } from "../_shared/http.ts";
 import { gatherGuideMemoryBundle } from "../_shared/guide_memory.ts";
 import { currentIsoWeek } from "./helpers.ts";
-
-function toText(v: unknown) {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
-
-function toBool(v: unknown, fallback = false) {
-  if (typeof v === "boolean") return v;
-  if (typeof v === "string") {
-    const lowered = v.trim().toLowerCase();
-    if (lowered === "true") return true;
-    if (lowered === "false") return false;
-  }
-  return fallback;
-}
-
-function json(status: number, data: unknown) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 function stylePrompt(style: string) {
   switch (style) {
@@ -247,14 +224,6 @@ async function touchImage(url: string) {
 }
 
 /** 将错误转为可读字符串 */
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
 
 /**
  * 查询指定用户上一张画像的 summary（不同 epoch 中最新的一张）。

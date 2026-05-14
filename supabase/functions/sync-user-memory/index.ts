@@ -1,4 +1,5 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
+import { toText, toRecord, toErrorMessage, corsHeaders } from "../_shared/http.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   type EverMemCreateMemoryInput,
@@ -18,32 +19,6 @@ import {
   shouldTriggerLivingMemory50,
   type MemoryAchievement,
 } from "../_shared/memory_achievements.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-function toText(v: unknown) {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
-}
-
-function toErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
-
-function toRecord(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
 
 function normalizeMemoryKind(value: unknown): EverMemMemoryKind {
   const text = toText(value);

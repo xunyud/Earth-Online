@@ -35,14 +35,14 @@ void main() {
     final source =
         await File('lib/features/quest/screens/home_page.dart').readAsString();
 
-    expect(source, contains('_localAgentStepResults'));
+    expect(source, contains('localAgentStepResults'));
     expect(
       source,
-      contains('return _waitForLocalAgentStepResult(pendingStepId);'),
+      contains('return _guideController.waitForLocalAgentStepResult(pendingStepId);'),
     );
     expect(
       source,
-      contains("final cachedResult = _localAgentStepResults[step.id];"),
+      contains("final cachedResult = _guideController.localAgentStepResults[step.id];"),
     );
   });
 

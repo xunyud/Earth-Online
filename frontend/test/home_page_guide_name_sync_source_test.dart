@@ -21,9 +21,9 @@ void main() {
 
     expect(
       source,
-      contains('_guideService.resolveDisplayName(localFallback: stored)'),
+      contains('_guideController.guideService.resolveDisplayName(localFallback: stored)'),
     );
     expect(
-        source, contains('await _guideService.saveDisplayName(normalized);'));
+        source, contains('await _guideController.saveDisplayName(normalized);'));
   });
 }
