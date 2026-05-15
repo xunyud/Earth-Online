@@ -1,0 +1,21 @@
+name: Smoke Test
+
+on:
+  # Vercel 部署完成时 GitHub 会发 deployment_status 事件
+  deployment_status:
+
+jobs:
+  smoke:
+    name: Post-Deploy Smoke Test
+    runs-on: ubuntu-latest
+    if: github.event.deployment_status.state == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for CDN propagation
+        run: sleep 10
+
+      - name: Run smoke test
+        run: |
+          chmod +x scripts/smoke-test.sh
+          ./scripts/smoke-test.sh "${{ github.event.deployment_status.target_url }}"

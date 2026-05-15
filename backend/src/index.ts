@@ -75,6 +75,10 @@ app.post('/agent/free-chat', requireAuth, async (req: AuthenticatedRequest, res)
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+export { app };
+
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+}

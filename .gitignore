@@ -46,8 +46,6 @@ Thumbs.db
 /generate_competition_decks.py
 /generate_pitch.js
 /generate_pitch.py
-/package.json
-/package-lock.json
 /supabase.ps1
 
 promo-video/public/audio/

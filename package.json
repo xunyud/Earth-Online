@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "scripts": {
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "openai": "^4.52.5",
+    "pptxgenjs": "^4.0.1"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2"
+  },
+  "lint-staged": {
+    "supabase/functions/**/*.ts": "deno check",
+    "frontend/lib/**/*.dart": "dart analyze --fatal-infos"
+  }
+}
