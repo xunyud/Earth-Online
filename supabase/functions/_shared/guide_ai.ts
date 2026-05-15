@@ -1,5 +1,6 @@
 import type { GuideMemoryBundle } from "./guide_memory.ts";
 import { toText, toRecord } from "./http.ts"
+import { fetchWithRetry } from "./evermemos_client.ts"
 
 export type GuideSuggestedTask = {
   title: string;
@@ -71,7 +72,7 @@ async function callJsonLLM<T>(
   if (!apiKey) return fallback;
 
   try {
-    const resp = await fetch(
+    const resp = await fetchWithRetry(
       `${getApiBaseUrl().replace(/\/+$/, "")}/chat/completions`,
       {
         method: "POST",
@@ -142,7 +143,7 @@ export async function callMultimodalLLM<T>(
   const timeoutMs = opts?.timeoutMs ?? 15000;
 
   try {
-    const resp = await fetch(
+    const resp = await fetchWithRetry(
       `${getApiBaseUrl().replace(/\/+$/, "")}/chat/completions`,
       {
         method: "POST",

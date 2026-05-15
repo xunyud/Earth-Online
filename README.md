@@ -22,18 +22,18 @@ Once a task is postponed, half-finished, or completed, the surrounding context o
 
 Earth Online was built around a different idea: productivity tools should not only collect tasks. They should remember recent behavior, preserve short-term context, and help users resume with less friction. The goal is not to gamify work for its own sake, but to make progress feel visible, guidance feel grounded, and planning feel more like an evolving journey than a static checklist.
 
-### The Role of EverMemOS
+### The Role of EverOS
 
-The "memory-aware" capability of Earth Online is powered by [EverMemOS](https://github.com/EverMind-AI/EverMemOS) — an open-source memory operating system for AI applications.
+The "memory-aware" capability of Earth Online is powered by [EverOS](https://github.com/EverMind-AI/EverMemOS) — an open-source memory operating system for AI applications.
 
-In this project, EverMemOS serves as the external long-term memory layer:
+In this project, EverOS serves as the external long-term memory layer:
 
-- **Memory Sync**: When users complete quests, the app uploads structured summaries of completed tasks to EverMemOS via its REST API. Each memory is namespaced per user (`quest-log:{userId}`), keeping personal context isolated.
-- **Memory Retrieval**: Before the guide assistant replies, the app fetches the user's recent memory digest from EverMemOS. This digest is injected into the guide's prompt context, allowing the assistant to reference what the user actually did recently rather than guessing.
-- **Async Processing**: EverMemOS processes uploaded memories asynchronously (returning a `request_id`), and the app polls for completion status before pulling the updated memory state — ensuring the memory layer stays eventually consistent without blocking the UI.
+- **Memory Sync**: When users complete quests, the app uploads structured summaries of completed tasks to EverOS via its REST API. Each memory is namespaced per user (`quest-log:{userId}`), keeping personal context isolated.
+- **Memory Retrieval**: Before the guide assistant replies, the app fetches the user's recent memory digest from EverOS. This digest is injected into the guide's prompt context, allowing the assistant to reference what the user actually did recently rather than guessing.
+- **Async Processing**: EverOS processes uploaded memories asynchronously (returning a `request_id`), and the app polls for completion status before pulling the updated memory state — ensuring the memory layer stays eventually consistent without blocking the UI.
 - **Cross-Surface Reuse**: The same memory store is consumed by guide chat, daily events, user portraits, and weekly summaries — giving every AI-powered feature access to the same grounded context about the user's recent activity.
 
-Without EverMemOS, the assistant would have no persistent memory between sessions. With it, every suggestion, summary, and event is shaped by what the user has actually been doing.
+Without EverOS, the assistant would have no persistent memory between sessions. With it, every suggestion, summary, and event is shaped by what the user has actually been doing.
 
 ## Core Features
 
@@ -96,7 +96,7 @@ XP, levels, rewards, events, diary, and summaries make progress feel cumulative.
 - Supabase for database, auth, migrations, and Edge Functions
 - TypeScript + Deno for serverless guide, memory, and task-processing functions
 - Node.js + Express for the lightweight backend and webhook handling
-- [EverMemOS](https://github.com/EverMind-AI/EverMemOS) for persistent AI memory layer
+- [EverOS](https://github.com/EverMind-AI/EverMemOS) for persistent AI memory layer
 - Redis for buffered message processing
 - Remotion for the promo video pipeline
 
@@ -247,7 +247,7 @@ npm run still:zh
 - `OPENAI_CHAT_MODEL`
 - `AGENT_CHAT_PROXY_URL`
 
-The Flutter memory panel reads EverMemOS directly, so pass `EVERMEMOS_API_KEY` through `--dart-define` for local builds that need memory search, pin/mute, voice memory, or image memory flows.
+The Flutter memory panel reads EverOS directly, so pass `EVERMEMOS_API_KEY` through `--dart-define` for local builds that need memory search, pin/mute, voice memory, or image memory flows.
 
 ## Screenshots / Preview Assets
 
@@ -267,7 +267,7 @@ Full version history now lives in [docs/changelog/CHANGELOG.md](./docs/changelog
 
 ### Memory System Evolution
 - Added memory decay weighting and semantic knowledge extraction so recent evidence is prioritized while durable behavior patterns can still surface.
-- Added `knowledge-extraction`, `memory-recommender`, and `memory-patrol` Edge Functions for weekly EverMemOS flushes, personalized task recommendations, and proactive nudges.
+- Added `knowledge-extraction`, `memory-recommender`, and `memory-patrol` Edge Functions for weekly EverOS flushes, personalized task recommendations, and proactive nudges.
 - Added anonymous collective memory for milestones such as 7-day streaks, first board clears, and recovery from breaks.
 
 ### Memory Visibility

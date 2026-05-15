@@ -355,7 +355,7 @@ export function syncAgentEventToMemory(
             extra: metadata?.extra ?? {},
           },
         },
-        AbortSignal.timeout(2000),
+        AbortSignal.timeout(5000),
       );
     } catch (err) {
       // 记忆写入失败不影响 agent 主流程，只打 warn

@@ -7,7 +7,7 @@
 
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { toText, toErrorMessage, json, corsHeaders } from "../_shared/http.ts"
-import { EverMemOSClient } from "../_shared/evermemos_client.ts";
+import { EverMemOSClient, fetchWithRetry } from "../_shared/evermemos_client.ts";
 import {
   buildRecommendationPrompt,
   MIN_MEMORY_COUNT,
@@ -128,7 +128,7 @@ async function generateRecommendations(
   const userPrompt = buildRecommendationPrompt(memoryTexts, clientContext);
 
   try {
-    const resp = await fetch(
+    const resp = await fetchWithRetry(
       `${getLlmBaseUrl()}/chat/completions`,
       {
         method: "POST",

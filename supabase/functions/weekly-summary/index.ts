@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { toText, toErrorMessage, corsHeaders } from "../_shared/http.ts"
-import { EverMemOSClient } from "../_shared/evermemos_client.ts";
+import { EverMemOSClient, fetchWithRetry } from "../_shared/evermemos_client.ts";
 
 type QuestRow = {
   title: string;
@@ -390,7 +390,7 @@ ${payloadText}
 ${payloadText}
 `.trim();
 
-  const resp = await fetch(`${getLlmBaseUrl()}/chat/completions`, {
+  const resp = await fetchWithRetry(`${getLlmBaseUrl()}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,

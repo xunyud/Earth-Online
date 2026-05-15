@@ -16,6 +16,8 @@ import {
 } from "../_shared/agent_engine.ts";
 import {
   continueAgentAfterTool,
+  replanAfterToolCompletion,
+  MAX_AGENT_STEPS,
   type AgentPlannerStepDraft,
 } from "../_shared/agent_planner.ts";
 import {
@@ -71,6 +73,12 @@ type AgentStepCompleteHandlerDeps = {
     completedStep: SerializedAgentRunStep,
     resultJson?: AgentJson,
   ) => AgentPlannerStepDraft[];
+  replan: (ctx: {
+    goal: string;
+    completedSteps: SerializedAgentRunStep[];
+    latestResult?: AgentJson;
+    memoryLines?: string[];
+  }) => Promise<AgentPlannerStepDraft[]>;
   now: () => string;
 };
 
@@ -99,6 +107,7 @@ function createDefaultAgentStepCompleteDeps(): AgentStepCompleteHandlerDeps {
     loadSnapshot: (runId, userId) => loadAgentRunSnapshot(serviceClient, runId, userId),
     continueRun: (goal, completedStep, resultJson) =>
       continueAgentAfterTool(goal, completedStep, resultJson),
+    replan: (ctx) => replanAfterToolCompletion(ctx),
     now: () => new Date().toISOString(),
   };
 }
@@ -244,11 +253,37 @@ export function createAgentStepCompleteHandler(
         );
       }
 
-      const continuationDrafts = deps.continueRun(
-        snapshotAfterTool.run.goal,
-        completedStep,
-        resultJson,
-      );
+      const toolName = toText(completedStep.tool_name);
+      const isAppTool = toolName.startsWith("app.");
+      const stepCount = snapshotAfterTool.steps.length;
+
+      let continuationDrafts: AgentPlannerStepDraft[];
+
+      if (isAppTool || stepCount >= MAX_AGENT_STEPS) {
+        // app 工具或步数到顶：用同步快速路径
+        continuationDrafts = deps.continueRun(
+          snapshotAfterTool.run.goal,
+          completedStep,
+          resultJson,
+        );
+      } else {
+        // 非 app 工具：先记录中间结果，再用 LLM re-plan 下一步
+        const intermediateSteps = deps.continueRun(
+          snapshotAfterTool.run.goal,
+          completedStep,
+          resultJson,
+        );
+        for (const draft of intermediateSteps) {
+          await appendPlannedStep(deps, runId, draft);
+        }
+
+        continuationDrafts = await deps.replan({
+          goal: snapshotAfterTool.run.goal,
+          completedSteps: snapshotAfterTool.steps,
+          latestResult: resultJson,
+        });
+      }
+
       for (const draft of continuationDrafts) {
         await appendPlannedStep(deps, runId, draft);
       }

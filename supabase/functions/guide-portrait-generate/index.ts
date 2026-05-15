@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, toText, toBool, toErrorMessage, json } from "../_shared/http.ts";
+import { fetchWithRetry } from "../_shared/evermemos_client.ts";
 import { gatherGuideMemoryBundle } from "../_shared/guide_memory.ts";
 import { currentIsoWeek } from "./helpers.ts";
 
@@ -105,7 +106,7 @@ async function generateImageViaOpenAI(prompt: string): Promise<{ b64_json: strin
 
   for (const model of models) {
     try {
-      const resp = await fetch(`${apiBase}/images/generations`, {
+      const resp = await fetchWithRetry(`${apiBase}/images/generations`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -162,7 +163,7 @@ async function generateImageViaOpenAI(prompt: string): Promise<{ b64_json: strin
   const encodedPrompt = encodeURIComponent(prompt.slice(0, 2000));
   const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?${query.toString()}`;
 
-  const polResp = await fetch(pollinationsUrl, {
+  const polResp = await fetchWithRetry(pollinationsUrl, {
     method: "GET",
     headers: { Accept: "image/*" },
     signal: AbortSignal.timeout(60_000),

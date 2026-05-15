@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { corsHeaders, toText, json } from "../_shared/http.ts";
+import { fetchWithRetry } from "../_shared/evermemos_client.ts";
 
 console.log("Function 'parse-quest' up and running!");
 
@@ -129,7 +130,7 @@ async function callConfiguredLlm(text: string): Promise<ParseQuestPayload | null
     6) cheer 是一句正常温暖的鼓励语，20 字以内，可选 1 个 emoji。
   `;
 
-  const response = await fetch(`${normalizedLlmBaseUrl}/chat/completions`, {
+  const response = await fetchWithRetry(`${normalizedLlmBaseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${llmApiKey}`,

@@ -1,5 +1,6 @@
 import { gatherGuideMemoryBundle } from "./guide_memory.ts";
 import { toText, toRecord } from "./http.ts"
+import { fetchWithRetry } from "./evermemos_client.ts"
 import {
   generateChat,
   generateDailyEvent,
@@ -302,7 +303,7 @@ async function fetchRecommendations(
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     if (!supabaseUrl || !serviceRoleKey) return [];
 
-    const resp = await fetch(
+    const resp = await fetchWithRetry(
       `${supabaseUrl}/functions/v1/memory-recommender`,
       {
         method: "POST",

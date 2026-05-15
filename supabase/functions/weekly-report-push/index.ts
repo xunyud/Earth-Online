@@ -4,6 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { toText, toErrorMessage, corsHeaders } from "../_shared/http.ts"
+import { fetchWithRetry } from "../_shared/evermemos_client.ts";
 
 type PushLanguage = "zh" | "en";
 
@@ -25,7 +26,7 @@ async function getWechatAccessToken(): Promise<string> {
 
   const url =
     `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`;
-  const resp = await fetch(url);
+  const resp = await fetchWithRetry(url);
   if (!resp.ok) {
     throw new Error(`Failed to get access_token: HTTP ${resp.status}`);
   }
@@ -53,7 +54,7 @@ async function sendWechatTextMessage(
 ): Promise<SendResult> {
   const url =
     `https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token=${accessToken}`;
-  const resp = await fetch(url, {
+  const resp = await fetchWithRetry(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -229,7 +230,7 @@ Deno.serve(async (req) => {
 
       try {
         // 3a. 调用 weekly-summary 生成周报
-        const summaryResp = await fetch(
+        const summaryResp = await fetchWithRetry(
           `${supabaseUrl}/functions/v1/weekly-summary`,
           {
             method: "POST",

@@ -15,7 +15,7 @@ import {
   shouldKeepStructuredMemoryItem,
 } from "../_shared/guide_memory.ts";
 import type { GuideStructuredMemoryItem } from "../_shared/guide_memory.ts";
-import { EverMemOSClient } from "../_shared/evermemos_client.ts";
+import { EverMemOSClient, fetchWithRetry } from "../_shared/evermemos_client.ts";
 import { searchCollectiveWisdom } from "../_shared/collective_memory.ts";
 
 function toNum(v: unknown, fallback = 0): number {
@@ -40,7 +40,7 @@ async function getWechatAccessToken(): Promise<string> {
   }
   const url =
     `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`;
-  const resp = await fetch(url);
+  const resp = await fetchWithRetry(url);
   if (!resp.ok) throw new Error(`get access_token HTTP ${resp.status}`);
   const data = await resp.json();
   if (data.errcode) throw new Error(`get access_token errcode=${data.errcode}`);
@@ -57,7 +57,7 @@ async function sendWechatText(
     const token = await getWechatAccessToken();
     const url =
       `https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token=${token}`;
-    const resp = await fetch(url, {
+    const resp = await fetchWithRetry(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

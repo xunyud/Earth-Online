@@ -5,6 +5,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, toText, toRecord, json } from "../_shared/http.ts";
 import { normalizeOpenAICompatibleBaseUrl } from "../_shared/guide_ai.ts";
+import { fetchWithRetry } from "../_shared/evermemos_client.ts";
 
 function getApiKey(): string {
   return (
@@ -70,7 +71,7 @@ Deno.serve(async (req) => {
       ? body.temperature
       : 0.4;
 
-    const llmResp = await fetch(
+    const llmResp = await fetchWithRetry(
       `${getApiBaseUrl()}/chat/completions`,
       {
         method: "POST",

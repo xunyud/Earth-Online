@@ -121,7 +121,7 @@ Deno.test("planAgentGoal file 意图不会被 freeform chat 拦截", () => {
 
 // ─── 2. continueAgentAfterTool：各工具的 continuation 输出 ──────────────────
 
-Deno.test("continueAgentAfterTool 为 file.read_text 生成 done 步骤并包含预览", () => {
+Deno.test("continueAgentAfterTool 为 file.read_text 生成 message 中间步骤并包含预览", () => {
   const completedStep = makeStep({
     tool_name: "file.read_text",
     arguments_json: { path: "README.md" },
@@ -135,12 +135,12 @@ Deno.test("continueAgentAfterTool 为 file.read_text 生成 done 步骤并包含
   const drafts = continueAgentAfterTool("读取 README", completedStep, resultJson);
 
   assertEquals(drafts.length, 1);
-  assertEquals(drafts[0].kind, "done");
+  assertEquals(drafts[0].kind, "message");
   assertStringIncludes(drafts[0].summary, "README");
   assertStringIncludes(`${drafts[0].output_text}`, "README.md");
 });
 
-Deno.test("continueAgentAfterTool 为 shell.exec 生成 done 步骤并包含命令摘要", () => {
+Deno.test("continueAgentAfterTool 为 shell.exec 生成 message 中间步骤并包含命令摘要", () => {
   const completedStep = makeStep({
     tool_name: "shell.exec",
     arguments_json: { command: "git status", cwd: "." },
@@ -155,7 +155,7 @@ Deno.test("continueAgentAfterTool 为 shell.exec 生成 done 步骤并包含命�
   const drafts = continueAgentAfterTool("执行 git status", completedStep, resultJson);
 
   assertEquals(drafts.length, 1);
-  assertEquals(drafts[0].kind, "done");
+  assertEquals(drafts[0].kind, "message");
   assertStringIncludes(drafts[0].summary, "git status");
   assertStringIncludes(`${drafts[0].output_text}`, "git status");
 });
@@ -185,13 +185,13 @@ Deno.test("continueAgentAfterTool 为 app.navigation.open 生成 done 步骤", (
   assertEquals(drafts[0].kind, "done");
 });
 
-Deno.test("continueAgentAfterTool 对未知工具也生成 done 步骤", () => {
+Deno.test("continueAgentAfterTool 对未知非 app 工具生成 message 中间步骤", () => {
   const completedStep = makeStep({ tool_name: "unknown.tool" });
 
   const drafts = continueAgentAfterTool("unknown", completedStep);
 
   assertEquals(drafts.length, 1);
-  assertEquals(drafts[0].kind, "done");
+  assertEquals(drafts[0].kind, "message");
 });
 
 // ─── 3. agent-step-complete handler：成功/失败分支 ───────────────────────────
@@ -245,6 +245,11 @@ function makeCompleteHandlerDeps(opts: {
         summary: "完成",
         output_text: "已完成工具执行。",
       }],
+    replan: async (): Promise<AgentPlannerStepDraft[]> => [{
+      kind: "done",
+      summary: "re-plan 完成",
+      output_text: "目标已达成。",
+    }],
     now: () => "2026-04-22T00:00:00.000Z",
   };
 }

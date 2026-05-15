@@ -75,6 +75,39 @@ function joinUrl(baseUrl: string, path: string) {
   return `${baseUrl.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
 }
 
+// socket closed / connection reset 等瞬态网络错误判定
+function isTransientFetchError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return msg.includes("socket") ||
+    msg.includes("connection") ||
+    msg.includes("reset") ||
+    msg.includes("aborted") ||
+    msg.includes("network") ||
+    msg.includes("econnrefused") ||
+    msg.includes("econnreset") ||
+    msg.includes("epipe");
+}
+
+export async function fetchWithRetry(
+  input: string | URL,
+  init?: RequestInit & { signal?: AbortSignal },
+  maxRetries = 2,
+): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fetch(input, init);
+    } catch (err) {
+      lastErr = err;
+      if (!isTransientFetchError(err) || attempt === maxRetries) break;
+      // 退避：100ms, 300ms
+      await new Promise((r) => setTimeout(r, 100 * (attempt + 1) * 2));
+    }
+  }
+  throw lastErr;
+}
+
 function getOptionalAuthHeaders(): Record<string, string> {
   // 优先读取 EVERMEMOS_API_KEY，其次兼容旧的 EVERMEMOS_AUTH_TOKEN
   const apiKey = Deno.env.get("EVERMEMOS_API_KEY") ?? "";
@@ -256,7 +289,7 @@ export class EverMemOSClient {
     ];
     let lastError = "";
     for (const endpoint of endpoints) {
-      const resp = await fetch(endpoint, {
+      const resp = await fetchWithRetry(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -311,7 +344,7 @@ export class EverMemOSClient {
         content: wrapped,
       };
       const endpoint = this.memoriesPath("");
-      const resp = await fetch(endpoint, {
+      const resp = await fetchWithRetry(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -381,7 +414,7 @@ export class EverMemOSClient {
     }
 
     const endpoint = this.memoriesPath("/search");
-    const getResp = await fetch(`${endpoint}?${params.toString()}`, {
+    const getResp = await fetchWithRetry(`${endpoint}?${params.toString()}`, {
       method: "GET",
       headers: { ...getOptionalAuthHeaders() },
       signal,
@@ -398,7 +431,7 @@ export class EverMemOSClient {
       );
     }
 
-    const postResp = await fetch(endpoint, {
+    const postResp = await fetchWithRetry(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -438,7 +471,7 @@ export class EverMemOSClient {
     }
 
     const endpoint = this.memoriesPath("/search");
-    const resp = await fetch(endpoint, {
+    const resp = await fetchWithRetry(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -471,7 +504,7 @@ export class EverMemOSClient {
     signal?: AbortSignal,
   ): Promise<EverMemSender> {
     const endpoint = joinUrl(this.baseUrl, "/senders/");
-    const resp = await fetch(endpoint, {
+    const resp = await fetchWithRetry(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -506,7 +539,7 @@ export class EverMemOSClient {
     signal?: AbortSignal,
   ): Promise<EverMemSender> {
     const endpoint = joinUrl(this.baseUrl, `/senders/${senderId}`);
-    const resp = await fetch(endpoint, {
+    const resp = await fetchWithRetry(endpoint, {
       method: "GET",
       headers: { ...getOptionalAuthHeaders() },
       signal,
@@ -532,7 +565,7 @@ export class EverMemOSClient {
     const uid = toText(userId);
     if (!uid) throw new Error("flushMemories missing userId");
     const endpoint = this.memoriesPath("/flush");
-    const resp = await fetch(endpoint, {
+    const resp = await fetchWithRetry(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -557,7 +590,7 @@ export class EverMemOSClient {
     signal?: AbortSignal,
   ): Promise<EverMemSender> {
     const endpoint = joinUrl(this.baseUrl, `/senders/${senderId}`);
-    const resp = await fetch(endpoint, {
+    const resp = await fetchWithRetry(endpoint, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

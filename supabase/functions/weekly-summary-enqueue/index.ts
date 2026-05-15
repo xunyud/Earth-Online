@@ -9,6 +9,7 @@ import {
   toText,
   weeklySummaryCorsHeaders,
 } from "../_shared/weekly_summary_jobs.ts";
+import { fetchWithRetry } from "../_shared/evermemos_client.ts";
 
 function getRequiredEnv(name: string): string {
   const value = Deno.env.get(name);
@@ -65,7 +66,7 @@ async function runWeeklySummaryJob(
     .eq("id", jobId);
 
   try {
-    const response = await fetch(`${supabaseUrl}/functions/v1/weekly-summary`, {
+    const response = await fetchWithRetry(`${supabaseUrl}/functions/v1/weekly-summary`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${serviceRole}`,
