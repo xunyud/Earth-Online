@@ -43,7 +43,6 @@ import '../widgets/portrait_insight_chart.dart';
 import '../widgets/home_settings_widgets.dart';
 import '../widgets/memory_recommendation_cards.dart';
 import '../models/quest_node.dart';
-import '../models/agent_run.dart';
 import '../models/agent_step.dart';
 import '../widgets/guide_panel_dialog.dart';
 import '../widgets/night_reflection_dialog.dart';
@@ -151,6 +150,7 @@ class _HomePageState extends State<HomePage> {
     return firstLine;
   }
 
+  // ignore: unused_element
   Future<void> _loadGuideDisplayName() async {
     final stored = await PreferencesService.guideDisplayName();
     final resolved =
@@ -547,6 +547,7 @@ class _HomePageState extends State<HomePage> {
   }
 
 
+  // ignore: unused_element
   Future<LocalToolResult> _executeAgentRewardRedeem(
     Map<String, dynamic> arguments,
   ) async {
@@ -699,6 +700,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // ignore: unused_element
   Future<void> _approveLatestAgentStep() async {
     final snapshot = await _guideController.agentRunService.approveLatestStep();
     if (snapshot != null) {
@@ -707,6 +709,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // ignore: unused_element
   Future<void> _rejectLatestAgentStep() async {
     final snapshot = await _guideController.agentRunService.rejectLatestStep();
     if (snapshot != null) {
@@ -747,6 +750,7 @@ class _HomePageState extends State<HomePage> {
   }
 
 
+  // ignore: unused_element
   Future<void> _runGuideBootstrapIfNeeded() async {
     if (_guideController.isGuideBootstrapping) return;
     // 等待数据加载完成，确保 quests/xp/gold 等状态已就绪
@@ -3303,8 +3307,9 @@ class _HomePageState extends State<HomePage> {
 
       if (result.isQueued && result.requestId != null) {
         showForestSnackBar(context, context.tr('night.upload_queued'));
-        // ?????????????????????????
-        unawaited(_startMemoryStatusPolling(result.requestId!));
+        // 等待记忆处理完成后再触发夜话，确保夜话能基于记忆生成
+        await _startMemoryStatusPolling(result.requestId!);
+        if (!mounted) return;
         await _triggerNightReflection(uploadRequestId: result.requestId);
       } else {
         showForestSnackBar(context, context.tr('night.upload_success'));
@@ -3327,8 +3332,8 @@ class _HomePageState extends State<HomePage> {
     try {
       final result = await _evermemosService.pollMemoryStatus(
         requestId,
-        maxAttempts: 5,
-        interval: const Duration(seconds: 2),
+        maxAttempts: 10,
+        interval: const Duration(seconds: 3),
       );
       if (!mounted) return;
       if (result.isSuccess) {
@@ -3337,8 +3342,9 @@ class _HomePageState extends State<HomePage> {
         showForestSnackBar(context, context.tr('night.poll_pending'));
       }
     } catch (_) {
-      // 轮询失败不影响用户体验，静默处理
-      debugPrint('?? ??????????????');
+      // 轮询失败（如 API 不支持状态查询），降级为固定等待让记忆有时间被处理
+      debugPrint('🧠 记忆状态轮询失败，降级等待 8 秒让 EverMemOS 处理完成');
+      await Future<void>.delayed(const Duration(seconds: 8));
     }
   }
 

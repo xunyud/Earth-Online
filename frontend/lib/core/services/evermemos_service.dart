@@ -145,7 +145,6 @@ class EvermemosService {
             (() => Supabase.instance.client.auth.currentUser?.id);
 
   final http.Client _client;
-  final Random _random = Random();
   final String? Function() _currentUserIdProvider;
   final Set<String> _uploadedQuestIdsToday = <String>{};
   String? _uploadedQuestDayKey;
@@ -212,14 +211,27 @@ class EvermemosService {
     };
     debugPrint('🧠 发送的Payload: ${jsonEncode(payload)}');
 
-    final response = await _client.post(
-      uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${AppConfig.evermemosApiKey}',
-      },
-      body: jsonEncode(payload),
-    );
+    final http.Response response;
+    try {
+      response = await _client
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${AppConfig.evermemosApiKey}',
+            },
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 30));
+    } catch (e) {
+      debugPrint('🧠 EverMemOS 网络异常: $e');
+      throw EvermemosSyncException(
+        _txt(
+          '网络连接失败，请检查网络后重试。($e)',
+          'Network error, please check your connection. ($e)',
+        ),
+      );
+    }
 
     debugPrint('🧠 EverMemOS 响应状态码: ${response.statusCode}');
     debugPrint('🧠 EverMemOS 完整返回体: ${response.body}');
@@ -236,12 +248,22 @@ class EvermemosService {
     final decodedBody = _tryDecodeJsonObject(response.body);
     _uploadedQuestIdsToday.addAll(unsyncedTodayCompleted.map((q) => q.id));
 
+    // EverMemOS 响应可能嵌套在 data 字段内，且 id 字段名可能是 task_id 或 request_id
+    final dataInner = decodedBody?['data'];
+    final dataMap = dataInner is Map<String, dynamic> ? dataInner : decodedBody;
+    final extractedRequestId = (dataMap?['request_id'] ??
+            dataMap?['task_id'] ??
+            decodedBody?['request_id'] ??
+            decodedBody?['task_id']) as String?;
+    final extractedStatus = (dataMap?['status'] ??
+            decodedBody?['status']) as String?;
+
     return EvermemosSyncResult(
       syncedCount: unsyncedTodayCompleted.length,
       content: content,
       httpStatusCode: response.statusCode,
-      requestId: decodedBody?['request_id'] as String?,
-      status: decodedBody?['status'] as String?,
+      requestId: extractedRequestId,
+      status: extractedStatus,
     );
   }
 
@@ -642,15 +664,6 @@ class EvermemosService {
     return buffer.toString().trim();
   }
 
-  String _generateMessageId() {
-    final timestamp = DateTime.now().microsecondsSinceEpoch;
-    final randomPart = _random.nextInt(1 << 32).toRadixString(16);
-    return 'msg_${timestamp}_$randomPart';
-  }
-
-  String _createTimeIso8601() {
-    return DateTime.now().toUtc().toIso8601String();
-  }
 
   bool _isMissingFilterValidationError(String responseBody) {
     final lower = responseBody.toLowerCase();

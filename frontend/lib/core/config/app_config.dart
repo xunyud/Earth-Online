@@ -13,7 +13,7 @@ class AppConfig {
 
   static const String evermemosApiKey = String.fromEnvironment(
     'EVERMEMOS_API_KEY',
-    defaultValue: '',
+    defaultValue: '03c09b42-c9a0-4565-a0ef-33bc8be1b2e9',
   );
 
   static const String evermemosBaseUrl = String.fromEnvironment(
